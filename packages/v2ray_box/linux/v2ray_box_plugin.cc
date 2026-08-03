@@ -80,7 +80,8 @@ void apply_session_credentials() {
   if (!g_socks_pass.empty()) {
     setenv("SECURE_VPN_SOCKS_PASS", g_socks_pass.c_str(), 1);
   }
-  setenv("SECURE_VPN_SOCKS_PORT", std::to_string(g_socks_port).c_str(), 1);
+  const std::string socks_port = std::to_string(g_socks_port);
+  setenv("SECURE_VPN_SOCKS_PORT", socks_port.c_str(), 1);
 }
 
 std::string active_config_path() {
