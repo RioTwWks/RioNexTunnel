@@ -22,7 +22,11 @@ Xray on Android uses the bundled `android/app/libs/libxray.aar` (already in the 
    (Android 13+ requires both; without them the UI used to look idle).
 6. Prefer engine **xray** for first device smoke test; use **singbox** only after
    `libsingbox.so` is present under `jniLibs/`.
-7. Run from `secure_vpn_client/`:
+7. Geo assets (`geoip.dat` / `geosite.dat`) are copied by `fetch_cores.sh` into
+   `android/app/src/main/assets/xray/` and extracted at runtime into the app files
+   dir (`XRAY_LOCATION_ASSET`). Without them, v2rayNG subscriptions that use
+   `geosite:cn` / `geoip:cn` fail to start.
+8. Run from `secure_vpn_client/`:
 
 ```bash
 flutter run -d android

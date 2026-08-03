@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 object SingboxProcess {
     private const val TAG = "V2Ray/SingboxProcess"
     private const val MIXED_INBOUND_HOST = "127.0.0.1"
-    private const val MIXED_INBOUND_PORT = 10808
+    private const val DEFAULT_SOCKS_PORT = 1080
     private val semverRegex = Regex("""\b(?:v)?(\d+\.\d+\.\d+(?:[-+._][0-9A-Za-z.-]+)?)\b""")
     private val versionLineRegex = Regex("""sing-box version\s+(\S+)""", RegexOption.IGNORE_CASE)
     private var process: Process? = null
@@ -19,6 +19,11 @@ object SingboxProcess {
         private set
     val isProcessAlive: Boolean
         get() = process?.isAlive == true
+
+    private fun socksInboundPort(): Int {
+        val port = SecureVpnCredentials.getSocksPort()
+        return if (port in 1..65535) port else DEFAULT_SOCKS_PORT
+    }
 
     fun getBinaryPath(context: Context): String? {
         val nativeLibDir = context.applicationInfo.nativeLibraryDir
@@ -152,12 +157,13 @@ object SingboxProcess {
     }
 
     fun waitForMixedInboundReady(timeoutMs: Long = 4000L): Boolean {
+        val port = socksInboundPort()
         val start = System.currentTimeMillis()
         while (System.currentTimeMillis() - start < timeoutMs) {
             if (!isRunning) return false
             try {
                 Socket().use { socket ->
-                    socket.connect(InetSocketAddress(MIXED_INBOUND_HOST, MIXED_INBOUND_PORT), 200)
+                    socket.connect(InetSocketAddress(MIXED_INBOUND_HOST, port), 200)
                     return true
                 }
             } catch (_: Exception) {

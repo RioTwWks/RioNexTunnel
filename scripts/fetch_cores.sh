@@ -178,5 +178,10 @@ copy_if_exists "${GEO_DEST}/geosite.dat" "${WINDOWS_RES}/geosite.dat"
 copy_if_exists "${GEO_DEST}/geoip.dat" "${MACOS_RES}/geoip.dat"
 copy_if_exists "${GEO_DEST}/geosite.dat" "${MACOS_RES}/geosite.dat"
 
+# Android: LibXray reads geosite/geoip via XRAY_LOCATION_ASSET; packaged under assets/xray/.
+ANDROID_XRAY_ASSETS="${ROOT_DIR}/secure_vpn_client/android/app/src/main/assets/xray"
+copy_if_exists "${GEO_DEST}/geoip.dat" "${ANDROID_XRAY_ASSETS}/geoip.dat"
+copy_if_exists "${GEO_DEST}/geosite.dat" "${ANDROID_XRAY_ASSETS}/geosite.dat"
+
 echo "Core binaries downloaded to ${DEST}"
 echo "Versions: Xray v${XRAY_VERSION}, sing-box v${SINGBOX_VERSION}"

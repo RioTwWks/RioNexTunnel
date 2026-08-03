@@ -28,6 +28,18 @@ Diagnostic patterns discovered during MVP integration. Check console stderr from
 
 **Fix:** `./scripts/fetch_cores.sh` (installs jniLibs) + `useLegacyPackaging = true` in app `build.gradle.kts`. Or keep engine on **xray** (uses `libxray.aar`).
 
+**Cause D:** Missing `geosite.dat` / `geoip.dat` — Xray looks under `/system/bin/` by default.
+
+**Symptom:** `failed to open geosite.dat > stat /system/bin/geosite.dat`
+
+**Fix:** `fetch_cores.sh` installs `android/app/src/main/assets/xray/*.dat`; `XrayBridge.initCoreEnv` copies them to the app files dir and sets `XRAY_LOCATION_ASSET`.
+
+**Cause E:** sing-box readiness probed port `10808` while Dart secure SOCKS listens on `1080`.
+
+**Symptom:** `sing-box started successfully` then immediate stop; UI never reaches Connected.
+
+**Fix:** Probe / TUN-bridge use `SecureVpnCredentials.getSocksPort()` (and SOCKS auth for the bridge).
+
 ### `Lost connection to device` right after connect
 
 Often an undeclared VPN service / crash while starting foreground VPN. Fix manifest first, full restart (`flutter run`), grant VPN + notifications.

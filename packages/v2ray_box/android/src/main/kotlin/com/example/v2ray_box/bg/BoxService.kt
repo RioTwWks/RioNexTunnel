@@ -15,6 +15,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
+import com.example.v2ray_box.SecureVpnCredentials
 import com.example.v2ray_box.Settings
 import com.example.v2ray_box.V2rayBoxPlugin
 import com.example.v2ray_box.constant.Action
@@ -191,6 +192,22 @@ class BoxService(
                 "Xray bridge per-app: mode=$perAppMode include=${(tunSettings["includedPackage"] as? List<*>)?.size ?: 0} exclude=${(tunSettings["excludedPackage"] as? List<*>)?.size ?: 0}"
             )
 
+            val socksPort = SecureVpnCredentials.getSocksPort().coerceIn(1, 65535)
+            val socksUser = SecureVpnCredentials.getUsername()
+            val socksPass = SecureVpnCredentials.getPassword()
+            val socksServer = mutableMapOf<String, Any>(
+                "address" to "127.0.0.1",
+                "port" to socksPort
+            )
+            if (!socksUser.isNullOrEmpty() && !socksPass.isNullOrEmpty()) {
+                socksServer["users"] = listOf(
+                    mapOf(
+                        "user" to socksUser,
+                        "pass" to socksPass
+                    )
+                )
+            }
+
             val config = mapOf(
                 "log" to mapOf("loglevel" to if (Settings.debugMode) "debug" else "warning"),
                 "inbounds" to listOf(
@@ -210,12 +227,7 @@ class BoxService(
                         "tag" to "proxy",
                         "protocol" to "socks",
                         "settings" to mapOf(
-                            "servers" to listOf(
-                                mapOf(
-                                    "address" to "127.0.0.1",
-                                    "port" to 10808
-                                )
-                            )
+                            "servers" to listOf(socksServer)
                         )
                     ),
                     mapOf(
@@ -474,7 +486,10 @@ class BoxService(
         if (!SingboxProcess.waitForMixedInboundReady()) {
             SingboxProcess.stop()
             emitServiceLog("sing-box inbound not ready", force = true)
-            stopAndAlert(Alert.StartService, "sing-box inbound not ready on 127.0.0.1:10808")
+            stopAndAlert(
+                Alert.StartService,
+                "sing-box inbound not ready on 127.0.0.1:${SecureVpnCredentials.getSocksPort()}"
+            )
             return false
         }
         Log.d(TAG, "sing-box process started")

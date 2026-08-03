@@ -24,6 +24,10 @@ object SecureVpnCredentials {
 
   fun getSocksPort(): Int = socksPort
 
+  fun getUsername(): String? = username
+
+  fun getPassword(): String? = password
+
   fun asEnvironment(): Map<String, String> {
     val env = mutableMapOf<String, String>()
     val user = username

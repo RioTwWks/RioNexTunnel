@@ -40,6 +40,56 @@ object XrayBridge {
         runCatching { Seq.setContext(context.applicationContext) }
             .onFailure { Log.w(TAG, "Seq.setContext failed: ${it.message}") }
         runCatching { LibXray.touch() }
+        val assetDir = ensureGeoAssets(context, workDir)
+        applyProcessEnv("XRAY_LOCATION_ASSET", assetDir)
+        applyProcessEnv("xray.location.asset", assetDir)
+    }
+
+    private fun ensureGeoAssets(context: Context, workDir: String): String {
+        val assetDir = File(workDir, "assets").apply { mkdirs() }
+        listOf("geoip.dat", "geosite.dat").forEach { name ->
+            val dest = File(assetDir, name)
+            if (dest.exists() && dest.length() > 0L) return@forEach
+            val copied = copyAssetCandidates(context, name, dest)
+            if (!copied) {
+                Log.w(TAG, "Geo asset missing: $name (packaged under assets/xray/ via fetch_cores.sh)")
+            }
+        }
+        return assetDir.absolutePath
+    }
+
+    private fun copyAssetCandidates(context: Context, name: String, dest: File): Boolean {
+        val candidates = listOf("xray/$name", name, "geo/$name")
+        for (path in candidates) {
+            val ok = runCatching {
+                context.assets.open(path).use { input ->
+                    dest.outputStream().use { output -> input.copyTo(output) }
+                }
+                true
+            }.getOrDefault(false)
+            if (ok && dest.exists() && dest.length() > 0L) {
+                Log.d(TAG, "Copied geo asset $path -> ${dest.absolutePath}")
+                return true
+            }
+        }
+        return false
+    }
+
+    internal fun applyProcessEnv(name: String, value: String): Boolean {
+        return runCatching {
+            val osClass = Class.forName("android.system.Os")
+            val setenv = osClass.getMethod(
+                "setenv",
+                String::class.java,
+                String::class.java,
+                java.lang.Boolean.TYPE
+            )
+            setenv.invoke(null, name, value, true)
+            true
+        }.getOrElse {
+            Log.w(TAG, "applyProcessEnv failed for $name: ${it.message}")
+            false
+        }
     }
 
     fun newCoreController(callback: XrayCallbackHandler): XrayCoreController {
@@ -289,6 +339,9 @@ class XrayCoreController(
         }
         env.addProperty(TUN_FD_ENV, value)
         env.addProperty(TUN_FD_ENV_ALT, value)
+        val assetDir = File(workDirPath, "assets").absolutePath
+        env.addProperty("XRAY_LOCATION_ASSET", assetDir)
+        env.addProperty("xray.location.asset", assetDir)
         Log.d(TAG, "Injected tun fd into config env value=$value")
     }
 
@@ -350,20 +403,7 @@ class XrayCoreController(
     }
 
     private fun applyProcessEnv(name: String, value: String): Boolean {
-        return runCatching {
-            val osClass = Class.forName("android.system.Os")
-            val setenv = osClass.getMethod(
-                "setenv",
-                String::class.java,
-                String::class.java,
-                java.lang.Boolean.TYPE
-            )
-            setenv.invoke(null, name, value, true)
-            true
-        }.getOrElse {
-            Log.w(TAG, "applyProcessEnv failed for $name: ${it.message}")
-            false
-        }
+        return XrayBridge.applyProcessEnv(name, value)
     }
 
     private fun fetchHttpBody(url: String): String? {
