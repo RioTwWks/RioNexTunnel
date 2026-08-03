@@ -53,3 +53,4 @@ windows/runner/resources/*
 !windows/runner/resources/.gitkeep
 macos/Runner/Resources/*
 !macos/Runner/Resources/.gitkeep
+android/app/src/main/jniLibs/**/libsingbox.so

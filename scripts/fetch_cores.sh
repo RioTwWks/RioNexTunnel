@@ -157,6 +157,12 @@ copy_if_exists "${DEST}/windows/x64/sing-box.exe" "${WINDOWS_RES}/sing-box.exe"
 copy_if_exists "${DEST}/macos/xray" "${MACOS_RES}/xray"
 copy_if_exists "${DEST}/macos/sing-box" "${MACOS_RES}/sing-box"
 
+# Android: ProcessBuilder runs nativeLibraryDir/libsingbox.so (requires useLegacyPackaging).
+# Official android-arm* archives ship a plain "sing-box" binary — rename for jniLibs packaging.
+ANDROID_JNI="${ROOT_DIR}/secure_vpn_client/android/app/src/main/jniLibs"
+copy_if_exists "${DEST}/android/arm64-v8a/sing-box" "${ANDROID_JNI}/arm64-v8a/libsingbox.so"
+copy_if_exists "${DEST}/android/armeabi-v7a/sing-box" "${ANDROID_JNI}/armeabi-v7a/libsingbox.so"
+
 GEO_BASE_URL="https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download"
 GEO_DEST="${DEST}/geo"
 mkdir -p "${GEO_DEST}"

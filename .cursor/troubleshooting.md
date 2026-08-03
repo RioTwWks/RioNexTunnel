@@ -10,6 +10,28 @@ Diagnostic patterns discovered during MVP integration. Check console stderr from
 4. Stale config dir? `ls ~/.local/share/v2ray_box/profiles/` — `active_config.json` must be a **file**, not directory
 5. Engine × profile matrix — test all four combinations
 
+## Connect fails — Android
+
+### UI does nothing after Connect (no Connected / no error)
+
+**Cause A:** App `AndroidManifest.xml` missing `VPNService` / `ProxyService` declarations (plugin manifest is empty; services must be in the app).
+
+**Fix:** See `docs/android_setup.md` — copy service blocks from the v2ray_box example manifest.
+
+**Cause B:** Android 13+ notification permission — plugin requested `POST_NOTIFICATIONS` but never resumed start after grant (`onActivityResult` ≠ `onRequestPermissionsResult`).
+
+**Fix:** Plugin now implements `RequestPermissionsResultListener` and continues `startService()` after grant.
+
+**Cause C:** Engine = singbox but `libsingbox.so` not packaged.
+
+**Symptom in logcat:** `sing-box binary not found at: .../lib/arm64/libsingbox.so`
+
+**Fix:** `./scripts/fetch_cores.sh` (installs jniLibs) + `useLegacyPackaging = true` in app `build.gradle.kts`. Or keep engine on **xray** (uses `libxray.aar`).
+
+### `Lost connection to device` right after connect
+
+Often an undeclared VPN service / crash while starting foreground VPN. Fix manifest first, full restart (`flutter run`), grant VPN + notifications.
+
 ## Error → cause → fix
 
 ### `Failed to write config file`

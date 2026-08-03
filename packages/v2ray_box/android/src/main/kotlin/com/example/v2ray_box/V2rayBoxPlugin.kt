@@ -71,7 +71,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
-    PluginRegistry.ActivityResultListener, ServiceConnection.Callback, CommandClient.Handler {
+    PluginRegistry.ActivityResultListener,
+    PluginRegistry.RequestPermissionsResultListener,
+    ServiceConnection.Callback, CommandClient.Handler {
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var statusChannel: EventChannel
@@ -82,6 +84,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private var credentialsPlugin: SecureVpnCredentialsPlugin? = null
 
     private var activity: Activity? = null
+    private var activityBinding: ActivityPluginBinding? = null
     private var connection: ServiceConnection? = null
     private var scope: CoroutineScope = GlobalScope
 
@@ -342,22 +345,32 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
+        activityBinding = binding
         binding.addActivityResultListener(this)
+        binding.addRequestPermissionsResultListener(this)
         connection = ServiceConnection(activity!!, this)
         connection?.reconnect()
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
+        activityBinding?.removeActivityResultListener(this)
+        activityBinding?.removeRequestPermissionsResultListener(this)
+        activityBinding = null
         activity = null
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
+        activityBinding = binding
         binding.addActivityResultListener(this)
+        binding.addRequestPermissionsResultListener(this)
     }
 
     override fun onDetachedFromActivity() {
         cancelActivePing("activity detached")
+        activityBinding?.removeActivityResultListener(this)
+        activityBinding?.removeRequestPermissionsResultListener(this)
+        activityBinding = null
         connection?.disconnect()
         connection = null
         activity = null
@@ -1196,15 +1209,26 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 onServiceAlert(Alert.RequestVPNPermission, null)
             }
             return true
-        } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_OK) {
-                startService()
-            } else {
-                onServiceAlert(Alert.RequestNotificationPermission, null)
-            }
-            return true
         }
         return false
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ): Boolean {
+        if (requestCode != NOTIFICATION_PERMISSION_REQUEST_CODE) {
+            return false
+        }
+        val granted = grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        if (granted || checkNotificationPermission()) {
+            startService()
+        } else {
+            onServiceAlert(Alert.RequestNotificationPermission, null)
+        }
+        return true
     }
 
     data class AppItem(

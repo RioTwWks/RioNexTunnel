@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -25,6 +26,8 @@ class VpnService {
   final CredentialService _credentialService;
   final String applicationId;
   final int socksPort;
+
+  static const _connectReadyTimeout = Duration(seconds: 25);
 
   bool _initialized = false;
   SessionCredentials? _sessionCredentials;
@@ -106,10 +109,7 @@ class VpnService {
       await disconnect();
     }
 
-    final permissionGranted = await _v2rayBox.checkVpnPermission();
-    if (!permissionGranted) {
-      await _v2rayBox.requestVpnPermission();
-    }
+    await _ensureVpnPermission();
 
     final rawConfig = await resolveProfileConfig(profile);
     final credentials = _credentialService.generate();
@@ -130,17 +130,28 @@ class VpnService {
     }
 
     await _setSessionCredentials(credentials);
-    final connected = await _v2rayBox.connectWithJson(
+    final started = await _v2rayBox.connectWithJson(
       secureConfig,
       name: profile.name,
       socksUsername: credentials.username,
       socksPassword: credentials.password,
       socksPort: socksPort,
     );
-    if (!connected) {
+    if (!started) {
       await _clearSessionCredentials();
       _credentialService.clear(credentials);
       throw StateError('Failed to start VPN');
+    }
+
+    try {
+      await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
+    } catch (error) {
+      await disconnect();
+      _credentialService.clear(credentials);
+      throw StateError(
+        'VPN did not reach Connected state. '
+        'Grant VPN and notification permissions, then try again. ($error)',
+      );
     }
 
     _sessionCredentials = credentials;
@@ -155,6 +166,37 @@ class VpnService {
       _sessionCredentials = null;
     }
     await _clearSessionCredentials();
+  }
+
+  Future<void> _ensureVpnPermission() async {
+    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+      return;
+    }
+    if (await _v2rayBox.checkVpnPermission()) {
+      return;
+    }
+    // Shows the system VPN consent dialog and returns immediately.
+    await _v2rayBox.requestVpnPermission();
+    final deadline = DateTime.now().add(const Duration(seconds: 60));
+    while (DateTime.now().isBefore(deadline)) {
+      if (await _v2rayBox.checkVpnPermission()) {
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+    }
+    throw StateError(
+      'VPN permission is required. Allow the VPN connection prompt and try again.',
+    );
+  }
+
+  Future<void> _waitForStatus(
+    VpnStatus target, {
+    required Duration timeout,
+  }) async {
+    await _v2rayBox
+        .watchStatus()
+        .firstWhere((status) => status == target)
+        .timeout(timeout);
   }
 
   Future<void> _configurePerAppProxy() async {
