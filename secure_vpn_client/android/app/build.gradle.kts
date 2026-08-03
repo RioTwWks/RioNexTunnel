@@ -42,3 +42,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Required at runtime: v2ray_box depends on LibXray via compileOnly.
+    implementation(files("libs/libxray.aar"))
+}

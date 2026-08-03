@@ -1,7 +1,6 @@
 package com.example.v2ray_box.xray
 
 import android.content.Context
-import android.util.Base64
 import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.JsonElement
@@ -9,7 +8,11 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import go.Seq
 import libXray.LibXray
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
@@ -21,8 +24,7 @@ interface XrayCallbackHandler {
 
 object XrayBridge {
     private const val TAG = "V2Ray/XrayBridge"
-    private const val TUN_FD_ENV = "xray.tun.fd"
-    private const val TUN_FD_ENV_ALT = "XRAY_TUN_FD"
+    private const val API_VERSION = 1
     private val gson = Gson()
     private val protectLogCount = AtomicLong(0L)
     @Volatile
@@ -48,8 +50,8 @@ object XrayBridge {
     }
 
     fun checkVersion(): String {
-        val response = decodeCallResponse(LibXray.xrayVersion())
-        return if (response.success) response.dataAsString() else ""
+        val response = invokeMethod("xrayVersion")
+        return if (response.success) response.dataFieldAsString("version") else ""
     }
 
     fun configureSocketProtection(
@@ -58,7 +60,7 @@ object XrayBridge {
     ) {
         if (protectFd == null) {
             dialerControllerRef = null
-            runCatching { LibXray.resetDns() }
+            runCatching { LibXray.resetDNS() }
             return
         }
         val controller = object : libXray.DialerController {
@@ -76,23 +78,22 @@ object XrayBridge {
         runCatching { LibXray.registerListenerController(controller) }
             .onFailure { Log.w(TAG, "registerListenerController failed: ${it.message}") }
         if (!dnsServer.isNullOrBlank()) {
-            runCatching { LibXray.initDns(controller, dnsServer) }
-                .onFailure { Log.w(TAG, "initDns failed: ${it.message}") }
+            runCatching { LibXray.setDNS(controller, dnsServer) }
+                .onFailure { Log.w(TAG, "setDNS failed: ${it.message}") }
         }
     }
 
     fun parseFirstOutboundFromShareLink(link: String): Map<String, Any>? {
         return runCatching {
-            val response = decodeCallResponse(
-                LibXray.convertShareLinksToXrayJson(link.toBase64())
+            val response = invokeMethod(
+                "convertShareLinksToXrayJson",
+                JsonObject().apply { addProperty("text", link) }
             )
             if (!response.success) {
                 Log.w(TAG, "parseFirstOutboundFromShareLink failed: ${response.error}")
                 return null
             }
-            val configJson = response.dataAsString()
-            if (configJson.isBlank()) return null
-            val root = JsonParser.parseString(configJson).asJsonObject
+            val root = response.dataAsJsonObject() ?: return null
             val outbounds = root.getAsJsonArray("outbounds") ?: return null
             if (outbounds.size() == 0 || !outbounds[0].isJsonObject) return null
             val normalizedAny = normalizeNumericTypes(
@@ -123,29 +124,24 @@ object XrayBridge {
         if (workDirPath.isBlank()) return -1L
 
         val timeoutSec = (timeoutMs.coerceAtLeast(1000) + 999) / 1000
-        invokeCoreDialMeasureDelay(configJson, testUrl, timeoutSec)?.let { return it }
-
         val workDir = File(workDirPath).apply { mkdirs() }
         val configFile = runCatching {
             File.createTempFile("ping_", ".json", workDir)
         }.getOrElse {
-            // Fallback for environments where temp file creation fails unexpectedly.
             File(workDir, "ping_${System.nanoTime()}.json")
         }
         return try {
             configFile.writeText(configJson)
-            val request = JsonObject().apply {
-                addProperty("datDir", workDirPath)
+            val payload = JsonObject().apply {
                 addProperty("configPath", configFile.absolutePath)
                 addProperty("timeout", timeoutSec)
                 addProperty("url", testUrl)
                 // Ensure delay is measured through the tested outbound, not direct network.
                 addProperty("proxy", proxyUrl)
             }
-            val response = decodeCallResponse(
-                LibXray.ping(request.toString().toBase64())
-            )
-            if (response.success) response.dataAsLong() else -1L
+            val response = invokeMethod("ping", payload)
+            if (!response.success) return -1L
+            response.dataFieldAsLong("delay")
         } catch (e: Exception) {
             Log.w(TAG, "measureOutboundDelay failed: ${e.message}")
             -1L
@@ -154,59 +150,23 @@ object XrayBridge {
         }
     }
 
-    private fun invokeCoreDialMeasureDelay(
-        configJson: String,
-        testUrl: String,
-        timeoutSec: Int
-    ): Long? {
-        val candidates = LibXray::class.java.methods.filter { it.name == "measureOutboundDelay" }
-        if (candidates.isEmpty()) return null
-
-        candidates.forEach { method ->
-            val paramTypes = method.parameterTypes
-            val args: Array<Any> = when {
-                paramTypes.size == 3 &&
-                    paramTypes[0] == String::class.java &&
-                    paramTypes[1] == String::class.java &&
-                    (paramTypes[2] == java.lang.Long.TYPE || paramTypes[2] == java.lang.Long::class.java) ->
-                    arrayOf(configJson, testUrl, timeoutSec.toLong())
-
-                paramTypes.size == 3 &&
-                    paramTypes[0] == String::class.java &&
-                    paramTypes[1] == String::class.java &&
-                    (paramTypes[2] == java.lang.Integer.TYPE || paramTypes[2] == java.lang.Integer::class.java) ->
-                    arrayOf(configJson, testUrl, timeoutSec)
-
-                paramTypes.size == 2 &&
-                    paramTypes[0] == String::class.java &&
-                    paramTypes[1] == String::class.java ->
-                    arrayOf(configJson, testUrl)
-
-                else -> return@forEach
-            }
-
-            val raw = runCatching { method.invoke(null, *args) }.getOrElse {
-                Log.w(TAG, "measureOutboundDelay invoke failed: ${it.message}")
-                return@forEach
-            } ?: return@forEach
-
-            when (raw) {
-                is Number -> return raw.toLong()
-                is String -> {
-                    val response = decodeCallResponse(raw)
-                    if (!response.success) {
-                        Log.w(TAG, "measureOutboundDelay response error: ${response.error}")
-                        return -1L
-                    }
-                    return response.dataAsLong()
-                }
-                else -> {
-                    Log.w(TAG, "measureOutboundDelay returned unsupported type: ${raw::class.java.name}")
-                }
+    internal fun invokeMethod(method: String, payload: JsonObject? = null): CallResponse {
+        val request = JsonObject().apply {
+            addProperty("apiVersion", API_VERSION)
+            addProperty("method", method)
+            if (payload != null) {
+                add("payload", payload)
             }
         }
+        val raw = runCatching { LibXray.invoke(request.toString()) }.getOrElse { e ->
+            return CallResponse(success = false, data = null, error = e.message ?: "invoke failed")
+        }
+        return decodeInvokeResponse(raw)
+    }
 
-        return null
+    internal fun getXrayRunning(): Boolean {
+        val response = invokeMethod("getXrayState")
+        return response.success && response.dataFieldAsBoolean("running")
     }
 }
 
@@ -218,7 +178,6 @@ class XrayCoreController(
         private const val TAG = "V2Ray/XrayCoreController"
         private const val TUN_FD_ENV = "xray.tun.fd"
         private const val TUN_FD_ENV_ALT = "XRAY_TUN_FD"
-        private const val DEFAULT_METRICS_LISTEN = "127.0.0.1:49227"
         private val coreLifecycleLock = Any()
     }
 
@@ -231,36 +190,36 @@ class XrayCoreController(
     private val lastStats = ConcurrentHashMap<String, AtomicLong>()
 
     val isRunning: Boolean
-        get() = running && runCatching { LibXray.getXrayState() }.getOrDefault(false)
+        get() = running && XrayBridge.getXrayRunning()
 
     fun startLoop(configContent: String, _tunFd: Int) {
         callback.startup()
         try {
             synchronized(coreLifecycleLock) {
-                if (runCatching { LibXray.getXrayState() }.getOrDefault(false)) {
-                    runCatching { decodeCallResponse(LibXray.stopXray()) }
+                if (XrayBridge.getXrayRunning()) {
+                    runCatching { XrayBridge.invokeMethod("stopXray") }
                 }
                 val tunFd = _tunFd.takeIf { it > 0 }
-                val goTunApplied = setTunFdInGoRuntime(tunFd)
-                if (!goTunApplied) {
-                    Log.w(TAG, "libXray SetTunFd API not available; falling back to process env")
-                }
+                // New libXray: SetTunFd is gone — inject into config root env.
                 setTunFdEnv(tunFd)
 
-                val sanitizedConfig = sanitizeConfig(configContent)
-                val request = buildRunFromJsonRequest(workDirPath, sanitizedConfig)
-                val response = decodeCallResponse(LibXray.runXrayFromJSON(request))
+                val sanitizedConfig = sanitizeConfig(configContent, tunFd)
+                val payload = JsonObject().apply {
+                    addProperty("configJSON", sanitizedConfig)
+                }
+                val response = XrayBridge.invokeMethod("runXrayFromJson", payload)
                 if (!response.success) {
-                    val message = response.error ?: "runXrayFromJSON failed"
+                    val message = response.error ?: "runXrayFromJson failed"
                     callback.onEmitStatus(1, message)
                     throw IllegalStateException(message)
                 }
-                running = runCatching { LibXray.getXrayState() }.getOrDefault(true)
+                // If state probe fails after a successful start, keep local running=true.
+                val state = XrayBridge.invokeMethod("getXrayState")
+                running = if (state.success) state.dataFieldAsBoolean("running") else true
             }
             callback.onEmitStatus(0, "core started")
         } catch (e: Exception) {
             running = false
-            setTunFdInGoRuntime(null)
             setTunFdEnv(null)
             callback.onEmitStatus(1, e.message)
             throw e
@@ -270,13 +229,12 @@ class XrayCoreController(
     fun stopLoop() {
         try {
             synchronized(coreLifecycleLock) {
-                val response = decodeCallResponse(LibXray.stopXray())
+                val response = XrayBridge.invokeMethod("stopXray")
                 if (!response.success) {
                     Log.w(TAG, "stopXray returned error: ${response.error}")
                 }
             }
         } finally {
-            setTunFdInGoRuntime(null)
             setTunFdEnv(null)
             running = false
             lastStats.clear()
@@ -294,10 +252,8 @@ class XrayCoreController(
                 "http://$metricsListen/debug/vars"
             }
 
-            val response = decodeCallResponse(LibXray.queryStats(metricsUrl.toBase64()))
-            if (!response.success) return 0L
-
-            val body = response.dataAsString()
+            // libXray no longer exposes queryStats — fetch metrics HTTP endpoint directly.
+            val body = fetchHttpBody(metricsUrl) ?: return 0L
             if (body.isBlank()) return 0L
             val total = extractTrafficTotal(body, tag, direction)
             val key = "$tag:$direction"
@@ -309,10 +265,11 @@ class XrayCoreController(
         }
     }
 
-    private fun sanitizeConfig(rawConfig: String): String {
+    private fun sanitizeConfig(rawConfig: String, tunFd: Int?): String {
         return try {
             val root = JsonParser.parseString(rawConfig).asJsonObject
             metricsListen = extractMetricsListen(root)
+            injectTunFdEnv(root, tunFd)
             // Avoid injecting metrics/stats blocks automatically.
             // Some libXray builds panic on repeated core starts when stats are re-registered.
             root.toString()
@@ -321,6 +278,18 @@ class XrayCoreController(
             Log.w(TAG, "sanitizeConfig failed, using original config: ${e.message}")
             rawConfig
         }
+    }
+
+    private fun injectTunFdEnv(root: JsonObject, tunFd: Int?) {
+        val value = (tunFd ?: 0).coerceAtLeast(0).toString()
+        val env = if (root.has("env") && root.get("env").isJsonObject) {
+            root.getAsJsonObject("env")
+        } else {
+            JsonObject().also { root.add("env", it) }
+        }
+        env.addProperty(TUN_FD_ENV, value)
+        env.addProperty(TUN_FD_ENV_ALT, value)
+        Log.d(TAG, "Injected tun fd into config env value=$value")
     }
 
     private fun extractMetricsListen(root: JsonObject): String {
@@ -370,7 +339,6 @@ class XrayCoreController(
         val appliedPrimary = applyProcessEnv(TUN_FD_ENV, value)
         val appliedAlt = applyProcessEnv(TUN_FD_ENV_ALT, value)
         if (!appliedPrimary && !appliedAlt) {
-            // Fallback path when direct process env update is unavailable.
             runCatching {
                 System.setProperty(TUN_FD_ENV, value)
                 System.setProperty(TUN_FD_ENV_ALT, value)
@@ -379,38 +347,6 @@ class XrayCoreController(
             }
         }
         Log.d(TAG, "Configured tun fd env value=$value")
-    }
-
-    private fun setTunFdInGoRuntime(tunFd: Int?): Boolean {
-        val value = (tunFd ?: 0).coerceAtLeast(0)
-        val methods = LibXray::class.java.methods.filter { method ->
-            (method.name == "setTunFd" || method.name == "setAndroidTunFd") &&
-                method.parameterTypes.size == 1
-        }
-        if (methods.isEmpty()) return false
-
-        var applied = false
-        methods.forEach { method ->
-            val parameterType = method.parameterTypes[0]
-            val arg: Any = when (parameterType) {
-                java.lang.Integer.TYPE, java.lang.Integer::class.java -> value
-                java.lang.Long.TYPE, java.lang.Long::class.java -> value.toLong()
-                java.lang.String::class.java -> value.toString()
-                else -> return@forEach
-            }
-
-            runCatching {
-                method.invoke(null, arg)
-                applied = true
-            }.onFailure {
-                Log.w(TAG, "Failed invoking ${method.name}(${parameterType.simpleName}): ${it.message}")
-            }
-        }
-
-        if (applied) {
-            Log.d(TAG, "Configured tun fd via libXray runtime API value=$value")
-        }
-        return applied
     }
 
     private fun applyProcessEnv(name: String, value: String): Boolean {
@@ -430,23 +366,25 @@ class XrayCoreController(
         }
     }
 
-    private fun buildRunFromJsonRequest(datDir: String, configJson: String): String {
+    private fun fetchHttpBody(url: String): String? {
+        var connection: HttpURLConnection? = null
         return try {
-            val method = LibXray::class.java.getMethod(
-                "newXrayRunFromJSONRequest",
-                String::class.java,
-                String::class.java,
-                String::class.java
-            )
-            val mphCachePath = File(datDir, "xray.mph").absolutePath
-            method.invoke(null, datDir, mphCachePath, configJson) as String
-        } catch (_: NoSuchMethodException) {
-            val legacyMethod = LibXray::class.java.getMethod(
-                "newXrayRunFromJSONRequest",
-                String::class.java,
-                String::class.java
-            )
-            legacyMethod.invoke(null, datDir, configJson) as String
+            connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 1500
+                readTimeout = 1500
+                requestMethod = "GET"
+                useCaches = false
+            }
+            val code = connection.responseCode
+            if (code !in 200..299) return null
+            BufferedReader(InputStreamReader(connection.inputStream, Charsets.UTF_8)).use { reader ->
+                reader.readText()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "fetchHttpBody failed: ${e.message}")
+            null
+        } finally {
+            connection?.disconnect()
         }
     }
 }
@@ -482,49 +420,52 @@ private fun normalizeNumericTypes(value: Any?): Any? {
     }
 }
 
-private data class CallResponse(
+internal data class CallResponse(
     val success: Boolean,
     val data: JsonElement?,
     val error: String?
 ) {
-    fun dataAsString(): String {
-        val element = data ?: return ""
+    fun dataAsJsonObject(): JsonObject? {
+        val element = data ?: return null
         return when {
-            element.isJsonPrimitive -> element.asJsonPrimitive.asString
-            else -> element.toString()
+            element.isJsonObject -> element.asJsonObject
+            element.isJsonPrimitive && element.asJsonPrimitive.isString -> {
+                runCatching { JsonParser.parseString(element.asString).asJsonObject }.getOrNull()
+            }
+            else -> null
         }
     }
 
-    fun dataAsLong(): Long {
-        val element = data ?: return -1L
-        return runCatching {
-            when {
-                element.isJsonPrimitive -> element.asJsonPrimitive.asLong
-                else -> element.toString().toLong()
-            }
-        }.getOrDefault(-1L)
+    fun dataFieldAsString(name: String): String {
+        val obj = dataAsJsonObject() ?: return ""
+        return runCatching { obj.get(name)?.asString }.getOrDefault("") ?: ""
+    }
+
+    fun dataFieldAsBoolean(name: String): Boolean {
+        val obj = dataAsJsonObject() ?: return false
+        return runCatching { obj.get(name)?.asBoolean }.getOrDefault(false) ?: false
+    }
+
+    fun dataFieldAsLong(name: String): Long {
+        val obj = dataAsJsonObject() ?: return -1L
+        return runCatching { obj.get(name)?.asLong }.getOrDefault(-1L) ?: -1L
     }
 }
 
-private fun decodeCallResponse(encoded: String): CallResponse {
-    if (encoded.isBlank()) {
+private fun decodeInvokeResponse(raw: String): CallResponse {
+    if (raw.isBlank()) {
         return CallResponse(success = false, data = null, error = "empty response")
     }
     return try {
-        val decoded = String(Base64.decode(encoded, Base64.DEFAULT), Charsets.UTF_8)
-        val obj = JsonParser.parseString(decoded).asJsonObject
+        val obj = JsonParser.parseString(raw).asJsonObject
         CallResponse(
             success = obj.get("success")?.asBoolean ?: false,
             data = obj.get("data"),
-            error = obj.get("error")?.asString
+            error = obj.get("error")?.takeIf { !it.isJsonNull }?.asString
         )
     } catch (e: Exception) {
         CallResponse(success = false, data = null, error = e.message ?: "decode failed")
     }
-}
-
-private fun String.toBase64(): String {
-    return Base64.encodeToString(this.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
 }
 
 private fun JsonElement.safeAsLong(): Long? {
