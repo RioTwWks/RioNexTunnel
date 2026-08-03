@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Secure VPN Proxy Auth",
+  "version": "1.0.0",
+  "description": "Auto-fills local proxy authentication for Secure VPN Client sessions.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlqE9h0+9PAbYU1SBW5dPERdsxz9qb7yGKO6tw+ZAFlCeCBNJJCm3hRpFsw7kLiAop2O6AogNU3xJ41mTfJ5VCnZoqFZuDMrTZHJnTmlSByByrYzfi/9FMxLAFCLi93M7C3L3u7tYAD2rlqlh2UfDhUFtzNW4CtHZD5SzIwnRe1v2dV1mMAyLat9px08fuXT0LzPuL55nIF4ej7l8bSk6BA2SzH/zkJDDcrgklpYTS4b7HLvDUzBB87DCGWNVBVRgRcCLoWlucJeZJlaizcNKfLgjHMVtm+kmVlPVDOwPqVHnJtSMxRZ5lmwmtyX11Ykz/RdzqJn2OdrKgAZvHl184wIDAQAB",
+  "permissions": [
+    "nativeMessaging",
+    "storage",
+    "webRequest",
+    "webRequestAuthProvider"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Secure VPN Proxy Auth"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "secure-vpn-proxy-auth@secure-vpn.local",
+      "strict_min_version": "109.0"
+    }
+  }
+}

@@ -24,6 +24,14 @@
 - [x] proxyOnly inbound sanitization + sing-box DNS migration
 - [x] Xray routing `proxy` tag rewrite
 - [x] **Verified:** xray/singbox × subscription/config (4 combinations)
+- [x] GNOME system proxy via GSettings (`system_proxy.cc`)
+- [x] HTTP inbound on `socksPort + 1` for desktop (`proxyOnly` in `ConfigParser`)
+- [x] Session credentials passed to native plugin (`connectWithJson` → `SystemProxy::Enable`)
+- [x] Orphan process cleanup on ports 1080/1081
+- [x] UI: proxy credentials in Settings when Connected
+- [x] Browser helper: extension + native messaging host (auto proxy-auth)
+- [x] UI: proxy credentials on Home + Copy both + RU/EN strings
+- [x] Settings: Browser helper status card
 
 ## Security checklist
 
@@ -41,17 +49,17 @@
 - [ ] iOS: Network Extension + connect smoke test
 - [ ] Windows: implement desktop plugin (mirror Linux `desktop_core.cc`)
 - [ ] macOS: verify proxy mode connect with bundled cores
-- [ ] System proxy integration on desktop (`setSystemProxy: true`)
+- [ ] Windows/macOS: `SystemProxy` integration (Linux-only today)
 
 ## Backlog — UX & profiles
 
 - [ ] Server picker when subscription returns multiple v2rayNG entries (currently first real entry)
 - [ ] Profile import from clipboard / QR
 - [ ] Connection stats + latency test in UI
-- [ ] Localized strings (RU/EN)
+- [ ] Full app localization (RU/EN) beyond proxy/browser helper strings
+- [ ] Publish browser extension to Chrome Web Store / Firefox AMO
 
 ## Backlog — security & hardening
-
 - [ ] Auto-run `security_probe.sh` in CI when Linux integration test connects
 - [ ] Fail closed if geo assets missing and config contains geosite/geoip rules
 - [ ] Audit sing-box `mixed` / deprecated DNS paths on mobile VPN mode
@@ -61,7 +69,7 @@
 
 - [ ] CI: `flutter analyze`, `flutter test` on push
 - [ ] Reduce `packages/v2ray_box/example/` from fork if not needed (size)
-- [ ] `docs/linux_setup.md` in `docs/` (mirror android/ios)
+- [x] `docs/linux_setup.md` in `docs/` (mirror android/ios)
 - [ ] Publish fork separately or document patch set vs upstream
 
 ---

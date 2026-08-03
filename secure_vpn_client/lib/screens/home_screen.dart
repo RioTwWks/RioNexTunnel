@@ -4,6 +4,7 @@ import 'package:v2ray_box/v2ray_box.dart';
 
 import '../providers/vpn_providers.dart';
 import '../widgets/connection_button.dart';
+import '../widgets/proxy_credentials_card.dart';
 import '../widgets/status_indicator.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -63,6 +64,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final stats = ref.watch(vpnStatsProvider).value;
     final engine = ref.watch(engineProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
+    final sessionCredentials = ref.watch(sessionCredentialsProvider);
+    final showProxyCard = status == VpnStatus.started &&
+        ProxyCredentialsCard.isDesktopProxy &&
+        sessionCredentials != null;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -100,6 +105,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             onConnect: _connect,
             onDisconnect: _disconnect,
           ),
+          if (showProxyCard) ...[
+            const SizedBox(height: 16),
+            ProxyCredentialsCard(
+              credentials: sessionCredentials,
+              showExtensionHint: true,
+              compact: true,
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(

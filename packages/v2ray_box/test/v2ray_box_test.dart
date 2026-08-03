@@ -237,6 +237,9 @@ class MockV2rayBoxPlatform
 
   @override
   Future<String> getPingTestUrl() async => _pingTestUrl;
+
+  @override
+  Future<Map<String, bool>> getBrowserHelperStatus() async => {};
 }
 
 void main() {

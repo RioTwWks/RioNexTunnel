@@ -15,6 +15,7 @@ sequenceDiagram
     VS->>CP: injectSecureSocksInbound(credentials)
     VS->>VB: connectWithJson(secureConfig)
     VB->>VB: write active_config.json
+    VB->>VB: SystemProxy::Enable (Linux GNOME)
     VB->>Core: spawn subprocess
     Core-->>VB: stderr on failure
     VB-->>UI: status events
@@ -31,7 +32,7 @@ sequenceDiagram
 ### Security layer (Dart)
 
 1. **`CredentialService`** — CSPRNG username/password per session (`crypto_utils.dart`).
-2. **`ConfigParser.injectSecureSocksInbound()`** — removes unsafe SOCKS inbounds, adds authenticated SOCKS on `127.0.0.1:1080`, validates config.
+2. **`ConfigParser.injectSecureSocksInbound()`** — removes unsafe SOCKS inbounds, adds authenticated SOCKS on `127.0.0.1:1080`; when `proxyOnly: true` (desktop), also adds HTTP inbound on `socksPort + 1` (default `1081`) with the same session credentials for GNOME system proxy.
 3. **`ConfigParser` subscription handling** — User-Agent selection, decoy skipping, v2rayNG JSON array parsing, sing-box DNS migration, proxy-only inbound stripping on desktop.
 4. **`LinkConfigBuilder`** — builds minimal xray/sing-box JSON from share links (`vless://`, `vmess://`, `trojan://`, `ss://`).
 
@@ -54,9 +55,13 @@ v2ray_box:
 
 | File | Role |
 |------|------|
-| `linux/v2ray_box_plugin.cc` | Method channel `v2ray_box`, credentials channel `secure_vpn/credentials` |
-| `linux/desktop_core.cc` | FindBinary, Start/Stop subprocess, geo asset copy, stderr capture |
+| `linux/v2ray_box_plugin.cc` | Method channel `v2ray_box`, credentials channel `secure_vpn/credentials`; calls `SystemProxy::Enable`/`Disable` on start/stop |
+| `linux/desktop_core.cc` | FindBinary, Start/Stop subprocess, geo asset copy, stderr capture, orphan process cleanup on ports 1080/1081 |
 | `linux/desktop_core.h` | Shared helpers (paths, WriteTextFile, EnsureXrayGeoAssets) |
+| `linux/system_proxy.cc` | GNOME GSettings backup/restore; sets HTTP proxy `127.0.0.1:1081` with session auth |
+| `linux/native_messaging.cc` | Installs native host + browser manifests; publishes session creds for extension |
+| `linux/native_messaging_host.cc` | Standalone stdio host (`secure_vpn_native_host`) for Chrome/Firefox extension |
+| `extensions/secure-vpn-proxy-auth/` | Browser extension: `onAuthRequired` + native messaging |
 
 **Runtime paths:**
 
@@ -92,12 +97,19 @@ Default Dart `http` User-Agent (`Dart/x.x (dart:io)`) may return full sing-box J
 
 ## Security model
 
+Desktop proxy mode (Linux):
+
 ```
-[Apps on device] --X--> 127.0.0.1:1080 (auth required)
-                              ^
-                              | SOCKS (session creds)
-[Flutter app] --> [xray/sing-box] --> [remote proxy outbound]
+[Browser] --system proxy--> 127.0.0.1:1081 HTTP (auth required)
+     ^                           ^
+     |                           |
+[Extension] <--native messaging-- [Flutter app] --> session.json + GSettings
+[Other apps] --> 127.0.0.1:1080 SOCKS (auth required, same session creds)
+                              |
+                    [xray/sing-box] --> remote outbound
 ```
+
+**Auth is mandatory by design** — per-session random credentials on `127.0.0.1` only; wiped on disconnect. Chromium ignores GSettings proxy passwords; the **browser extension** auto-fills `407` challenges via native messaging (no unauthenticated forwarder).
 
 Vulnerable pattern we avoid:
 

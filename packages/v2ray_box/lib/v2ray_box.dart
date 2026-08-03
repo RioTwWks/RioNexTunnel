@@ -359,4 +359,9 @@ class V2rayBox {
   Future<String> getPingTestUrl() {
     return V2rayBoxPlatform.instance.getPingTestUrl();
   }
+
+  /// Linux desktop: browser helper (native host + extension) status flags.
+  Future<Map<String, bool>> getBrowserHelperStatus() {
+    return V2rayBoxPlatform.instance.getBrowserHelperStatus();
+  }
 }

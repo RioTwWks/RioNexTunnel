@@ -10,6 +10,7 @@
 #include <string>
 
 #include "desktop_core.h"
+#include "native_messaging.h"
 #include "system_proxy.h"
 #include "v2ray_box_plugin_private.h"
 
@@ -184,6 +185,8 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
       if (!xray_binary.empty()) {
         v2ray_box::EnsureXrayGeoAssets(work_dir, xray_binary);
       }
+      v2ray_box::NativeMessaging::InstallHost("");
+      v2ray_box::NativeMessaging::InstallManifests();
       response = make_success_string("");
     }
   } else if (strcmp(method, "change_config_options") == 0) {
@@ -281,8 +284,11 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
             self->is_running = TRUE;
             if (v2ray_box::ConfigOptionsSetSystemProxy(g_config_options) &&
                 !g_socks_user.empty()) {
-              v2ray_box::SystemProxy::Enable("127.0.0.1", g_socks_port + 1,
+              const int http_port = g_socks_port + 1;
+              v2ray_box::SystemProxy::Enable("127.0.0.1", http_port,
                                              g_socks_user, g_socks_pass);
+              v2ray_box::NativeMessaging::PublishCredentials(
+                  "127.0.0.1", http_port, g_socks_user, g_socks_pass);
             }
             emit_status(self, "Started");
             response = make_success_bool(true);
@@ -295,8 +301,18 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
         }
       }
     }
+  } else if (strcmp(method, "get_browser_helper_status") == 0) {
+    const auto status = v2ray_box::NativeMessaging::GetBrowserHelperStatus();
+    g_autoptr(FlValue) map = fl_value_new_map();
+    for (const auto& entry : status) {
+      fl_value_set_string_take(
+          map, entry.first.c_str(),
+          fl_value_new_bool(entry.second ? TRUE : FALSE));
+    }
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
   } else if (strcmp(method, "stop") == 0) {
     emit_status(self, "Stopping");
+    v2ray_box::NativeMessaging::ClearCredentials();
     v2ray_box::SystemProxy::Disable();
     v2ray_box::DesktopCore::Instance().Stop();
     self->is_running = FALSE;
@@ -363,6 +379,7 @@ static void v2ray_box_plugin_dispose(GObject* object) {
   g_clear_object(&self->alerts_channel);
   g_clear_object(&self->ping_channel);
   g_clear_object(&self->logs_channel);
+  v2ray_box::NativeMessaging::ClearCredentials();
   v2ray_box::SystemProxy::Disable();
   v2ray_box::DesktopCore::Instance().Stop();
   G_OBJECT_CLASS(v2ray_box_plugin_parent_class)->dispose(object);

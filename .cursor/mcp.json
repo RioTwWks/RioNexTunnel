@@ -2,7 +2,7 @@
     "mcpServers": {
         // --- Основной MCP-сервер для Flutter/Dart (должен идти первым)---
         "dart-mcp-server": {
-            "command": "dart",
+            "command": "/home/ivan/development/flutter/bin/dart",
             "args": ["mcp-server", "--force-roots-fallback"]
         },
         // --- MCP-сервер для инспекции UI с Marionette ---
@@ -11,7 +11,7 @@
             "command": "/bin/bash",
             "args": [
                 "-c",
-                "cd /home/ivan/Secure-Cross-Platform-VPN-Client/secure_vpn_client && exec /snap/bin/flutter pub run marionette_mcp"
+                "cd /home/ivan/Secure-Cross-Platform-VPN-Client/secure_vpn_client && exec /home/ivan/development/flutter/bin/flutter pub run marionette_mcp"
             ]
         },
         // --- MCP-сервер для статического анализа с Semgrep ---

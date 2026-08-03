@@ -31,7 +31,7 @@ Secure-Cross-Platform-VPN-Client/
 
 1. **SOCKS5 must always require auth** on `127.0.0.1` only — never `0.0.0.0`, never port `7890` unauthenticated.
 2. **Credentials are per-session** — generate on connect, wipe on disconnect; never log or persist.
-3. **Desktop = proxy mode**, not full TUN VPN (Linux/Windows/macOS use `VpnMode.proxy`).
+3. **Desktop = proxy mode**, not full TUN VPN (Linux/Windows/macOS use `VpnMode.proxy`). On Linux, **Connected** routes browser traffic via authenticated HTTP proxy (`127.0.0.1:1081`). Install **browser extension** (`extensions/secure-vpn-proxy-auth/`) for auto proxy-auth; fallback: copy creds from Home/Settings.
 4. **Do not commit core binaries** — they live in `*/runner/resources/` and are gitignored; use `scripts/fetch_cores.sh`.
 5. **Edit the local fork** at `packages/v2ray_box/`, not pub.dev cache / plugin symlinks under `build/`.
 
@@ -72,7 +72,7 @@ flutter build linux --debug
 
 | Platform | Mode | Status |
 |----------|------|--------|
-| Linux | Proxy | **Verified** — all 4 connect combinations |
+| Linux | Proxy | **Verified** — all 4 connect combinations; GNOME system proxy + HTTP 1081 inbound |
 | Android | VPN | Scaffold + fork patches; needs device test |
 | iOS | VPN | Scaffold + docs; needs device test |
 | Windows | Proxy | Plugin stub; cores via CMake install |

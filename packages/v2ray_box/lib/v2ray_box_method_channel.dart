@@ -492,4 +492,17 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
     );
     return result ?? 'https://www.gstatic.com/generate_204';
   }
+
+  @override
+  Future<Map<String, bool>> getBrowserHelperStatus() async {
+    final result = await methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+      'get_browser_helper_status',
+    );
+    if (result == null) {
+      return {};
+    }
+    return result.map(
+      (key, value) => MapEntry(key.toString(), value == true),
+    );
+  }
 }

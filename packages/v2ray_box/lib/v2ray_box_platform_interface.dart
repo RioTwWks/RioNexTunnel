@@ -292,4 +292,11 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
   Future<String> getPingTestUrl() {
     throw UnimplementedError('getPingTestUrl() has not been implemented.');
   }
+
+  /// Linux desktop: native messaging host + browser extension readiness.
+  Future<Map<String, bool>> getBrowserHelperStatus() {
+    throw UnimplementedError(
+      'getBrowserHelperStatus() has not been implemented.',
+    );
+  }
 }

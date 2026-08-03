@@ -2,13 +2,13 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/vpn_engine.dart';
 import '../providers/vpn_providers.dart';
-import '../utils/config_parser.dart';
+import '../widgets/browser_helper_card.dart';
+import '../widgets/proxy_credentials_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -45,16 +45,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await _loadCoreInfo();
   }
 
-  Future<void> _copyToClipboard(String label, String value) async {
-    await Clipboard.setData(ClipboardData(text: value));
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label copied')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final engine = ref.watch(engineProvider);
@@ -62,7 +52,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final desktopProxy = !kIsWeb &&
         (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
-    final httpPort = ConfigParser.defaultSocksPort + 1;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -96,6 +85,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 16),
         Text('Core info: $_coreVersion'),
         const SizedBox(height: 16),
+        if (desktopProxy) ...[
+          const BrowserHelperCard(),
+          const SizedBox(height: 16),
+        ],
         Text(
           'Security',
           style: Theme.of(context).textTheme.titleMedium,
@@ -115,44 +108,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             desktopProxy &&
             sessionCredentials != null) ...[
           const SizedBox(height: 16),
-          Text(
-            'System proxy (this session)',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'If the browser asks for proxy login, use these values. '
-            'They are not your VPN server account — only for local proxy '
-            '127.0.0.1:$httpPort.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Proxy username'),
-            subtitle: Text(sessionCredentials.username),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy),
-              tooltip: 'Copy username',
-              onPressed: () => _copyToClipboard(
-                'Username',
-                sessionCredentials.username,
-              ),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.key_outlined),
-            title: const Text('Proxy password'),
-            subtitle: Text('${sessionCredentials.password.length} characters'),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy),
-              tooltip: 'Copy password',
-              onPressed: () => _copyToClipboard(
-                'Password',
-                sessionCredentials.password,
-              ),
-            ),
-          ),
+          ProxyCredentialsCard(credentials: sessionCredentials),
         ],
       ],
     );

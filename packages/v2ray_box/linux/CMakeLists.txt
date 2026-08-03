@@ -14,9 +14,22 @@ set(PLUGIN_NAME "v2ray_box_plugin")
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "desktop_core.cc"
+  "native_messaging.cc"
   "system_proxy.cc"
   "v2ray_box_plugin.cc"
 )
+
+add_executable(secure_vpn_native_host
+  "native_messaging_host.cc"
+  "desktop_core.cc"
+  "native_messaging.cc"
+)
+apply_standard_settings(secure_vpn_native_host)
+target_include_directories(secure_vpn_native_host PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+set_target_properties(secure_vpn_native_host PROPERTIES
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+add_custom_command(TARGET secure_vpn_native_host POST_BUILD
+  COMMAND chmod 755 $<TARGET_FILE:secure_vpn_native_host>)
 
 # Define the plugin library target. Its name must not be changed (see comment
 # on PLUGIN_NAME above).
@@ -48,7 +61,7 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE gio-2.0)
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
 set(v2ray_box_bundled_libraries
-  ""
+  "${CMAKE_CURRENT_BINARY_DIR}/secure_vpn_native_host"
   PARENT_SCOPE
 )
 
