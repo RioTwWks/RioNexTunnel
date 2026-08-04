@@ -1,12 +1,10 @@
 # Настройка iOS
 
-[English version](ios_setup.md)
+This page moved to the bilingual documentation.
 
-1. Откройте `secure_vpn_client/ios/Runner.xcworkspace` в Xcode.
-2. Добавьте возможность **Network Extensions** и включите **Packet Tunnel**.
-3. Добавьте entitlement `com.apple.developer.networking.vpn.api` в цель Runner и tunnel extension.
-4. Настройте действующую команду разработки и provisioning profile.
-5. Скопируйте бинарники ядер в пути, ожидаемые `v2ray_box` (см. README плагина), или используйте bundled xcframeworks.
-6. Запустите `flutter run -d ios` из `secure_vpn_client/` на macOS.
+| Language | Link |
+|----------|------|
+| English | [en/ios_setup.md](en/ios_setup.md) |
+| Русский | [ru/ios_setup.md](ru/ios_setup.md) |
 
-Для тестирования VPN на устройстве iOS требуется платная учётная запись Apple Developer.
+Index: [docs/README.md](README.md)
