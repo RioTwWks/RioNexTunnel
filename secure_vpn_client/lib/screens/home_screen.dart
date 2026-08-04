@@ -33,9 +33,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     try {
-      final connectedProfile = await ref
-          .read(vpnServiceProvider)
-          .connect(profile);
+      final result = await ref.read(vpnServiceProvider).connect(profile);
+      ref.read(engineProvider.notifier).noteActiveEngine(result.engine);
+      final connectedProfile = result.profile;
       if (connectedProfile.autoSelectBestServer ||
           connectedProfile.selectedServerIndex != profile.selectedServerIndex) {
         final updated = await ref
@@ -81,6 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final status = ref.watch(vpnStatusProvider).value ?? VpnStatus.stopped;
     final stats = ref.watch(vpnStatsProvider).value;
     final engine = ref.watch(engineProvider);
+    final enginePreference = ref.watch(enginePreferenceProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final showProxyCard =
@@ -103,8 +104,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     StatusIndicator(status: status),
                     const Spacer(),
                     _MetaChip(
-                      icon: Icons.memory_outlined,
-                      label: engine.coreName,
+                      icon: enginePreference.isAuto
+                          ? Icons.hdr_auto_outlined
+                          : Icons.memory_outlined,
+                      label: enginePreference.isAuto
+                          ? 'auto · ${engine.coreName}'
+                          : engine.coreName,
                     ),
                   ],
                 ),

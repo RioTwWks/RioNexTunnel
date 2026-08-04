@@ -350,7 +350,7 @@ class LinkConfigBuilder {
       stream['tlsSettings'] = {
         'serverName': params['sni'] ?? server,
         if (params['fp']?.isNotEmpty == true) 'fingerprint': params['fp'],
-        'allowInsecure': params['allowInsecure'] == '1',
+        // Do not emit allowInsecure — removed in modern Xray (use pcs/vcn).
       };
     } else {
       stream['security'] = 'none';

@@ -7,14 +7,23 @@ import 'package:flutter/services.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/credentials.dart';
+import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_parser.dart';
+import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
 import '../utils/server_latency.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
+
+class ConnectResult {
+  const ConnectResult({required this.profile, required this.engine});
+
+  final Profile profile;
+  final VpnEngine engine;
+}
 
 class VpnService {
   VpnService({
@@ -35,6 +44,7 @@ class VpnService {
   bool _initialized = false;
   SessionCredentials? _sessionCredentials;
   VpnEngine _engine = VpnEngine.xray;
+  EnginePreference _enginePreference = EnginePreference.auto;
   VpnStatus _currentStatus = VpnStatus.stopped;
   StreamSubscription<VpnStatus>? _statusSubscription;
   final StreamController<VpnStatus> _statusController =
@@ -42,6 +52,7 @@ class VpnService {
 
   SessionCredentials? get sessionCredentials => _sessionCredentials;
   VpnEngine get engine => _engine;
+  EnginePreference get enginePreference => _enginePreference;
   V2rayBox get v2rayBox => _v2rayBox;
   VpnStatus get currentStatus => _currentStatus;
 
@@ -79,6 +90,10 @@ class VpnService {
     await _configurePerAppProxy();
     _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
     _initialized = true;
+  }
+
+  void setEnginePreference(EnginePreference preference) {
+    _enginePreference = preference;
   }
 
   Future<void> setEngine(
@@ -178,10 +193,11 @@ class VpnService {
     return best;
   }
 
-  Future<Profile> connect(Profile profile) async {
+  Future<ConnectResult> connect(Profile profile) async {
     await initialize();
     AppLog.info(
-      'Connect requested profile=${profile.name} engine=${_engine.coreName}',
+      'Connect requested profile=${profile.name} '
+      'preference=${_enginePreference.storageName}',
     );
 
     if (_sessionCredentials != null) {
@@ -189,6 +205,43 @@ class VpnService {
     }
 
     await _ensureVpnPermission();
+
+    final resolution = await EngineAutoSelector.resolve(
+      profile: profile,
+      box: _v2rayBox,
+      preference: _enginePreference,
+    );
+    AppLog.info(resolution.reason);
+
+    Object? lastError;
+    for (var i = 0; i < resolution.attemptOrder.length; i++) {
+      final engine = resolution.attemptOrder[i];
+      try {
+        await setEngine(engine, disconnectIfNeeded: true);
+        final connectedProfile = await _connectWithCurrentEngine(profile);
+        return ConnectResult(profile: connectedProfile, engine: engine);
+      } catch (error) {
+        lastError = error;
+        AppLog.error('Connect with ${engine.coreName} failed: $error');
+        await disconnect();
+        final hasFallback = i < resolution.attemptOrder.length - 1;
+        if (!hasFallback) {
+          break;
+        }
+        AppLog.info(
+          'Falling back to ${resolution.attemptOrder[i + 1].coreName}',
+        );
+      }
+    }
+
+    throw lastError ??
+        StateError('Failed to connect with any available core engine');
+  }
+
+  Future<Profile> _connectWithCurrentEngine(Profile profile) async {
+    AppLog.info(
+      'Connecting profile=${profile.name} engine=${_engine.coreName}',
+    );
 
     var effectiveProfile = profile;
     if (profile.type == ProfileType.subscription &&
@@ -255,7 +308,7 @@ class VpnService {
     _sessionCredentials = credentials;
     // Ensure UI flips to Disconnect even if a status event was raced/missed.
     _publishStatus(VpnStatus.started);
-    AppLog.info('VPN connected');
+    AppLog.info('VPN connected with ${_engine.coreName}');
     return effectiveProfile;
   }
 
@@ -324,9 +377,27 @@ class VpnService {
     if (_currentStatus == target) {
       return;
     }
+    final seen = <VpnStatus>{_currentStatus};
     await _statusController.stream
-        .firstWhere((status) => status == target)
-        .timeout(timeout);
+        .timeout(timeout)
+        .firstWhere((status) {
+          seen.add(status);
+          if (status == target) {
+            return true;
+          }
+          // Core often returns started=true then fails → Starting → Stopped.
+          // Fail fast so Auto engine fallback can run.
+          if (status == VpnStatus.stopped &&
+              seen.contains(VpnStatus.starting)) {
+            return true;
+          }
+          return false;
+        });
+    if (_currentStatus != target) {
+      throw StateError(
+        'VPN failed to reach Connected (status=${_currentStatus.name})',
+      );
+    }
   }
 
   Future<void> _configurePerAppProxy() async {

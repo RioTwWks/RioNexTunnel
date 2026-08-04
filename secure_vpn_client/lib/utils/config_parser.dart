@@ -272,6 +272,8 @@ class ConfigParser {
     final config = Map<String, dynamic>.from(decoded);
     if (engine == VpnEngine.xray) {
       _normalizeXraySubscriptionConfig(config);
+      // Modern libXray rejects deprecated allowInsecure (use pcs/vcn instead).
+      _stripDeprecatedXrayTlsFlags(config);
     }
     if (engine == VpnEngine.singbox) {
       _migrateSingboxLegacyDns(config);
@@ -469,6 +471,31 @@ class ConfigParser {
         })
         .whereType<Map<String, dynamic>>()
         .toList();
+  }
+
+  /// Removes deprecated Xray TLS keys rejected by current libXray builds.
+  ///
+  /// `allowInsecure` was removed in favor of pinnedPeerCertSha256 /
+  /// verifyPeerCertByName. Stripping forces normal certificate verification.
+  static void _stripDeprecatedXrayTlsFlags(Map<String, dynamic> config) {
+    _stripDeprecatedTlsKeysRecursive(config);
+  }
+
+  static void _stripDeprecatedTlsKeysRecursive(dynamic node) {
+    if (node is Map) {
+      node.remove('allowInsecure');
+      // Older panels sometimes emit the alias under stream settings.
+      node.remove('allow_insecure');
+      for (final value in node.values) {
+        _stripDeprecatedTlsKeysRecursive(value);
+      }
+      return;
+    }
+    if (node is List) {
+      for (final item in node) {
+        _stripDeprecatedTlsKeysRecursive(item);
+      }
+    }
   }
 
   static String? _primaryXrayOutboundTag(Map<String, dynamic> config) {

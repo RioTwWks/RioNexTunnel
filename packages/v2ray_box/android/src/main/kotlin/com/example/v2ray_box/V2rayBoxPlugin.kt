@@ -825,15 +825,18 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 scope.launch(Dispatchers.IO) {
                     result.runCatching {
                         val engine = Settings.coreEngine
+                        val ctx = applicationContext
+                        val singboxPath = ctx?.let { SingboxProcess.getBinaryPath(it) }
                         val info = mutableMapOf<String, Any>(
                             "core" to engine,
-                            "active_runtime_engine" to Settings.effectiveCoreEngine()
+                            "active_runtime_engine" to Settings.effectiveCoreEngine(),
+                            "xray_available" to true,
+                            "singbox_available" to (singboxPath != null),
                         )
                         if (engine == CoreEngine.SINGBOX) {
                             info["engine"] = "sing-box"
                             info["version_source"] = "libsingbox.so"
                             try {
-                                val ctx = applicationContext
                                 if (ctx != null) {
                                     val rawVersion = SingboxProcess.getVersion(ctx)
                                     if (rawVersion.isNotEmpty()) {
@@ -845,7 +848,6 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         } else {
                             info["engine"] = "xray-core"
                             try {
-                                val ctx = applicationContext
                                 if (ctx != null) {
                                     val workDir = (ctx.getExternalFilesDir(null) ?: ctx.filesDir).absolutePath
                                     XrayBridge.initCoreEnv(ctx, workDir)

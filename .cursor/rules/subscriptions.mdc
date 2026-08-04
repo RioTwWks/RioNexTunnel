@@ -33,6 +33,18 @@ UI persists `Profile.selectedServerIndex` / `selectedServerName`.
 `ServerLatencyProbe` measures TCP connect RTT to each node host:port (portable; Linux has no native `url_test`).
 `Profile.autoSelectBestServer` → `VpnService.connect` re-probes and picks the lowest latency before start.
 
+## Auto engine (xray vs sing-box)
+
+Settings preference: **Auto** | Xray | sing-box (`EnginePreference`).
+
+Auto resolution (`EngineAutoSelector`):
+
+1. **Availability** — `getCoreInfo` flags `xray_available` / `singbox_available` (Android: `libsingbox.so`; Linux: `FindBinary`)
+2. **Subscription format** — fetch with both UAs; prefer engine whose body lists more real servers; demote xray if geosite/geoip present but geo assets missing
+3. **Connect fallback** — try engines in order; on failure disconnect and try the next
+
+Manual preference disables fallback (single engine only).
+
 ## Post-processing (`injectSecureSocksInbound`)
 
 - xray: `_normalizeXraySubscriptionConfig` — rewrite `proxy` outbound tag, drop `api` rules

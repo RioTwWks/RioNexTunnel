@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/engine_preference.dart';
 import '../models/vpn_engine.dart';
 import '../providers/vpn_providers.dart';
 import '../services/app_log.dart';
@@ -51,23 +52,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
-  Future<void> _onEngineChanged(VpnEngine? engine) async {
-    if (engine == null) {
+  Future<void> _onEnginePreferenceChanged(EnginePreference? preference) async {
+    if (preference == null) {
       return;
     }
-    await ref.read(engineProvider.notifier).setEngine(engine);
+    await ref.read(enginePreferenceProvider.notifier).setPreference(preference);
+    if (!preference.isAuto) {
+      ref
+          .read(engineProvider.notifier)
+          .noteActiveEngine(
+            preference == EnginePreference.singbox
+                ? VpnEngine.singbox
+                : VpnEngine.xray,
+          );
+    }
     await _loadCoreInfo();
   }
 
   @override
   Widget build(BuildContext context) {
+    final preference = ref.watch(enginePreferenceProvider);
     final engine = ref.watch(engineProvider);
     final status = ref.watch(vpnStatusProvider).value ?? VpnStatus.stopped;
     final themeMode = ref.watch(themeModeProvider);
-    final desktopProxy = !kIsWeb &&
-        (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    final desktopProxy =
+        !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final scheme = Theme.of(context).colorScheme;
+    final engineSubtitle = preference.isAuto
+        ? (_coreVersion.isEmpty
+              ? 'Auto: pick by availability, subscription format, connect fallback'
+              : 'Auto · active: $_coreVersion')
+        : (_coreVersion.isEmpty ? null : 'Active: $_coreVersion');
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -105,34 +121,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 14),
         _SectionCard(
           title: 'Core engine',
-          subtitle: _coreVersion.isEmpty ? null : 'Active: $_coreVersion',
+          subtitle: engineSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SegmentedButton<VpnEngine>(
+              SegmentedButton<EnginePreference>(
                 key: const ValueKey('engine_selector'),
                 segments: const [
                   ButtonSegment(
-                    value: VpnEngine.xray,
+                    value: EnginePreference.auto,
+                    label: Text('Auto'),
+                    icon: Icon(Icons.hdr_auto_outlined, size: 18),
+                  ),
+                  ButtonSegment(
+                    value: EnginePreference.xray,
                     label: Text('Xray'),
                   ),
                   ButtonSegment(
-                    value: VpnEngine.singbox,
+                    value: EnginePreference.singbox,
                     label: Text('sing-box'),
                   ),
                 ],
-                selected: {engine},
+                selected: {preference},
                 onSelectionChanged: status == VpnStatus.started
                     ? null
-                    : (selection) => _onEngineChanged(selection.first),
+                    : (selection) =>
+                          _onEnginePreferenceChanged(selection.first),
               ),
+              if (preference.isAuto) ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Uses ${engine.coreName} until the next Auto connect',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
               if (status == VpnStatus.started) ...[
                 const SizedBox(height: 10),
                 Text(
                   'Disconnect VPN before switching engine',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ],
@@ -173,7 +204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _logPath.isEmpty
                   ? 'Resolving…'
                   : '$_logPath\n'
-                      'Android also: Android/data/…/files/logs/',
+                        'Android also: Android/data/…/files/logs/',
             ),
             isThreeLine: true,
             trailing: IconButton(
@@ -205,11 +236,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-    this.subtitle,
-  });
+  const _SectionCard({required this.title, required this.child, this.subtitle});
 
   final String title;
   final String? subtitle;
@@ -226,17 +253,17 @@ class _SectionCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(
                 subtitle!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
               ),
             ],
             const SizedBox(height: 14),

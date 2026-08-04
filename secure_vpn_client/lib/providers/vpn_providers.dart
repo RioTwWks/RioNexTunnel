@@ -7,12 +7,14 @@ import 'package:uuid/uuid.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/credentials.dart';
+import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
 import '../services/vpn_service.dart';
 
 const _profilesKey = 'vpn_profiles';
 const _engineKey = 'vpn_engine';
+const _enginePreferenceKey = 'vpn_engine_preference';
 
 final vpnServiceProvider = Provider<VpnService>((ref) {
   final service = VpnService();
@@ -69,6 +71,20 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
+/// User preference: Auto / Xray / sing-box.
+final enginePreferenceProvider =
+    StateNotifierProvider<EnginePreferenceNotifier, EnginePreference>((ref) {
+      return EnginePreferenceNotifier(
+        ref.watch(vpnServiceProvider),
+        onActiveEngine: (engine) {
+          Future.microtask(() {
+            ref.read(engineProvider.notifier).noteActiveEngine(engine);
+          });
+        },
+      );
+    });
+
+/// Currently active core engine (may change during Auto connect fallback).
 final engineProvider = StateNotifierProvider<EngineNotifier, VpnEngine>((ref) {
   return EngineNotifier(ref.watch(vpnServiceProvider));
 });
@@ -81,20 +97,78 @@ final profilesProvider = StateNotifierProvider<ProfilesNotifier, List<Profile>>(
 
 final selectedProfileProvider = StateProvider<Profile?>((ref) => null);
 
-class EngineNotifier extends StateNotifier<VpnEngine> {
-  EngineNotifier(this._vpnService) : super(VpnEngine.xray) {
+class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
+  EnginePreferenceNotifier(
+    this._vpnService, {
+    void Function(VpnEngine engine)? onActiveEngine,
+  }) : _onActiveEngine = onActiveEngine,
+       super(EnginePreference.auto) {
     _load();
   }
 
   final VpnService _vpnService;
+  final void Function(VpnEngine engine)? _onActiveEngine;
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_engineKey);
-    if (saved != null) {
-      state = VpnEngine.fromCoreName(saved);
-      await _vpnService.setEngine(state, disconnectIfNeeded: false);
+    final savedPref = prefs.getString(_enginePreferenceKey);
+    if (savedPref != null) {
+      state = EnginePreference.fromStorage(savedPref);
+      _vpnService.setEnginePreference(state);
+      if (!state.isAuto) {
+        final engine = state == EnginePreference.singbox
+            ? VpnEngine.singbox
+            : VpnEngine.xray;
+        await _vpnService.setEngine(engine, disconnectIfNeeded: false);
+        _onActiveEngine?.call(engine);
+      }
+      return;
     }
+
+    // Migrate legacy vpn_engine → fixed preference.
+    final legacy = prefs.getString(_engineKey);
+    if (legacy != null) {
+      final engine = VpnEngine.fromCoreName(legacy);
+      state = engine == VpnEngine.singbox
+          ? EnginePreference.singbox
+          : EnginePreference.xray;
+      _vpnService.setEnginePreference(state);
+      await _vpnService.setEngine(engine, disconnectIfNeeded: false);
+      await prefs.setString(_enginePreferenceKey, state.storageName);
+      _onActiveEngine?.call(engine);
+      return;
+    }
+
+    _vpnService.setEnginePreference(EnginePreference.auto);
+  }
+
+  Future<void> setPreference(EnginePreference preference) async {
+    state = preference;
+    _vpnService.setEnginePreference(preference);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_enginePreferenceKey, preference.storageName);
+
+    if (!preference.isAuto) {
+      final engine = preference == EnginePreference.singbox
+          ? VpnEngine.singbox
+          : VpnEngine.xray;
+      await _vpnService.setEngine(engine);
+      await prefs.setString(_engineKey, engine.coreName);
+      _onActiveEngine?.call(engine);
+    }
+  }
+}
+
+class EngineNotifier extends StateNotifier<VpnEngine> {
+  EngineNotifier(this._vpnService) : super(VpnEngine.xray) {
+    state = _vpnService.engine;
+  }
+
+  final VpnService _vpnService;
+
+  /// Updates UI after Auto connect / fallback without changing preference.
+  void noteActiveEngine(VpnEngine engine) {
+    state = engine;
   }
 
   Future<void> setEngine(VpnEngine engine) async {

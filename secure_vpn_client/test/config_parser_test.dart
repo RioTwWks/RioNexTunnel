@@ -143,6 +143,34 @@ void main() {
       expect(tags, ['secure-socks-in', 'secure-http-in']);
     });
 
+    test('strips deprecated allowInsecure from xray TLS settings', () {
+      const withInsecure = '''
+{
+  "outbounds": [{
+    "protocol": "vmess",
+    "tag": "proxy",
+    "streamSettings": {
+      "security": "tls",
+      "tlsSettings": {"serverName": "example.com", "allowInsecure": true}
+    }
+  }],
+  "inbounds": []
+}
+''';
+      final result = ConfigParser.injectSecureSocksInbound(
+        withInsecure,
+        credentials,
+        VpnEngine.xray,
+      );
+      expect(result.contains('allowInsecure'), isFalse);
+      final decoded = jsonDecode(result) as Map<String, dynamic>;
+      final outbound = (decoded['outbounds'] as List).first as Map;
+      final tls =
+          ((outbound['streamSettings'] as Map)['tlsSettings'] as Map);
+      expect(tls.containsKey('allowInsecure'), isFalse);
+      expect(tls['serverName'], 'example.com');
+    });
+
     test('normalizes v2rayNG JSON array subscriptions', () {
       const body = '''
 [

@@ -328,6 +328,14 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
         map, "version",
         fl_value_new_string(
             v2ray_box::DesktopCore::Instance().GetVersion(g_core_engine).c_str()));
+    const bool xray_ok =
+        !v2ray_box::DesktopCore::Instance().FindBinary("xray").empty();
+    const bool singbox_ok =
+        !v2ray_box::DesktopCore::Instance().FindBinary("singbox").empty();
+    fl_value_set_string_take(map, "xray_available",
+                             fl_value_new_bool(xray_ok ? TRUE : FALSE));
+    fl_value_set_string_take(map, "singbox_available",
+                             fl_value_new_bool(singbox_ok ? TRUE : FALSE));
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
   } else if (strcmp(method, "get_logs") == 0) {
     g_autoptr(FlValue) list = fl_value_new_list();

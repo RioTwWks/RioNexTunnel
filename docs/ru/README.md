@@ -79,6 +79,7 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Linux desktop: proxy mode, все 4 комбинации engine × profile
 - [x] Выбор сервера из списка подписки
 - [x] Автовыбор сервера с лучшей задержкой
+- [x] Автовыбор ядра (доступность / формат / fallback connect)
 - [ ] Полноценный E2E на Android / iOS / Windows / macOS
 - [ ] CI: `flutter analyze` + `flutter test`
 

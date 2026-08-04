@@ -40,7 +40,8 @@ sequenceDiagram
 
 - `initialize()` — sets `VpnMode.proxy` on desktop, `enableTun: false` in `ConfigOptions`.
 - `resolveProfileConfig()` — subscription URL → selected server (by `selectedServerIndex`) as link or JSON; config link → `LinkConfigBuilder`.
-- `connect()` — inject secure inbound → `checkConfigJson` → set credentials channel → `connectWithJson`.
+- `connect()` — resolve Auto engine order → inject secure inbound → `checkConfigJson` → set credentials channel → `connectWithJson` (fallback to next engine on failure when preference is Auto).
+- `EngineAutoSelector` — availability + subscription UA format + geo demotion for Auto preference.
 
 ## v2ray_box fork (`packages/v2ray_box`)
 
