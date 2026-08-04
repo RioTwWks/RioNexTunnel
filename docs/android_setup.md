@@ -1,5 +1,7 @@
 # Android setup
 
+> **Language / Язык:** **English** | [Русский](android_setup.ru.md)
+
 1. Open `secure_vpn_client/android/app/src/main/AndroidManifest.xml` and verify:
    - VPN permissions (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS`, …)
    - `<service>` entries for `com.example.v2ray_box.bg.VPNService` and `ProxyService`

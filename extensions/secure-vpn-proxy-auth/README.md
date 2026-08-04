@@ -1,5 +1,7 @@
 # Secure VPN Proxy Auth (browser extension)
 
+> **Language / Язык:** **English** | [Русский](README.ru.md)
+
 One-time setup for Chromium and Firefox on Linux desktop.
 
 ## Install extension

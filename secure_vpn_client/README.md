@@ -1,5 +1,7 @@
 # Secure VPN Client (Flutter app)
 
+> **Язык / Language:** **Русский** | [English](README.en.md)
+
 Основное Flutter-приложение репозитория [Secure-Cross-Platform-VPN-Client](../README.md).
 
 Кроссплатформенный VPN-клиент на **Xray-core** и **sing-box** с динамической аутентификацией локального SOCKS5 (`127.0.0.1:1080`).
@@ -49,9 +51,9 @@ flutter test
 
 | Платформа | Режим | Документация |
 |-----------|-------|--------------|
-| Linux | Proxy (SOCKS) | [docs/linux_setup.md](../docs/linux_setup.md) |
-| Android | VPN (TUN) | [docs/android_setup.md](../docs/android_setup.md) |
-| iOS | VPN | [docs/ios_setup.md](../docs/ios_setup.md) |
+| Linux | Proxy (SOCKS) | [docs/linux_setup.ru.md](../docs/linux_setup.ru.md) |
+| Android | VPN (TUN) | [docs/android_setup.ru.md](../docs/android_setup.ru.md) |
+| iOS | VPN | [docs/ios_setup.ru.md](../docs/ios_setup.ru.md) |
 | Windows / macOS | Proxy | см. корневой README |
 
 Бинарники `xray`, `sing-box`, `geoip.dat`, `geosite.dat` лежат в `linux/runner/resources/` (и аналогах) — **не в git**, ставятся через `fetch_cores.sh`.

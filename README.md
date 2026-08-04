@@ -1,5 +1,7 @@
 # Secure VPN Client (MVP)
 
+> **Язык / Language:** **Русский** | [English](README.en.md)
+
 **Кроссплатформенный VPN-клиент на Flutter с поддержкой Xray-core и sing-box**  
 *Реализована защита от уязвимости неавторизованного SOCKS5-прокси (март 2026)*
 
@@ -76,13 +78,13 @@ flutter pub get
 ### 3. Настройка нативных разрешений
 
 - **Android**  
-  Откройте `android/app/src/main/AndroidManifest.xml` и убедитесь, что присутствует `<service>` для `VpnService` (см. инструкцию в `/docs/android_setup.md`).
+  Откройте `android/app/src/main/AndroidManifest.xml` и убедитесь, что присутствует `<service>` для `VpnService` (см. инструкцию в `/docs/android_setup.ru.md`).
 
 - **iOS**  
-  В Xcode добавьте `com.apple.developer.networking.vpn.api` в entitlements. Подробнее – `/docs/ios_setup.md`.
+  В Xcode добавьте `com.apple.developer.networking.vpn.api` в entitlements. Подробнее – `/docs/ios_setup.ru.md`.
 
 - **Linux**  
-  См. `/docs/linux_setup.md` (proxy mode, `fetch_cores.sh`, geo assets).
+  См. `/docs/linux_setup.ru.md` (proxy mode, `fetch_cores.sh`, geo assets).
 
 - **Windows / macOS**  
   Скопируйте бинарники ядер в `windows/runner/resources/`, `macos/Runner/Resources/` (через `./scripts/fetch_cores.sh` из корня репозитория).
@@ -159,7 +161,7 @@ Secure-Cross-Platform-VPN-Client/
 │   ├── fetch_cores.sh            # Загрузка ядер и geo-файлов
 │   ├── security_probe.sh         # Проверка SOCKS auth
 │   └── sync_v2ray_box.sh
-├── docs/                         # android_setup, ios_setup, linux_setup
+├── docs/                         # android/ios/linux setup (EN + .ru.md версии)
 └── .cursor/                      # Документация для AI-агентов (AGENTS.md)
 ```
 

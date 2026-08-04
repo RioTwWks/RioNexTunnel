@@ -1,5 +1,7 @@
 # iOS setup
 
+> **Language / Язык:** **English** | [Русский](ios_setup.ru.md)
+
 1. Open `secure_vpn_client/ios/Runner.xcworkspace` in Xcode.
 2. Add the **Network Extensions** capability and enable **Packet Tunnel**.
 3. Add entitlement `com.apple.developer.networking.vpn.api` to the Runner target and tunnel extension.
