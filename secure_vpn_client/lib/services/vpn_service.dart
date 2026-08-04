@@ -256,8 +256,10 @@ class VpnService {
     VpnStatus target, {
     required Duration timeout,
   }) async {
-    await _v2rayBox
-        .watchStatus()
+    if (_currentStatus == target) {
+      return;
+    }
+    await _statusController.stream
         .firstWhere((status) => status == target)
         .timeout(timeout);
   }

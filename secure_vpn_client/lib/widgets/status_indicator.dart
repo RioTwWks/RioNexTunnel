@@ -9,15 +9,15 @@ class StatusIndicator extends StatelessWidget {
 
   final VpnStatus status;
 
-  Color get _color {
+  Color _color(ColorScheme scheme) {
     switch (status) {
       case VpnStatus.started:
-        return Colors.green;
+        return scheme.primary;
       case VpnStatus.starting:
       case VpnStatus.stopping:
-        return Colors.orange;
+        return scheme.tertiary;
       case VpnStatus.stopped:
-        return Colors.red;
+        return scheme.error;
     }
   }
 
@@ -36,20 +36,43 @@ class StatusIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: _color,
-            shape: BoxShape.circle,
+    final scheme = Theme.of(context).colorScheme;
+    final color = _color(scheme);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.55),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(_label),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            _label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -26,6 +26,12 @@ Diagnostic patterns discovered during MVP integration. Check console stderr from
 
 **Fix:** Use IP UDP DNS (`8.8.8.8` / `1.1.1.1`) without `detour: direct` (sing-box ≥1.12 fatals on that) and set `route.default_domain_resolver`. The VPN app package is excluded from TUN, so default dial for DNS works.
 
+### Connect stays on Connect (Android) — never shows Disconnect
+
+**Cause:** `EventChannel` status allows only one native sink. UI `watchStatus()` plus `VpnService._waitForStatus()` each called `receiveBroadcastStream()`, so the wait listener replaced (then cancelled) the UI sink. Linux often still looked fine due to timing; Android left the button stuck on Connect after a successful tunnel.
+
+**Fix:** Cache a shared broadcast status stream in `v2ray_box` method channel; `VpnService` owns one native subscription and publishes to UI via `watchStatus()` / `_publishStatus(started)` after connect.
+
 ### UI does nothing after Connect (no Connected / no error)
 
 **Cause A:** App `AndroidManifest.xml` missing `VPNService` / `ProxyService` declarations (plugin manifest is empty; services must be in the app).

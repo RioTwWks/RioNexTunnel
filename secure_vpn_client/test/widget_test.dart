@@ -11,8 +11,8 @@ void main() {
       ),
     );
 
-    expect(find.text('Secure VPN Client'), findsOneWidget);
-    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Secure VPN'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Profiles'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
     expect(find.byKey(const ValueKey('connect_button')), findsOneWidget);

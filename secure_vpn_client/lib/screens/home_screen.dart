@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/profile.dart';
 import '../providers/vpn_providers.dart';
 import '../widgets/connection_button.dart';
 import '../widgets/proxy_credentials_card.dart';
@@ -68,58 +69,192 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final showProxyCard = status == VpnStatus.started &&
         ProxyCredentialsCard.isDesktopProxy &&
         sessionCredentials != null;
+    final scheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  StatusIndicator(status: status),
-                  const SizedBox(height: 12),
-                  Text('Engine: ${engine.coreName}'),
-                  const SizedBox(height: 8),
-                  Text(
-                    selectedProfile == null
-                        ? 'No profile selected'
-                        : 'Profile: ${selectedProfile.name}',
-                  ),
-                  if (stats != null) ...[
-                    const SizedBox(height: 8),
-                    Text('Upload: ${stats.formattedUplinkTotal}'),
-                    Text('Download: ${stats.formattedDownlinkTotal}'),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    StatusIndicator(status: status),
+                    const Spacer(),
+                    _MetaChip(
+                      icon: Icons.memory_outlined,
+                      label: engine.coreName,
+                    ),
                   ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  selectedProfile == null
+                      ? 'No profile selected'
+                      : selectedProfile.name,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  selectedProfile == null
+                      ? 'Add a config link or subscription in Profiles'
+                      : selectedProfile.type == ProfileType.subscription
+                          ? 'Subscription profile'
+                          : 'Direct config link',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+                if (stats != null && status == VpnStatus.started) ...[
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatTile(
+                          label: 'Upload',
+                          value: stats.formattedUplinkTotal,
+                          icon: Icons.arrow_upward_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _StatTile(
+                          label: 'Download',
+                          value: stats.formattedDownlinkTotal,
+                          icon: Icons.arrow_downward_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
-          ConnectionButton(
+        ),
+        const SizedBox(height: 36),
+        Center(
+          child: ConnectionButton(
             status: status,
             busy: _busy,
             onConnect: _connect,
             onDisconnect: _disconnect,
           ),
-          if (showProxyCard) ...[
-            const SizedBox(height: 16),
-            ProxyCredentialsCard(
-              credentials: sessionCredentials,
-              showExtensionHint: true,
-              compact: true,
+        ),
+        if (showProxyCard) ...[
+          const SizedBox(height: 28),
+          ProxyCredentialsCard(
+            credentials: sessionCredentials,
+            showExtensionHint: true,
+            compact: true,
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 20),
+          Card(
+            color: scheme.errorContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.error_outline, color: scheme.onErrorContainer),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: TextStyle(color: scheme.onErrorContainer),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: scheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
         ],
       ),
     );

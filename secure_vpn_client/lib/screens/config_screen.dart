@@ -61,98 +61,181 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
   Widget build(BuildContext context) {
     final profiles = ref.watch(profilesProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        TextField(
-          key: const ValueKey('profile_name_field'),
-          controller: _nameController,
-          decoration: const InputDecoration(
-            labelText: 'Profile name',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          key: const ValueKey('profile_link_field'),
-          controller: _linkController,
-          decoration: InputDecoration(
-            labelText: _type == ProfileType.link
-                ? 'Config link (vless://, vmess://, ...)'
-                : 'Subscription URL',
-            border: const OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        ),
-        const SizedBox(height: 12),
-        SegmentedButton<ProfileType>(
-          segments: const [
-            ButtonSegment(
-              value: ProfileType.link,
-              label: Text('Link'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add profile',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Paste a share link or subscription URL',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  key: const ValueKey('profile_name_field'),
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Profile name',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const ValueKey('profile_link_field'),
+                  controller: _linkController,
+                  decoration: InputDecoration(
+                    labelText: _type == ProfileType.link
+                        ? 'Config link (vless://, vmess://, …)'
+                        : 'Subscription URL',
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<ProfileType>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ProfileType.link,
+                      label: Text('Link'),
+                      icon: Icon(Icons.link),
+                    ),
+                    ButtonSegment(
+                      value: ProfileType.subscription,
+                      label: Text('Subscription'),
+                      icon: Icon(Icons.rss_feed_outlined),
+                    ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (selection) {
+                    setState(() => _type = selection.first);
+                  },
+                ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  key: const ValueKey('add_profile_button'),
+                  onPressed: _addProfile,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Add profile'),
+                ),
+              ],
             ),
-            ButtonSegment(
-              value: ProfileType.subscription,
-              label: Text('Subscription'),
-            ),
-          ],
-          selected: {_type},
-          onSelectionChanged: (selection) {
-            setState(() => _type = selection.first);
-          },
-        ),
-        const SizedBox(height: 12),
-        FilledButton(
-          key: const ValueKey('add_profile_button'),
-          onPressed: _addProfile,
-          child: const Text('Add profile'),
+          ),
         ),
         const SizedBox(height: 24),
         Text(
-          'Profiles',
-          style: Theme.of(context).textTheme.titleMedium,
+          'Saved profiles',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         if (profiles.isEmpty)
-          const Text('No profiles yet')
-        else
-          ...profiles.map(
-            (profile) => Card(
-              child: ListTile(
-                title: Text(profile.name),
-                subtitle: Text(
-                  profile.type == ProfileType.link
-                      ? 'Direct link'
-                      : 'Subscription',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      selectedProfile?.id == profile.id
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_off,
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () {
-                        ref
-                            .read(profilesProvider.notifier)
-                            .removeProfile(profile.id);
-                        if (selectedProfile?.id == profile.id) {
-                          ref.read(selectedProfileProvider.notifier).state =
-                              null;
-                        }
-                      },
-                    ),
-                  ],
-                ),
-                onTap: () {
-                  ref.read(selectedProfileProvider.notifier).state = profile;
-                },
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.dns_outlined,
+                    size: 36,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'No profiles yet',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Add a link or subscription to get started',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
+          )
+        else
+          ...profiles.map(
+            (profile) {
+              final selected = selectedProfile?.id == profile.id;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Card(
+                  color: selected
+                      ? scheme.primaryContainer.withValues(alpha: 0.45)
+                      : null,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 6,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: selected
+                          ? scheme.primary
+                          : scheme.surfaceContainerHigh,
+                      foregroundColor: selected
+                          ? scheme.onPrimary
+                          : scheme.onSurfaceVariant,
+                      child: Icon(
+                        profile.type == ProfileType.link
+                            ? Icons.link
+                            : Icons.rss_feed_outlined,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      profile.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      profile.type == ProfileType.link
+                          ? 'Direct link'
+                          : 'Subscription',
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (selected)
+                          Icon(Icons.check_circle, color: scheme.primary),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () {
+                            ref
+                                .read(profilesProvider.notifier)
+                                .removeProfile(profile.id);
+                            if (selectedProfile?.id == profile.id) {
+                              ref
+                                  .read(selectedProfileProvider.notifier)
+                                  .state = null;
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      ref.read(selectedProfileProvider.notifier).state =
+                          profile;
+                    },
+                  ),
+                ),
+              );
+            },
           ),
       ],
     );

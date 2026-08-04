@@ -125,7 +125,7 @@ class _StatusBody extends StatelessWidget {
     Color summaryColor;
     if (ready) {
       summary = BrowserHelperStrings.ready(locale);
-      summaryColor = Colors.green.shade700;
+      summaryColor = Theme.of(context).colorScheme.primary;
     } else if (!host) {
       summary = BrowserHelperStrings.hostMissing(locale);
       summaryColor = Theme.of(context).colorScheme.error;
@@ -134,10 +134,10 @@ class _StatusBody extends StatelessWidget {
       summaryColor = Theme.of(context).colorScheme.error;
     } else if (!extension) {
       summary = BrowserHelperStrings.extensionMissing(locale);
-      summaryColor = Colors.orange.shade800;
+      summaryColor = Theme.of(context).colorScheme.tertiary;
     } else {
       summary = BrowserHelperStrings.waiting(locale);
-      summaryColor = Colors.orange.shade800;
+      summaryColor = Theme.of(context).colorScheme.tertiary;
     }
 
     return Column(
@@ -185,7 +185,9 @@ class _StatusRow extends StatelessWidget {
         Icon(
           ok ? Icons.check_circle_outline : Icons.radio_button_unchecked,
           size: 18,
-          color: ok ? Colors.green.shade700 : Theme.of(context).disabledColor,
+          color: ok
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).disabledColor,
         ),
         const SizedBox(width: 8),
         Text(label),
