@@ -23,7 +23,7 @@ Secure-Cross-Platform-VPN-Client/
 │   ├── fetch_cores.sh          # Download xray/sing-box + geo assets
 │   ├── security_probe.sh       # Local SOCKS auth probe
 │   └── sync_v2ray_box.sh       # Sync fork patches
-├── docs/                       # Platform setup (android_setup.md, ios_setup.md)
+├── docs/                       # Bilingual docs: en/, ru/ (see docs/README.md)
 └── .cursor/                    # Agent docs (this folder)
 ```
 

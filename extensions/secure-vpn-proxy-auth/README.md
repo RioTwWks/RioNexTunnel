@@ -2,6 +2,8 @@
 
 One-time setup for Chromium and Firefox on Linux desktop.
 
+Full guide: [docs/en/browser_extension.md](../../docs/en/browser_extension.md) · [RU](../../docs/ru/browser_extension.md)
+
 ## Install extension
 
 1. Open `chrome://extensions` (Chromium: `chrome://extensions`, Firefox: `about:debugging#/runtime/this-firefox`).
