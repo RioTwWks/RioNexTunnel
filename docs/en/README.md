@@ -14,7 +14,7 @@
 
 ## Overview
 
-**Secure VPN Client** is a secure and flexible VPN client built as an MVP. The app connects to VPN servers via VLESS, VMess, Shadowsocks, Trojan, and other protocols (through Xray-core and sing-box engines). The main difference from many existing clients is **complete elimination of the unauthenticated local SOCKS5 proxy vulnerability** discovered in spring 2026 in apps such as Hiddify, v2rayNG, Happ, and others.
+**Secure VPN Client** is a secure and flexible VPN client built as an MVP. The app connects to VPN servers via VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH, and other protocols (through Xray-core and sing-box engines). The main difference from many existing clients is **complete elimination of the unauthenticated local SOCKS5 proxy vulnerability** discovered in spring 2026 in apps such as Hiddify, v2rayNG, Happ, and others.
 
 The project is built from scratch on Flutter for five platforms: **Android, iOS, Windows, Linux, macOS**.
 

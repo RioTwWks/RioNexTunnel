@@ -95,7 +95,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                   controller: _linkController,
                   decoration: InputDecoration(
                     labelText: _type == ProfileType.link
-                        ? 'Config link (vless://, vmess://, …)'
+                        ? 'Config link (vless://, hy2://, tuic://, …)'
                         : 'Subscription URL',
                   ),
                   maxLines: 3,

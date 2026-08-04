@@ -34,7 +34,7 @@ sequenceDiagram
 1. **`CredentialService`** — CSPRNG username/password per session (`crypto_utils.dart`).
 2. **`ConfigParser.injectSecureSocksInbound()`** — removes unsafe SOCKS inbounds, adds authenticated SOCKS on `127.0.0.1:1080`; when `proxyOnly: true` (desktop), also adds HTTP inbound on `socksPort + 1` (default `1081`) with the same session credentials for GNOME system proxy.
 3. **`ConfigParser` subscription handling** — User-Agent selection, decoy skipping, v2rayNG JSON array parsing, sing-box DNS migration, proxy-only inbound stripping on desktop.
-4. **`LinkConfigBuilder`** — builds minimal xray/sing-box JSON from share links (`vless://`, `vmess://`, `trojan://`, `ss://`).
+4. **`LinkConfigBuilder`** — builds minimal xray/sing-box JSON from share links (`vless://`, `vmess://`, `trojan://`, `ss://`, `hy2://`, `hy://`, `tuic://`, `wg://`, `ssh://`). Hysteria/TUIC/WireGuard/SSH require sing-box.
 
 ### VpnService
 

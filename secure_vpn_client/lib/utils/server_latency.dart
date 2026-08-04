@@ -81,9 +81,7 @@ class ServerLatencyProbe {
       if (uri.host.isEmpty) {
         return null;
       }
-      final port = uri.hasPort
-          ? uri.port
-          : (lower.startsWith('ss://') ? 8388 : 443);
+      final port = uri.hasPort ? uri.port : _defaultPortForLink(lower);
       if (port <= 0) {
         return null;
       }
@@ -119,10 +117,18 @@ class ServerLatencyProbe {
     Map<String, dynamic> outbound,
   ) {
     final type = outbound['type']?.toString();
-    if (type != 'vless' &&
-        type != 'vmess' &&
-        type != 'trojan' &&
-        type != 'shadowsocks') {
+    const proxyTypes = {
+      'vless',
+      'vmess',
+      'trojan',
+      'shadowsocks',
+      'hysteria',
+      'hysteria2',
+      'tuic',
+      'wireguard',
+      'ssh',
+    };
+    if (type == null || !proxyTypes.contains(type)) {
       return null;
     }
     final host = outbound['server']?.toString();
@@ -260,6 +266,19 @@ class ServerLatencyProbe {
       }
     }
     return best;
+  }
+
+  static int _defaultPortForLink(String lower) {
+    if (lower.startsWith('ss://')) {
+      return 8388;
+    }
+    if (lower.startsWith('wg://') || lower.startsWith('wireguard://')) {
+      return 51820;
+    }
+    if (lower.startsWith('ssh://')) {
+      return 22;
+    }
+    return 443;
   }
 
   static String _padBase64(String value) {

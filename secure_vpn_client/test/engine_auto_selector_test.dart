@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:secure_vpn_client/models/engine_preference.dart';
+import 'package:secure_vpn_client/models/profile.dart';
 import 'package:secure_vpn_client/models/vpn_engine.dart';
 import 'package:secure_vpn_client/utils/engine_auto_selector.dart';
+import 'package:secure_vpn_client/utils/link_config_builder.dart';
 
 void main() {
   group('EnginePreference', () {
@@ -32,6 +34,18 @@ void main() {
         reason: 'test',
       );
       expect(resolution.preferred, VpnEngine.singbox);
+    });
+  });
+
+  group('sing-box-only link detection', () {
+    test('hy2 profile is flagged for sing-box', () {
+      const profile = Profile(
+        id: '1',
+        name: 'hy2',
+        configLink: 'hy2://pw@host:443',
+        type: ProfileType.link,
+      );
+      expect(LinkConfigBuilder.requiresSingbox(profile.configLink), isTrue);
     });
   });
 }

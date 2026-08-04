@@ -246,7 +246,15 @@ class ConfigParser {
     return lower.startsWith('vless://') ||
         lower.startsWith('vmess://') ||
         lower.startsWith('trojan://') ||
-        lower.startsWith('ss://');
+        lower.startsWith('ss://') ||
+        lower.startsWith('hy2://') ||
+        lower.startsWith('hysteria2://') ||
+        lower.startsWith('hy://') ||
+        lower.startsWith('hysteria://') ||
+        lower.startsWith('tuic://') ||
+        lower.startsWith('wg://') ||
+        lower.startsWith('wireguard://') ||
+        lower.startsWith('ssh://');
   }
 
   static String _padBase64(String value) {

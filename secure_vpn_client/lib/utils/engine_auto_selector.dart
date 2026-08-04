@@ -7,6 +7,7 @@ import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
 import 'config_parser.dart';
+import 'link_config_builder.dart';
 
 /// Result of resolving which core engine(s) to try for a profile.
 class EngineResolution {
@@ -182,6 +183,13 @@ class EngineAutoSelector {
     }
 
     if (profile.type == ProfileType.link) {
+      if (LinkConfigBuilder.requiresSingbox(profile.configLink) &&
+          available.contains(VpnEngine.singbox)) {
+        return [
+          VpnEngine.singbox,
+          ...base.where((engine) => engine != VpnEngine.singbox),
+        ];
+      }
       return base;
     }
 
@@ -198,7 +206,21 @@ class EngineAutoSelector {
           xrayBody = body;
         }
         final servers = ConfigParser.listSubscriptionServers(body);
-        scores[engine] = servers.length;
+        var score = servers.length;
+        final singboxOnly = servers.any(
+          (server) => LinkConfigBuilder.requiresSingbox(server.content),
+        );
+        if (singboxOnly) {
+          if (engine == VpnEngine.singbox) {
+            score += 1000;
+          } else if (servers.every(
+            (server) => LinkConfigBuilder.requiresSingbox(server.content),
+          )) {
+            // Entire list needs sing-box — demote xray.
+            score = 0;
+          }
+        }
+        scores[engine] = score;
       } catch (_) {
         scores[engine] = -1;
       }

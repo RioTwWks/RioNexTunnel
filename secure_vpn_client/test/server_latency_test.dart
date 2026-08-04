@@ -42,17 +42,31 @@ void main() {
       expect(endpoint?.port, 443);
     });
 
-    test('extracts host/port from sing-box outbound JSON', () {
+    test('extracts host/port from hy2 link', () {
+      const link = 'hy2://secret@hy2.example:8443?sni=hy2.example#Node';
+      final endpoint = ServerLatencyProbe.endpointFromContent(link);
+      expect(endpoint?.host, 'hy2.example');
+      expect(endpoint?.port, 8443);
+    });
+
+    test('extracts host/port from wireguard link default port', () {
+      const link = 'wg://PRIVATE@wg.example?publickey=PUB';
+      final endpoint = ServerLatencyProbe.endpointFromContent(link);
+      expect(endpoint?.host, 'wg.example');
+      expect(endpoint?.port, 51820);
+    });
+
+    test('extracts host/port from hysteria2 sing-box JSON', () {
       const json = '''
 {
   "outbounds": [
-    {"type": "trojan", "server": "sg.example", "server_port": 8443}
+    {"type": "hysteria2", "server": "hy2.example", "server_port": 443}
   ]
 }
 ''';
       final endpoint = ServerLatencyProbe.endpointFromContent(json);
-      expect(endpoint?.host, 'sg.example');
-      expect(endpoint?.port, 8443);
+      expect(endpoint?.host, 'hy2.example');
+      expect(endpoint?.port, 443);
     });
   });
 

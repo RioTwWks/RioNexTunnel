@@ -4,12 +4,43 @@ import '../models/vpn_engine.dart';
 import 'config_parser.dart';
 
 class LinkConfigBuilder {
+  /// Share-link schemes accepted by the app (subscription lines + profiles).
+  static const supportedSchemes = [
+    'vless',
+    'vmess',
+    'trojan',
+    'ss',
+    'hy',
+    'hysteria',
+    'hy2',
+    'hysteria2',
+    'tuic',
+    'wg',
+    'wireguard',
+    'ssh',
+  ];
+
+  /// Protocols that only work with sing-box (not stock Xray-core).
+  static const singboxOnlySchemes = [
+    'hy',
+    'hysteria',
+    'hy2',
+    'hysteria2',
+    'tuic',
+    'wg',
+    'wireguard',
+    'ssh',
+  ];
+
   static bool isConfigLink(String value) {
-    final lower = value.trim().toLowerCase();
-    return lower.startsWith('vless://') ||
-        lower.startsWith('vmess://') ||
-        lower.startsWith('trojan://') ||
-        lower.startsWith('ss://');
+    final scheme = _schemeOf(value);
+    return scheme != null && supportedSchemes.contains(scheme);
+  }
+
+  /// True when the link must be built/run with sing-box.
+  static bool requiresSingbox(String value) {
+    final scheme = _schemeOf(value);
+    return scheme != null && singboxOnlySchemes.contains(scheme);
   }
 
   static String buildFromLink(String link, VpnEngine engine) {
@@ -18,9 +49,26 @@ class LinkConfigBuilder {
       throw ConfigParserException('Unsupported config link format');
     }
 
+    if (requiresSingbox(normalized) && engine != VpnEngine.singbox) {
+      throw ConfigParserException(
+        'This protocol requires the sing-box engine '
+        '(Hysteria, Hysteria2, TUIC, WireGuard, SSH). '
+        'Switch engine preference to Auto or sing-box.',
+      );
+    }
+
     return engine == VpnEngine.singbox
         ? _buildSingbox(normalized)
         : _buildXray(normalized);
+  }
+
+  static String? _schemeOf(String value) {
+    final trimmed = value.trim();
+    final sep = trimmed.indexOf('://');
+    if (sep <= 0) {
+      return null;
+    }
+    return trimmed.substring(0, sep).toLowerCase();
   }
 
   static String _buildXray(String link) {
@@ -30,19 +78,10 @@ class LinkConfigBuilder {
       'inbounds': <dynamic>[],
       'outbounds': [
         outbound,
-        {
-          'tag': 'direct',
-          'protocol': 'freedom',
-        },
-        {
-          'tag': 'block',
-          'protocol': 'blackhole',
-        },
+        {'tag': 'direct', 'protocol': 'freedom'},
+        {'tag': 'block', 'protocol': 'blackhole'},
       ],
-      'routing': {
-        'domainStrategy': 'AsIs',
-        'rules': <dynamic>[],
-      },
+      'routing': {'domainStrategy': 'AsIs', 'rules': <dynamic>[]},
     };
     return const JsonEncoder.withIndent('  ').convert(config);
   }
@@ -55,16 +94,8 @@ class LinkConfigBuilder {
       // and fails while TUN is up. Bootstrap with IP DNS via direct.
       'dns': {
         'servers': [
-          {
-            'type': 'udp',
-            'tag': 'dns-direct',
-            'server': '8.8.8.8',
-          },
-          {
-            'type': 'udp',
-            'tag': 'dns-backup',
-            'server': '1.1.1.1',
-          },
+          {'type': 'udp', 'tag': 'dns-direct', 'server': '8.8.8.8'},
+          {'type': 'udp', 'tag': 'dns-backup', 'server': '1.1.1.1'},
         ],
         'final': 'dns-direct',
         'strategy': 'prefer_ipv4',
@@ -72,10 +103,7 @@ class LinkConfigBuilder {
       'inbounds': <dynamic>[],
       'outbounds': [
         outbound,
-        {
-          'type': 'direct',
-          'tag': 'direct',
-        },
+        {'type': 'direct', 'tag': 'direct'},
       ],
       'route': {
         'rules': <dynamic>[],
@@ -86,9 +114,7 @@ class LinkConfigBuilder {
         },
       },
       'experimental': {
-        'clash_api': {
-          'external_controller': '127.0.0.1:9090',
-        },
+        'clash_api': {'external_controller': '127.0.0.1:9090'},
       },
     };
     return const JsonEncoder.withIndent('  ').convert(config);
@@ -124,6 +150,21 @@ class LinkConfigBuilder {
     }
     if (lower.startsWith('ss://')) {
       return _parseSingboxShadowsocks(link);
+    }
+    if (lower.startsWith('hy2://') || lower.startsWith('hysteria2://')) {
+      return _parseSingboxHysteria2(link);
+    }
+    if (lower.startsWith('hy://') || lower.startsWith('hysteria://')) {
+      return _parseSingboxHysteria(link);
+    }
+    if (lower.startsWith('tuic://')) {
+      return _parseSingboxTuic(link);
+    }
+    if (lower.startsWith('wg://') || lower.startsWith('wireguard://')) {
+      return _parseSingboxWireGuard(link);
+    }
+    if (lower.startsWith('ssh://')) {
+      return _parseSingboxSsh(link);
     }
     throw ConfigParserException('Unsupported sing-box link');
   }
@@ -174,11 +215,7 @@ class LinkConfigBuilder {
       'protocol': 'trojan',
       'settings': {
         'servers': [
-          {
-            'address': server,
-            'port': port,
-            'password': password,
-          },
+          {'address': server, 'port': port, 'password': password},
         ],
       },
       'streamSettings': _xrayStreamSettings(uri.queryParameters, server),
@@ -329,6 +366,177 @@ class LinkConfigBuilder {
     };
   }
 
+  static Map<String, dynamic> _parseSingboxHysteria2(String link) {
+    final normalized = link.replaceFirst(
+      RegExp(r'^hysteria2://', caseSensitive: false),
+      'hy2://',
+    );
+    final uri = Uri.parse(normalized);
+    final server = uri.host;
+    if (server.isEmpty) {
+      throw ConfigParserException('Invalid hy2 link');
+    }
+    final params = uri.queryParameters;
+    final outbound = <String, dynamic>{
+      'type': 'hysteria2',
+      'tag': 'proxy',
+      'server': server,
+      'server_port': uri.port > 0 ? uri.port : 443,
+      'password': uri.userInfo,
+      'tls': _singboxMandatoryTls(params, server),
+    };
+
+    final obfsType = params['obfs'];
+    if (obfsType != null && obfsType.isNotEmpty) {
+      outbound['obfs'] = {
+        'type': obfsType,
+        if (params['obfs-password']?.isNotEmpty == true)
+          'password': params['obfs-password'],
+      };
+    }
+    return outbound;
+  }
+
+  static Map<String, dynamic> _parseSingboxHysteria(String link) {
+    final normalized = link.replaceFirst(
+      RegExp(r'^hysteria://', caseSensitive: false),
+      'hy://',
+    );
+    final uri = Uri.parse(normalized);
+    final server = uri.host;
+    if (server.isEmpty) {
+      throw ConfigParserException('Invalid hysteria link');
+    }
+    final params = uri.queryParameters;
+    final auth = uri.userInfo.isNotEmpty ? uri.userInfo : params['auth'];
+    final outbound = <String, dynamic>{
+      'type': 'hysteria',
+      'tag': 'proxy',
+      'server': server,
+      'server_port': uri.port > 0 ? uri.port : 443,
+      if (auth != null && auth.isNotEmpty) 'auth_str': auth,
+      'tls': _singboxMandatoryTls(
+        params,
+        server,
+        sniKeys: const ['sni', 'peer'],
+      ),
+    };
+
+    final up = int.tryParse(params['upmbps'] ?? '');
+    if (up != null) {
+      outbound['up_mbps'] = up;
+    }
+    final down = int.tryParse(params['downmbps'] ?? '');
+    if (down != null) {
+      outbound['down_mbps'] = down;
+    }
+    if (params['obfs'] == 'xplus') {
+      outbound['obfs'] = params['obfsParam'] ?? '';
+    }
+    if (params['protocol']?.isNotEmpty == true) {
+      outbound['protocol'] = params['protocol'];
+    }
+    return outbound;
+  }
+
+  static Map<String, dynamic> _parseSingboxTuic(String link) {
+    final uri = Uri.parse(link);
+    final server = uri.host;
+    if (server.isEmpty) {
+      throw ConfigParserException('Invalid tuic link');
+    }
+    final parts = uri.userInfo.split(':');
+    final uuid = parts.isNotEmpty ? parts[0] : '';
+    final password = parts.length > 1 ? parts.sublist(1).join(':') : '';
+    final params = uri.queryParameters;
+    return {
+      'type': 'tuic',
+      'tag': 'proxy',
+      'server': server,
+      'server_port': uri.port > 0 ? uri.port : 443,
+      'uuid': uuid,
+      'password': password,
+      if (params['congestion_control']?.isNotEmpty == true)
+        'congestion_control': params['congestion_control'],
+      if (params['udp_relay_mode']?.isNotEmpty == true)
+        'udp_relay_mode': params['udp_relay_mode'],
+      'tls': _singboxMandatoryTls(params, server),
+    };
+  }
+
+  static Map<String, dynamic> _parseSingboxWireGuard(String link) {
+    final uri = Uri.parse(link);
+    final server = uri.host;
+    if (server.isEmpty) {
+      throw ConfigParserException('Invalid wireguard link');
+    }
+    final params = uri.queryParameters;
+    final outbound = <String, dynamic>{
+      'type': 'wireguard',
+      'tag': 'proxy',
+      'server': server,
+      'server_port': uri.port > 0 ? uri.port : 51820,
+      'private_key': uri.userInfo,
+    };
+    if (params['publickey']?.isNotEmpty == true) {
+      outbound['peer_public_key'] = params['publickey'];
+    }
+    if (params['psk']?.isNotEmpty == true) {
+      outbound['pre_shared_key'] = params['psk'];
+    }
+    if (params['address']?.isNotEmpty == true) {
+      outbound['local_address'] = params['address']!
+          .split(',')
+          .map((a) => a.trim())
+          .where((a) => a.isNotEmpty)
+          .toList();
+    }
+    if (params['reserved']?.isNotEmpty == true) {
+      final bytes = params['reserved']!
+          .split(',')
+          .map((v) => int.tryParse(v.trim()))
+          .whereType<int>()
+          .toList();
+      if (bytes.isNotEmpty) {
+        outbound['reserved'] = bytes;
+      }
+    }
+    final mtu = int.tryParse(params['mtu'] ?? '');
+    if (mtu != null) {
+      outbound['mtu'] = mtu;
+    }
+    return outbound;
+  }
+
+  static Map<String, dynamic> _parseSingboxSsh(String link) {
+    final uri = Uri.parse(link);
+    final server = uri.host;
+    if (server.isEmpty) {
+      throw ConfigParserException('Invalid ssh link');
+    }
+    final parts = uri.userInfo.split(':');
+    final user = parts.isNotEmpty ? parts[0] : '';
+    final password = parts.length > 1 ? parts.sublist(1).join(':') : '';
+    final params = uri.queryParameters;
+    return {
+      'type': 'ssh',
+      'tag': 'proxy',
+      'server': server,
+      'server_port': uri.port > 0 ? uri.port : 22,
+      'user': user,
+      if (password.isNotEmpty) 'password': password,
+      if (params['pk']?.isNotEmpty == true) 'private_key': params['pk'],
+      if (params['pkp']?.isNotEmpty == true)
+        'private_key_passphrase': params['pkp'],
+      if (params['hk']?.isNotEmpty == true)
+        'host_key': params['hk']!
+            .split(',')
+            .map((k) => k.trim())
+            .where((k) => k.isNotEmpty)
+            .toList(),
+    };
+  }
+
   static Map<String, dynamic> _xrayStreamSettings(
     Map<String, String> params,
     String server,
@@ -382,7 +590,8 @@ class LinkConfigBuilder {
             'public_key': params['pbk'] ?? '',
             'short_id': params['sid'] ?? '',
           },
-          if (params['fp']?.isNotEmpty == true) 'utls': {'enabled': true, 'fingerprint': params['fp']},
+          if (params['fp']?.isNotEmpty == true)
+            'utls': {'enabled': true, 'fingerprint': params['fp']},
         },
       };
     }
@@ -391,11 +600,53 @@ class LinkConfigBuilder {
         'tls': {
           'enabled': true,
           'server_name': params['sni'] ?? server,
-          if (params['fp']?.isNotEmpty == true) 'utls': {'enabled': true, 'fingerprint': params['fp']},
+          if (params['fp']?.isNotEmpty == true)
+            'utls': {'enabled': true, 'fingerprint': params['fp']},
         },
       };
     }
     return {};
+  }
+
+  /// TLS block always enabled (Hysteria / TUIC).
+  static Map<String, dynamic> _singboxMandatoryTls(
+    Map<String, String> params,
+    String server, {
+    List<String> sniKeys = const ['sni'],
+  }) {
+    String? sni;
+    for (final key in sniKeys) {
+      final value = params[key];
+      if (value != null && value.isNotEmpty) {
+        sni = value;
+        break;
+      }
+    }
+    final tls = <String, dynamic>{
+      'enabled': true,
+      'server_name': sni ?? server,
+    };
+    if (_truthyParam(params['insecure']) ||
+        _truthyParam(params['allowInsecure'])) {
+      tls['insecure'] = true;
+    }
+    final alpn = params['alpn'];
+    if (alpn != null && alpn.isNotEmpty) {
+      tls['alpn'] = alpn
+          .split(',')
+          .map((a) => a.trim())
+          .where((a) => a.isNotEmpty)
+          .toList();
+    }
+    return tls;
+  }
+
+  static bool _truthyParam(String? value) {
+    if (value == null) {
+      return false;
+    }
+    final lower = value.toLowerCase();
+    return lower == '1' || lower == 'true' || lower == 'yes';
   }
 
   static Map<String, dynamic> _singboxTransport(Map<String, String> params) {
@@ -405,7 +656,8 @@ class LinkConfigBuilder {
         'transport': {
           'type': 'ws',
           'path': params['path'] ?? '/',
-          if (params['host']?.isNotEmpty == true) 'headers': {'Host': params['host']},
+          if (params['host']?.isNotEmpty == true)
+            'headers': {'Host': params['host']},
         },
       };
     }
