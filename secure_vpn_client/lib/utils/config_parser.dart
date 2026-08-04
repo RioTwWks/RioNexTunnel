@@ -168,6 +168,8 @@ class ConfigParser {
     }
     if (engine == VpnEngine.singbox) {
       _migrateSingboxLegacyDns(config);
+      _ensureSingboxRemoteDns(config);
+      _ensureSingboxClashApi(config);
     }
     _sanitizeInboundsForProxy(config, engine, proxyOnly: proxyOnly);
     _removeUnsafeSocksInbounds(config, engine);
@@ -190,8 +192,75 @@ class ConfigParser {
     }
     config['inbounds'] = inbounds;
 
+    // Mobile VPN mode: Android/iOS create a system TUN and pass its fd to the
+    // core. Subscription JSON only has SOCKS/HTTP — without a tun inbound the
+    // fd is ignored and all device traffic blackholes.
+    if (!proxyOnly && engine == VpnEngine.xray) {
+      _ensureXrayTunInbound(config);
+    }
+
     validateSecure(jsonEncode(config), engine: engine);
     return const JsonEncoder.withIndent('  ').convert(config);
+  }
+
+  /// Xray TUN inbound matching libXray / v2ray_box Android expectations.
+  static void _ensureXrayTunInbound(Map<String, dynamic> config) {
+    final inbounds = List<dynamic>.from(
+      config['inbounds'] as List<dynamic>? ?? const [],
+    );
+    final hasTun = inbounds.any(
+      (raw) => raw is Map && raw['protocol']?.toString() == 'tun',
+    );
+    if (!hasTun) {
+      inbounds.insert(0, {
+        'tag': 'tun-in',
+        'protocol': 'tun',
+        'settings': {
+          'name': 'xray0',
+          'MTU': 1500,
+          'userLevel': 8,
+        },
+        'sniffing': {
+          'enabled': true,
+          'destOverride': ['http', 'tls'],
+        },
+      });
+      config['inbounds'] = inbounds;
+    }
+
+    final policy = config['policy'];
+    if (policy is! Map) {
+      config['policy'] = {
+        'levels': {
+          '8': {
+            'handshake': 4,
+            'connIdle': 300,
+            'uplinkOnly': 1,
+            'downlinkOnly': 1,
+          },
+        },
+      };
+      return;
+    }
+    final levels = policy['levels'];
+    if (levels is Map && levels.containsKey('8')) {
+      return;
+    }
+    final updated = Map<String, dynamic>.from(policy);
+    final updatedLevels = levels is Map
+        ? Map<String, dynamic>.from(levels)
+        : <String, dynamic>{};
+    updatedLevels.putIfAbsent(
+      '8',
+      () => {
+        'handshake': 4,
+        'connIdle': 300,
+        'uplinkOnly': 1,
+        'downlinkOnly': 1,
+      },
+    );
+    updated['levels'] = updatedLevels;
+    config['policy'] = updated;
   }
 
   static Map<String, dynamic> _buildXraySocksInbound(
@@ -454,6 +523,93 @@ class ConfigParser {
       migrated.add(migratedServer);
     }
     dns['servers'] = migrated;
+  }
+
+  /// Replace fragile `local` DNS (breaks under Android VPN → [::1]:53) with
+  /// IP-based UDP resolvers. Do not set `detour: direct` — sing-box ≥1.12
+  /// rejects it as "detour to an empty direct outbound makes no sense".
+  static void _ensureSingboxRemoteDns(Map<String, dynamic> config) {
+    final dns = config['dns'];
+    final dnsMap = dns is Map
+        ? Map<String, dynamic>.from(dns)
+        : <String, dynamic>{};
+    final serversRaw = dnsMap['servers'];
+    final servers = <Map<String, dynamic>>[];
+
+    if (serversRaw is List) {
+      for (final raw in serversRaw) {
+        if (raw is! Map) {
+          continue;
+        }
+        final server = Map<String, dynamic>.from(raw);
+        if (server['type']?.toString() == 'local') {
+          continue;
+        }
+        // Strip redundant/invalid detour=direct (fatal on modern sing-box).
+        if (server['detour']?.toString() == 'direct') {
+          server.remove('detour');
+        }
+        servers.add(server);
+      }
+    }
+
+    if (servers.isEmpty) {
+      servers.addAll([
+        {
+          'type': 'udp',
+          'tag': 'dns-direct',
+          'server': '8.8.8.8',
+        },
+        {
+          'type': 'udp',
+          'tag': 'dns-backup',
+          'server': '1.1.1.1',
+        },
+      ]);
+    }
+
+    final resolverTag = servers.first['tag']?.toString() ?? 'dns-direct';
+    if (servers.first['tag'] == null) {
+      servers.first['tag'] = resolverTag;
+    }
+
+    dnsMap['servers'] = servers;
+    dnsMap['final'] = resolverTag;
+    dnsMap.putIfAbsent('strategy', () => 'prefer_ipv4');
+    config['dns'] = dnsMap;
+
+    final route = config['route'];
+    final routeMap =
+        route is Map ? Map<String, dynamic>.from(route) : <String, dynamic>{};
+    routeMap['default_domain_resolver'] = {
+      'server': resolverTag,
+      'strategy': dnsMap['strategy'] ?? 'prefer_ipv4',
+    };
+    routeMap.putIfAbsent('final', () => 'proxy');
+    routeMap.putIfAbsent('rules', () => <dynamic>[]);
+    config['route'] = routeMap;
+  }
+
+  /// Local Clash API for traffic stats (CommandClient polls 127.0.0.1:9090).
+  static void _ensureSingboxClashApi(Map<String, dynamic> config) {
+    final experimental = config['experimental'];
+    final experimentalMap = experimental is Map
+        ? Map<String, dynamic>.from(experimental)
+        : <String, dynamic>{};
+
+    final clashApi = experimentalMap['clash_api'];
+    final clashMap = clashApi is Map
+        ? Map<String, dynamic>.from(clashApi)
+        : <String, dynamic>{};
+
+    final controller = clashMap['external_controller']?.toString() ?? '';
+    if (controller.isEmpty ||
+        controller.startsWith('0.0.0.0') ||
+        controller.startsWith('[::]')) {
+      clashMap['external_controller'] = '127.0.0.1:9090';
+    }
+    experimentalMap['clash_api'] = clashMap;
+    config['experimental'] = experimentalMap;
   }
 
   static bool _isValidXrayInboundForProxy(Map<String, dynamic> inbound) {

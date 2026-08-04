@@ -113,6 +113,7 @@ open class CommandClient(
     private suspend fun pollSingboxStats() {
         Log.d(TAG, "Starting sing-box stats polling via Clash API")
         var logCounter = 0
+        var consecutiveFailures = 0
         while (pollingJob?.isActive == true) {
             try {
                 val conn = URL("$SINGBOX_API/connections").openConnection() as HttpURLConnection
@@ -122,6 +123,7 @@ open class CommandClient(
 
                 val code = conn.responseCode
                 if (code == 200) {
+                    consecutiveFailures = 0
                     val body = conn.inputStream.bufferedReader().readText()
                     conn.disconnect()
 
@@ -146,11 +148,18 @@ open class CommandClient(
                     lastSingboxUpload = uploadTotal
                     lastSingboxDownload = downloadTotal
                 } else {
-                    Log.w(TAG, "sing-box connections API returned $code")
+                    consecutiveFailures++
+                    if (consecutiveFailures <= 2 || consecutiveFailures % 30 == 0) {
+                        Log.w(TAG, "sing-box connections API returned $code")
+                    }
                     conn.disconnect()
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "sing-box stats poll error: ${e.message}")
+                consecutiveFailures++
+                // Avoid log spam when clash_api is missing/not ready yet.
+                if (consecutiveFailures <= 2 || consecutiveFailures % 30 == 0) {
+                    Log.w(TAG, "sing-box stats poll error: ${e.message}")
+                }
             }
             delay(POLL_INTERVAL_MS)
         }

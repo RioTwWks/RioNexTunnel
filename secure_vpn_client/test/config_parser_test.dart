@@ -45,11 +45,17 @@ void main() {
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       final inbounds = decoded['inbounds'] as List<dynamic>;
 
-      expect(inbounds.length, 1);
-      final inbound = inbounds.first as Map<String, dynamic>;
-      expect(inbound['listen'], '127.0.0.1');
-      expect(inbound['port'], ConfigParser.defaultSocksPort);
-      expect(inbound['settings']['auth'], 'password');
+      final tags = inbounds
+          .whereType<Map>()
+          .map((inbound) => inbound['tag'])
+          .toList();
+      expect(tags, containsAll(['tun-in', 'secure-socks-in']));
+      final socks = inbounds.whereType<Map>().firstWhere(
+            (inbound) => inbound['tag'] == 'secure-socks-in',
+          );
+      expect(socks['listen'], '127.0.0.1');
+      expect(socks['port'], ConfigParser.defaultSocksPort);
+      expect(socks['settings']['auth'], 'password');
     });
 
     test('injects secure sing-box SOCKS inbound', () {
@@ -66,6 +72,31 @@ void main() {
       expect(inbound['listen'], '127.0.0.1');
       expect(inbound['listen_port'], ConfigParser.defaultSocksPort);
       expect((inbound['users'] as List).isNotEmpty, isTrue);
+    });
+
+    test('VPN mode keeps tun inbound for xray (not proxyOnly)', () {
+      const withTun = '''
+{
+  "inbounds": [
+    {"tag": "tun", "protocol": "tun", "port": 0, "settings": {"name": "xray0"}},
+    {"tag": "socks", "protocol": "socks", "listen": "127.0.0.1", "port": 10808,
+     "settings": {"auth": "noauth"}}
+  ],
+  "outbounds": [{"protocol": "vless", "tag": "proxy"}]
+}
+''';
+      final result = ConfigParser.injectSecureSocksInbound(
+        withTun,
+        credentials,
+        VpnEngine.xray,
+      );
+      final tags = (jsonDecode(result) as Map)['inbounds'] as List;
+      final protocols = tags
+          .whereType<Map>()
+          .map((inbound) => inbound['protocol'])
+          .toList();
+      expect(protocols, contains('tun'));
+      expect(protocols, contains('socks'));
     });
 
     test('validateSecure rejects missing auth', () {

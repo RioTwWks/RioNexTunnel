@@ -11,6 +11,7 @@ import '../models/profile.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_parser.dart';
 import '../utils/link_config_builder.dart';
+import 'app_log.dart';
 import 'credential_service.dart';
 
 class VpnService {
@@ -32,10 +33,32 @@ class VpnService {
   bool _initialized = false;
   SessionCredentials? _sessionCredentials;
   VpnEngine _engine = VpnEngine.xray;
+  VpnStatus _currentStatus = VpnStatus.stopped;
+  StreamSubscription<VpnStatus>? _statusSubscription;
+  final StreamController<VpnStatus> _statusController =
+      StreamController<VpnStatus>.broadcast();
 
   SessionCredentials? get sessionCredentials => _sessionCredentials;
   VpnEngine get engine => _engine;
   V2rayBox get v2rayBox => _v2rayBox;
+  VpnStatus get currentStatus => _currentStatus;
+
+  /// Latest status first, then live updates. Prefer this over calling
+  /// [V2rayBox.watchStatus] directly so UI and connect() share one source.
+  Stream<VpnStatus> watchStatus() async* {
+    yield _currentStatus;
+    yield* _statusController.stream;
+  }
+
+  void _publishStatus(VpnStatus status) {
+    if (_currentStatus == status) {
+      return;
+    }
+    _currentStatus = status;
+    if (!_statusController.isClosed) {
+      _statusController.add(status);
+    }
+  }
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -54,6 +77,8 @@ class VpnService {
     );
     await _v2rayBox.setCoreEngine(_engine.coreName);
     await _configurePerAppProxy();
+    _statusSubscription ??=
+        _v2rayBox.watchStatus().listen(_publishStatus);
     _initialized = true;
   }
 
@@ -104,6 +129,7 @@ class VpnService {
 
   Future<void> connect(Profile profile) async {
     await initialize();
+    AppLog.info('Connect requested profile=${profile.name} engine=${_engine.coreName}');
 
     if (_sessionCredentials != null) {
       await disconnect();
@@ -112,6 +138,7 @@ class VpnService {
     await _ensureVpnPermission();
 
     final rawConfig = await resolveProfileConfig(profile);
+    AppLog.info('Resolved profile config (${rawConfig.length} bytes)');
     final credentials = _credentialService.generate();
     final desktopProxy = !kIsWeb &&
         (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
@@ -122,9 +149,14 @@ class VpnService {
       socksPort: socksPort,
       proxyOnly: desktopProxy,
     );
+    AppLog.info(
+      'Secure config ready proxyOnly=$desktopProxy '
+      'inbounds=${_inboundSummary(secureConfig)}',
+    );
 
     final validationError = await _v2rayBox.checkConfigJson(secureConfig);
     if (validationError.isNotEmpty) {
+      AppLog.error('Config validation failed: $validationError');
       _credentialService.clear(credentials);
       throw StateError('Invalid VPN config: $validationError');
     }
@@ -138,6 +170,7 @@ class VpnService {
       socksPort: socksPort,
     );
     if (!started) {
+      AppLog.error('connectWithJson returned false');
       await _clearSessionCredentials();
       _credentialService.clear(credentials);
       throw StateError('Failed to start VPN');
@@ -146,6 +179,7 @@ class VpnService {
     try {
       await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
     } catch (error) {
+      AppLog.error('Did not reach Connected: $error');
       await disconnect();
       _credentialService.clear(credentials);
       throw StateError(
@@ -155,9 +189,36 @@ class VpnService {
     }
 
     _sessionCredentials = credentials;
+    // Ensure UI flips to Disconnect even if a status event was raced/missed.
+    _publishStatus(VpnStatus.started);
+    AppLog.info('VPN connected');
+  }
+
+  String _inboundSummary(String configJson) {
+    try {
+      final decoded = jsonDecode(configJson);
+      if (decoded is! Map) {
+        return 'invalid';
+      }
+      final inbounds = decoded['inbounds'];
+      if (inbounds is! List) {
+        return 'none';
+      }
+      return inbounds
+          .whereType<Map>()
+          .map((inbound) {
+            final tag = inbound['tag'] ?? '?';
+            final protocol = inbound['protocol'] ?? inbound['type'] ?? '?';
+            return '$tag:$protocol';
+          })
+          .join(',');
+    } catch (_) {
+      return 'parse-error';
+    }
   }
 
   Future<void> disconnect() async {
+    AppLog.info('Disconnect requested');
     if (_initialized) {
       await _v2rayBox.disconnect();
     }
@@ -166,6 +227,8 @@ class VpnService {
       _sessionCredentials = null;
     }
     await _clearSessionCredentials();
+    _publishStatus(VpnStatus.stopped);
+    AppLog.info('VPN disconnected');
   }
 
   Future<void> _ensureVpnPermission() async {
@@ -200,14 +263,13 @@ class VpnService {
   }
 
   Future<void> _configurePerAppProxy() async {
-    if (kIsWeb) {
+    if (kIsWeb || !Platform.isAndroid) {
       return;
     }
-    await _v2rayBox.setPerAppProxyMode(PerAppProxyMode.include);
-    await _v2rayBox.setPerAppProxyList(
-      [applicationId],
-      PerAppProxyMode.include,
-    );
+    // Full-device VPN: route all apps except this package (OFF excludes self
+    // in VPNService). INCLUDE with only our packageName is a no-op on Android
+    // (cannot include oneself) and previously left traffic unrouted / confusing.
+    await _v2rayBox.setPerAppProxyMode(PerAppProxyMode.off);
   }
 
   Future<void> _setSessionCredentials(SessionCredentials credentials) async {

@@ -56,8 +56,18 @@ void main() {
       );
       final decoded = jsonDecode(secure) as Map<String, dynamic>;
       for (final inbound in decoded['inbounds'] as List) {
-        expect((inbound as Map)['listen'], '127.0.0.1');
+        final map = inbound as Map;
+        if (map['protocol'] == 'tun') {
+          continue;
+        }
+        expect(map['listen'], '127.0.0.1');
       }
+      expect(
+        (decoded['inbounds'] as List).any(
+          (inbound) => (inbound as Map)['protocol'] == 'tun',
+        ),
+        isTrue,
+      );
     });
   });
 }

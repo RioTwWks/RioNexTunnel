@@ -283,10 +283,121 @@ class BoxService(
                 return configFile.absolutePath
             }
 
+            val toWrite = if (!proxyOnly) {
+                ensureXrayTunInbound(configJson)
+            } else {
+                configJson
+            }
             val configFile = File(wDir, "active_config.json")
-            configFile.writeText(configJson)
+            configFile.writeText(toWrite)
             Log.d(TAG, "JSON config written to: ${configFile.absolutePath}")
             return configFile.absolutePath
+        }
+
+        /**
+         * Subscription / Dart JSON often has only SOCKS. Android VPN mode creates a
+         * system TUN and passes its fd to Xray — without a tun inbound that fd is
+         * unused and device traffic blackholes.
+         *
+         * IMPORTANT: Do not round-trip via Map+Gson — Gson turns ints into Doubles
+         * (`0` → `0.0`) and Xray rejects float ports (`uint32`).
+         */
+        private fun ensureXrayTunInbound(configJson: String): String {
+            return try {
+                val root = com.google.gson.JsonParser.parseString(configJson).asJsonObject
+                val inbounds = if (root.has("inbounds") && root.get("inbounds").isJsonArray) {
+                    root.getAsJsonArray("inbounds")
+                } else {
+                    com.google.gson.JsonArray().also { root.add("inbounds", it) }
+                }
+
+                val hasTun = inbounds.any { el ->
+                    el.isJsonObject &&
+                        el.asJsonObject.get("protocol")?.asString == "tun"
+                }
+                if (hasTun) {
+                    // Keep original JSON byte-for-byte for number types (ports stay ints).
+                    return configJson
+                }
+
+                val tun = com.google.gson.JsonObject().apply {
+                    addProperty("tag", "tun-in")
+                    // Omit port: tun does not listen on a TCP port; including 0 risks
+                    // float serialization issues on some paths.
+                    addProperty("protocol", "tun")
+                    add(
+                        "settings",
+                        com.google.gson.JsonObject().apply {
+                            addProperty("name", "xray0")
+                            addProperty("MTU", 1500)
+                            addProperty("userLevel", 8)
+                        }
+                    )
+                    add(
+                        "sniffing",
+                        com.google.gson.JsonObject().apply {
+                            addProperty("enabled", true)
+                            add(
+                                "destOverride",
+                                com.google.gson.JsonArray().apply {
+                                    add("http")
+                                    add("tls")
+                                }
+                            )
+                        }
+                    )
+                }
+                // JsonArray has no add(index, element) — prepend via rebuild.
+                val withTun = com.google.gson.JsonArray()
+                withTun.add(tun)
+                inbounds.forEach { withTun.add(it) }
+                root.add("inbounds", withTun)
+                Log.d(TAG, "Injected missing Xray tun inbound for VPN mode")
+
+                if (!root.has("policy") || !root.get("policy").isJsonObject) {
+                    root.add(
+                        "policy",
+                        com.google.gson.JsonObject().apply {
+                            add(
+                                "levels",
+                                com.google.gson.JsonObject().apply {
+                                    add(
+                                        "8",
+                                        com.google.gson.JsonObject().apply {
+                                            addProperty("handshake", 4)
+                                            addProperty("connIdle", 300)
+                                            addProperty("uplinkOnly", 1)
+                                            addProperty("downlinkOnly", 1)
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    )
+                } else {
+                    val policy = root.getAsJsonObject("policy")
+                    val levels = if (policy.has("levels") && policy.get("levels").isJsonObject) {
+                        policy.getAsJsonObject("levels")
+                    } else {
+                        com.google.gson.JsonObject().also { policy.add("levels", it) }
+                    }
+                    if (!levels.has("8")) {
+                        levels.add(
+                            "8",
+                            com.google.gson.JsonObject().apply {
+                                addProperty("handshake", 4)
+                                addProperty("connIdle", 300)
+                                addProperty("uplinkOnly", 1)
+                                addProperty("downlinkOnly", 1)
+                            }
+                        )
+                    }
+                }
+                root.toString()
+            } catch (e: Exception) {
+                Log.w(TAG, "ensureXrayTunInbound failed, using original JSON: ${e.message}")
+                configJson
+            }
         }
 
         fun wipeSensitiveConfigFiles(context: Context) {
@@ -352,6 +463,7 @@ class BoxService(
         if (!force && !Settings.debugMode) return
         val trimmed = message.trim()
         if (trimmed.isEmpty()) return
+        ServiceFileLog.append(service, "service", trimmed)
         binder.broadcast {
             it.onServiceWriteLog(trimmed)
         }

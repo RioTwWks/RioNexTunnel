@@ -12,6 +12,20 @@ Diagnostic patterns discovered during MVP integration. Check console stderr from
 
 ## Connect fails — Android
 
+### Connected but no internet (Xray + subscription)
+
+**Cause:** Subscription JSON has SOCKS/HTTP only. `injectSecureSocksInbound` used to strip `tun` and never re-add it. Android still creates a system TUN and passes its fd to Xray — without a `protocol: tun` inbound the fd is ignored and all traffic blackholes. Hiddify works because it always injects TUN.
+
+**Also:** `_configurePerAppProxy` previously set INCLUDE with only the VPN package (Android cannot include itself).
+
+**Fix:** VPN mode (`proxyOnly: false`) injects `tun-in`; per-app mode defaults to OFF (full device, exclude self). Native `writeJsonConfigFile` also ensures TUN as a safety net.
+
+**Logs:** App → `…/app_flutter/logs/app.log` (Settings → Diagnostics). Native → `Android/data/<pkg>/files/logs/` (`vpn-service.log`, `xray-access.log`, `xray-error.log`).
+
+**Cause:** sing-box config used `dns.servers: [{type: local}]`. Under Android VPN the system resolver queries `[::1]:53` → connection refused, so the proxy host never resolves (`lookup rio2skadi.pro`).
+
+**Fix:** Use IP UDP DNS (`8.8.8.8` / `1.1.1.1`) without `detour: direct` (sing-box ≥1.12 fatals on that) and set `route.default_domain_resolver`. The VPN app package is excluded from TUN, so default dial for DNS works.
+
 ### UI does nothing after Connect (no Connected / no error)
 
 **Cause A:** App `AndroidManifest.xml` missing `VPNService` / `ProxyService` declarations (plugin manifest is empty; services must be in the app).

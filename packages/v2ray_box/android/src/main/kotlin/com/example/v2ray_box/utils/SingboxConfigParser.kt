@@ -35,24 +35,23 @@ object SingboxConfigParser {
     }
 
     private fun buildDns(): Map<String, Any> {
+        // Never use type=local under Android VPN — system resolver hits [::1]:53.
+        // Do not set detour=direct — sing-box rejects it as empty direct outbound.
         return mapOf(
             "servers" to listOf(
                 mapOf(
-                    "type" to "https",
-                    "tag" to DNS_REMOTE_TAG,
-                    "server" to "1.1.1.1",
-                    "server_port" to 443,
-                    "path" to "/dns-query",
-                    "detour" to "proxy"
+                    "type" to "udp",
+                    "tag" to DNS_DIRECT_TAG,
+                    "server" to "8.8.8.8"
                 ),
                 mapOf(
-                    "type" to "local",
-                    "tag" to DNS_DIRECT_TAG
+                    "type" to "udp",
+                    "tag" to DNS_REMOTE_TAG,
+                    "server" to "1.1.1.1"
                 )
             ),
             "strategy" to DNS_STRATEGY,
-            "final" to DNS_REMOTE_TAG,
-            "disable_expire" to true,
+            "final" to DNS_DIRECT_TAG,
             "independent_cache" to true
         )
     }

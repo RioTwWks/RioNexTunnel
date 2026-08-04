@@ -29,6 +29,12 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   final logsChannel = const EventChannel('v2ray_box/logs', JSONMethodCodec());
 
+  /// Shared broadcast streams — EventChannel allows only one native listener.
+  /// Multiple [receiveBroadcastStream] calls cancel the previous sink (breaks
+  /// Android UI status updates when connect() also waits on status).
+  Stream<VpnStatus>? _statusStream;
+  Stream<VpnStats>? _statsStream;
+
   @override
   Future<String?> getPlatformVersion() async {
     final version = await methodChannel.invokeMethod<String>(
@@ -240,24 +246,29 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<VpnStatus> watchStatus() {
-    return statusChannel.receiveBroadcastStream().map((event) {
-      if (event is Map) {
-        return VpnStatus.fromString(event['status']?.toString());
-      }
-      return VpnStatus.stopped;
-    });
+    return _statusStream ??= statusChannel
+        .receiveBroadcastStream()
+        .map((event) {
+          if (event is Map) {
+            return VpnStatus.fromString(event['status']?.toString());
+          }
+          return VpnStatus.stopped;
+        })
+        .asBroadcastStream();
   }
 
   @override
   Stream<VpnStats> watchStats() {
-    return statsChannel.receiveBroadcastStream().map((event) {
-      if (event is Map) {
-        // Convert Map<dynamic, dynamic> to Map<String, dynamic>
-        final map = Map<String, dynamic>.from(event);
-        return VpnStats.fromJson(map);
-      }
-      return const VpnStats();
-    });
+    return _statsStream ??= statsChannel
+        .receiveBroadcastStream()
+        .map((event) {
+          if (event is Map) {
+            final map = Map<String, dynamic>.from(event);
+            return VpnStats.fromJson(map);
+          }
+          return const VpnStats();
+        })
+        .asBroadcastStream();
   }
 
   @override

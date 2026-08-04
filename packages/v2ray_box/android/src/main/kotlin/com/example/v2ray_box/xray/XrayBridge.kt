@@ -320,6 +320,7 @@ class XrayCoreController(
             val root = JsonParser.parseString(rawConfig).asJsonObject
             metricsListen = extractMetricsListen(root)
             injectTunFdEnv(root, tunFd)
+            injectLogFilePaths(root)
             // Avoid injecting metrics/stats blocks automatically.
             // Some libXray builds panic on repeated core starts when stats are re-registered.
             root.toString()
@@ -328,6 +329,22 @@ class XrayCoreController(
             Log.w(TAG, "sanitizeConfig failed, using original config: ${e.message}")
             rawConfig
         }
+    }
+
+    private fun injectLogFilePaths(root: JsonObject) {
+        val logDir = File(workDirPath, "logs").apply { mkdirs() }
+        val log = if (root.has("log") && root.get("log").isJsonObject) {
+            root.getAsJsonObject("log")
+        } else {
+            JsonObject().also { root.add("log", it) }
+        }
+        if (!log.has("loglevel")) {
+            log.addProperty("loglevel", "warning")
+        }
+        // Never write credentials: access log has destinations only.
+        log.addProperty("access", File(logDir, "xray-access.log").absolutePath)
+        log.addProperty("error", File(logDir, "xray-error.log").absolutePath)
+        Log.d(TAG, "Xray file logs -> ${logDir.absolutePath}")
     }
 
     private fun injectTunFdEnv(root: JsonObject, tunFd: Int?) {

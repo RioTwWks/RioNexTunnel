@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'providers/vpn_providers.dart';
 import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
+import 'services/app_log.dart';
+import 'theme/app_theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  AppLog.info('App starting');
   runApp(const ProviderScope(child: SecureVpnApp()));
 }
 
-class SecureVpnApp extends StatelessWidget {
+class SecureVpnApp extends ConsumerWidget {
   const SecureVpnApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Secure VPN Client',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       home: const MainShell(),
     );
   }
@@ -41,11 +47,32 @@ class _MainShellState extends State<MainShell> {
     SettingsScreen(),
   ];
 
+  static const _titles = ['Home', 'Profiles', 'Settings'];
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Secure VPN Client'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Secure VPN',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4,
+                  ),
+            ),
+            Text(
+              _titles[_index],
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
       ),
       body: IndexedStack(
         index: _index,
@@ -56,18 +83,18 @@ class _MainShellState extends State<MainShell> {
         onDestinationSelected: (index) => setState(() => _index = index),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            icon: Icon(Icons.shield_outlined),
+            selectedIcon: Icon(Icons.shield),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.list_alt_outlined),
-            selectedIcon: Icon(Icons.list_alt),
+            icon: Icon(Icons.dns_outlined),
+            selectedIcon: Icon(Icons.dns),
             label: 'Profiles',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune),
             label: 'Settings',
           ),
         ],

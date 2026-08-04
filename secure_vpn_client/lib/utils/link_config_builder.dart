@@ -51,13 +51,23 @@ class LinkConfigBuilder {
     final outbound = _parseSingboxOutbound(link);
     final config = {
       'log': {'level': 'warn'},
+      // Never use type:local on Android VPN — system resolver hits [::1]:53
+      // and fails while TUN is up. Bootstrap with IP DNS via direct.
       'dns': {
         'servers': [
           {
-            'type': 'local',
+            'type': 'udp',
             'tag': 'dns-direct',
+            'server': '8.8.8.8',
+          },
+          {
+            'type': 'udp',
+            'tag': 'dns-backup',
+            'server': '1.1.1.1',
           },
         ],
+        'final': 'dns-direct',
+        'strategy': 'prefer_ipv4',
       },
       'inbounds': <dynamic>[],
       'outbounds': [
@@ -70,6 +80,15 @@ class LinkConfigBuilder {
       'route': {
         'rules': <dynamic>[],
         'final': 'proxy',
+        'default_domain_resolver': {
+          'server': 'dns-direct',
+          'strategy': 'prefer_ipv4',
+        },
+      },
+      'experimental': {
+        'clash_api': {
+          'external_controller': '127.0.0.1:9090',
+        },
       },
     };
     return const JsonEncoder.withIndent('  ').convert(config);
