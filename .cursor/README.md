@@ -27,8 +27,10 @@ Documentation and rules for AI agents working in this repository.
 - `mcp.json` — MCP server configuration
 - `settings.json` — editor preferences for this workspace
 
-## Human docs
+## Human docs (bilingual)
 
-- [docs/linux_setup.md](../docs/linux_setup.md)
-- [docs/android_setup.md](../docs/android_setup.md)
-- [docs/ios_setup.md](../docs/ios_setup.md)
+- Index: [docs/README.md](../docs/README.md)
+- English: [docs/en/](../docs/en/README.md)
+- Русский: [docs/ru/](../docs/ru/README.md)
+
+Keep `docs/en/` and `docs/ru/` in sync when changing user-facing guides.

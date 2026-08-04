@@ -1,67 +1,73 @@
 # Secure VPN Client (Flutter app)
 
-Основное Flutter-приложение репозитория [Secure-Cross-Platform-VPN-Client](../README.md).
+Main Flutter application of [Secure-Cross-Platform-VPN-Client](../README.md).
 
-Кроссплатформенный VPN-клиент на **Xray-core** и **sing-box** с динамической аутентификацией локального SOCKS5 (`127.0.0.1:1080`).
+Cross-platform VPN client on **Xray-core** and **sing-box** with dynamic local SOCKS5 authentication (`127.0.0.1:1080`).
 
-## Быстрый старт
+Основное Flutter-приложение репозитория. Кроссплатформенный VPN-клиент с динамической аутентификацией локального SOCKS5.
+
+---
+
+## Documentation / Документация
+
+| Language | Guide |
+|----------|-------|
+| English | [docs/en/getting_started.md](../docs/en/getting_started.md) |
+| Русский | [docs/ru/getting_started.md](../docs/ru/getting_started.md) |
+
+| Platform | EN | RU |
+|----------|----|----|
+| Linux | [linux_setup](../docs/en/linux_setup.md) | [linux_setup](../docs/ru/linux_setup.md) |
+| Android | [android_setup](../docs/en/android_setup.md) | [android_setup](../docs/ru/android_setup.md) |
+| iOS | [ios_setup](../docs/en/ios_setup.md) | [ios_setup](../docs/ru/ios_setup.md) |
+
+---
+
+## Quick start / Быстрый старт
 
 ```bash
-# Из корня репозитория — скачать ядра и geo-файлы
+# From repo root — fetch cores and geo files
 cd ..
 ./scripts/fetch_cores.sh
 
-# Вернуться в приложение
 cd secure_vpn_client
 flutter pub get
-flutter run -d linux    # или android / windows / macos / ios
+flutter run -d linux    # or android / windows / macos / ios
 ```
 
-После изменений в `packages/v2ray_box/linux/` нужен **полный перезапуск** (`flutter run`), не hot reload.
+After changes in `packages/v2ray_box/linux/` — **full restart** (`flutter run`), not hot reload.
 
-## Зависимости
+---
 
-- Локальный форк плагина: `packages/v2ray_box` (path dependency в `pubspec.yaml`)
-- State management: **Riverpod**
-- Dart SDK: `^3.11.0` (см. `pubspec.yaml`)
-
-## Структура `lib/`
+## `lib/` structure
 
 ```
 lib/
 ├── main.dart
 ├── models/          # Profile, VpnEngine, Credentials
-├── providers/       # Riverpod (profiles, engine, VPN status)
-├── screens/         # Home, Config (profiles), Settings
+├── providers/       # Riverpod
+├── screens/         # Home, Config, Settings
 ├── services/        # VpnService, CredentialService
 ├── utils/           # ConfigParser, LinkConfigBuilder, crypto
 └── widgets/
 ```
 
-## Тесты и линтер
+---
+
+## Tests
 
 ```bash
 flutter analyze
 flutter test
 ```
 
-## Платформы
+Security tests: [test/security_test.md](test/security_test.dart), [../scripts/security_probe.sh](../scripts/security_probe.sh).
 
-| Платформа | Режим | Документация |
-|-----------|-------|--------------|
-| Linux | Proxy (SOCKS) | [docs/linux_setup.md](../docs/linux_setup.md) |
-| Android | VPN (TUN) | [docs/android_setup.md](../docs/android_setup.md) |
-| iOS | VPN | [docs/ios_setup.md](../docs/ios_setup.md) |
-| Windows / macOS | Proxy | см. корневой README |
+---
 
-Бинарники `xray`, `sing-box`, `geoip.dat`, `geosite.dat` лежат в `linux/runner/resources/` (и аналогах) — **не в git**, ставятся через `fetch_cores.sh`.
+## Developers / AI agents
 
-## Безопасность
+- [../.cursor/AGENTS.md](../.cursor/AGENTS.md)
+- [../docs/en/troubleshooting.md](../docs/en/troubleshooting.md) · [RU](../docs/ru/troubleshooting.md)
 
-- Учётные данные SOCKS генерируются на каждую сессию и стираются при disconnect.
-- Подробности и чеклист: [test/security_test.dart](test/security_test.dart), [../scripts/security_probe.sh](../scripts/security_probe.sh).
-
-## Для разработчиков / AI-агентов
-
-- [../.cursor/AGENTS.md](../.cursor/AGENTS.md) — карта репозитория и правила для агентов
-- [../.cursor/troubleshooting.md](../.cursor/troubleshooting.md) — типичные ошибки Linux и подписок
+Core binaries (`xray`, `sing-box`, `geoip.dat`, `geosite.dat`) in `linux/runner/resources/` — **not in git**, installed via `fetch_cores.sh`.
