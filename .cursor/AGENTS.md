@@ -23,7 +23,9 @@ Secure-Cross-Platform-VPN-Client/
 │   ├── fetch_cores.sh          # Download xray/sing-box + geo assets
 │   ├── security_probe.sh       # Local SOCKS auth probe
 │   └── sync_v2ray_box.sh       # Sync fork patches
-├── docs/                       # Platform setup (android_setup.md, ios_setup.md)
+├── docs/                       # Bilingual user docs (en/, ru/)
+│   ├── en/                     # English guides
+│   └── ru/                     # Russian guides
 └── .cursor/                    # Agent docs (this folder)
 ```
 
@@ -80,11 +82,14 @@ flutter build linux --debug
 
 ## Related docs
 
-- [architecture.md](architecture.md) — components and data flow
+- User docs (EN/RU): [../docs/README.md](../docs/README.md) — `docs/en/`, `docs/ru/`
+- [architecture.md](architecture.md) — components and data flow (agent copy; user-facing: `docs/en|ru/architecture.md`)
 - [troubleshooting.md](troubleshooting.md) — fixed bugs and diagnostic patterns
 - [workflows.md](workflows.md) — build, test, debug checklists
 - [tasks.md](tasks.md) — completed work + backlog
 - [rules/](rules/) — scoped Cursor rules (`.mdc`)
+
+When changing setup or security behavior, update **both** `docs/en/` and `docs/ru/`.
 
 ## MCP servers (optional)
 

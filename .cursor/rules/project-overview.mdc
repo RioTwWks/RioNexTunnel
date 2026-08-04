@@ -11,6 +11,7 @@ Flutter VPN app in `secure_vpn_client/`. Local plugin fork in `packages/v2ray_bo
 
 - `.cursor/AGENTS.md` — repo map and golden rules
 - `.cursor/troubleshooting.md` — known Linux/subscription failures
+- `docs/en/` and `docs/ru/` — bilingual user documentation (keep both in sync)
 
 ## Non-negotiable security
 

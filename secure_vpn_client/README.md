@@ -1,31 +1,45 @@
 # Secure VPN Client (Flutter app)
 
-Основное Flutter-приложение репозитория [Secure-Cross-Platform-VPN-Client](../README.md).
+**English** · **Русский**
+
+Main Flutter application of [Secure-Cross-Platform-VPN-Client](../README.md).
+
+Cross-platform VPN client on **Xray-core** and **sing-box** with dynamic authenticated local SOCKS5 (`127.0.0.1:1080`).
 
 Кроссплатформенный VPN-клиент на **Xray-core** и **sing-box** с динамической аутентификацией локального SOCKS5 (`127.0.0.1:1080`).
 
-## Быстрый старт
+## Documentation / Документация
+
+| | English | Русский |
+|--|---------|---------|
+| Project overview | [README.en.md](../README.en.md) | [README.ru.md](../README.ru.md) |
+| Docs index | [docs/en/](../docs/en/README.md) | [docs/ru/](../docs/ru/README.md) |
+| Getting started | [getting-started.md](../docs/en/getting-started.md) | [getting-started.md](../docs/ru/getting-started.md) |
+
+## Quick start / Быстрый старт
 
 ```bash
-# Из корня репозитория — скачать ядра и geo-файлы
+# From repository root — download cores and geo assets
 cd ..
 ./scripts/fetch_cores.sh
 
-# Вернуться в приложение
+# Back to the app
 cd secure_vpn_client
 flutter pub get
-flutter run -d linux    # или android / windows / macos / ios
+flutter run -d linux    # or android / windows / macos / ios
 ```
 
-После изменений в `packages/v2ray_box/linux/` нужен **полный перезапуск** (`flutter run`), не hot reload.
+After changes in `packages/v2ray_box/linux/`, use a **full restart** (`flutter run`), not hot reload.
 
-## Зависимости
+После правок в `packages/v2ray_box/linux/` нужен **полный перезапуск**, не hot reload.
 
-- Локальный форк плагина: `packages/v2ray_box` (path dependency в `pubspec.yaml`)
+## Dependencies / Зависимости
+
+- Local plugin fork: `packages/v2ray_box` (path dependency in `pubspec.yaml`)
 - State management: **Riverpod**
-- Dart SDK: `^3.11.0` (см. `pubspec.yaml`)
+- Dart SDK: `^3.11.0` (see `pubspec.yaml`)
 
-## Структура `lib/`
+## `lib/` layout / Структура `lib/`
 
 ```
 lib/
@@ -38,30 +52,31 @@ lib/
 └── widgets/
 ```
 
-## Тесты и линтер
+## Tests / Тесты
 
 ```bash
 flutter analyze
 flutter test
 ```
 
-## Платформы
+## Platforms / Платформы
 
-| Платформа | Режим | Документация |
-|-----------|-------|--------------|
-| Linux | Proxy (SOCKS) | [docs/linux_setup.md](../docs/linux_setup.md) |
-| Android | VPN (TUN) | [docs/android_setup.md](../docs/android_setup.md) |
-| iOS | VPN | [docs/ios_setup.md](../docs/ios_setup.md) |
-| Windows / macOS | Proxy | см. корневой README |
+| Platform | Mode | English | Русский |
+|----------|------|---------|---------|
+| Linux | Proxy (SOCKS/HTTP) | [linux_setup.md](../docs/en/linux_setup.md) | [linux_setup.md](../docs/ru/linux_setup.md) |
+| Android | VPN (TUN) | [android_setup.md](../docs/en/android_setup.md) | [android_setup.md](../docs/ru/android_setup.md) |
+| iOS | VPN | [ios_setup.md](../docs/en/ios_setup.md) | [ios_setup.md](../docs/ru/ios_setup.md) |
+| Windows / macOS | Proxy | see [README.en.md](../README.en.md) | см. [README.ru.md](../README.ru.md) |
 
-Бинарники `xray`, `sing-box`, `geoip.dat`, `geosite.dat` лежат в `linux/runner/resources/` (и аналогах) — **не в git**, ставятся через `fetch_cores.sh`.
+Binaries `xray`, `sing-box`, `geoip.dat`, `geosite.dat` live under `linux/runner/resources/` (and equivalents) — **not in git**; install via `fetch_cores.sh`.
 
-## Безопасность
+## Security / Безопасность
 
-- Учётные данные SOCKS генерируются на каждую сессию и стираются при disconnect.
-- Подробности и чеклист: [test/security_test.dart](test/security_test.dart), [../scripts/security_probe.sh](../scripts/security_probe.sh).
+- SOCKS credentials are generated per session and wiped on disconnect.
+- Details: [docs/en/security.md](../docs/en/security.md) · [docs/ru/security.md](../docs/ru/security.md)
+- Tests / probe: [test/security_test.dart](test/security_test.dart), [../scripts/security_probe.sh](../scripts/security_probe.sh)
 
-## Для разработчиков / AI-агентов
+## Developers / AI agents
 
-- [../.cursor/AGENTS.md](../.cursor/AGENTS.md) — карта репозитория и правила для агентов
-- [../.cursor/troubleshooting.md](../.cursor/troubleshooting.md) — типичные ошибки Linux и подписок
+- [../.cursor/AGENTS.md](../.cursor/AGENTS.md) — repository map and agent rules
+- [../.cursor/troubleshooting.md](../.cursor/troubleshooting.md) — Linux and subscription failures
