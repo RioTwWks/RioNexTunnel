@@ -1,5 +1,7 @@
 # Linux setup
 
+[Русская версия](linux_setup_ru.md)
+
 ## Prerequisites
 
 ```bash
