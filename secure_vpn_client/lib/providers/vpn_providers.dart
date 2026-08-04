@@ -39,8 +39,9 @@ final vpnStatsProvider = StreamProvider<VpnStats>((ref) {
 
 const _themeModeKey = 'theme_mode';
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
+final themeModeProvider = StateNotifierProvider<ThemeModeNotifier, ThemeMode>((
+  ref,
+) {
   return ThemeModeNotifier();
 });
 
@@ -68,15 +69,15 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
-final engineProvider =
-    StateNotifierProvider<EngineNotifier, VpnEngine>((ref) {
+final engineProvider = StateNotifierProvider<EngineNotifier, VpnEngine>((ref) {
   return EngineNotifier(ref.watch(vpnServiceProvider));
 });
 
-final profilesProvider =
-    StateNotifierProvider<ProfilesNotifier, List<Profile>>((ref) {
-  return ProfilesNotifier();
-});
+final profilesProvider = StateNotifierProvider<ProfilesNotifier, List<Profile>>(
+  (ref) {
+    return ProfilesNotifier();
+  },
+);
 
 final selectedProfileProvider = StateProvider<Profile?>((ref) => null);
 
@@ -123,7 +124,9 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(state.map((profile) => profile.toJson()).toList());
+    final encoded = jsonEncode(
+      state.map((profile) => profile.toJson()).toList(),
+    );
     await prefs.setString(_profilesKey, encoded);
   }
 
@@ -140,6 +143,29 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
     );
     state = [...state, profile];
     await _persist();
+  }
+
+  Future<Profile?> selectServer({
+    required String profileId,
+    required int serverIndex,
+    String? serverName,
+    bool autoSelectBestServer = false,
+  }) async {
+    final index = state.indexWhere((profile) => profile.id == profileId);
+    if (index < 0) {
+      return null;
+    }
+    final updated = state[index].copyWith(
+      selectedServerIndex: serverIndex,
+      selectedServerName: serverName,
+      autoSelectBestServer: autoSelectBestServer,
+    );
+    state = [
+      for (var i = 0; i < state.length; i++)
+        if (i == index) updated else state[i],
+    ];
+    await _persist();
+    return updated;
   }
 
   Future<void> removeProfile(String id) async {

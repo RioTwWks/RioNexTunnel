@@ -35,25 +35,23 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     }
 
     if (_type == ProfileType.link && !V2rayBox().isValidConfigLink(link)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid VPN config link')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invalid VPN config link')));
       return;
     }
 
-    await ref.read(profilesProvider.notifier).addProfile(
-          name: name,
-          configLink: link,
-          type: _type,
-        );
+    await ref
+        .read(profilesProvider.notifier)
+        .addProfile(name: name, configLink: link, type: _type);
 
     _nameController.clear();
     _linkController.clear();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile added')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile added')));
     }
   }
 
@@ -75,23 +73,21 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                 Text(
                   'Add profile',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Paste a share link or subscription URL',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   key: const ValueKey('profile_name_field'),
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Profile name',
-                  ),
+                  decoration: const InputDecoration(labelText: 'Profile name'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -137,9 +133,9 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         const SizedBox(height: 24),
         Text(
           'Saved profiles',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         if (profiles.isEmpty)
@@ -162,8 +158,8 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                   Text(
                     'Add a link or subscription to get started',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                      color: scheme.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -171,72 +167,79 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
             ),
           )
         else
-          ...profiles.map(
-            (profile) {
-              final selected = selectedProfile?.id == profile.id;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Card(
-                  color: selected
-                      ? scheme.primaryContainer.withValues(alpha: 0.45)
-                      : null,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    leading: CircleAvatar(
-                      backgroundColor: selected
-                          ? scheme.primary
-                          : scheme.surfaceContainerHigh,
-                      foregroundColor: selected
-                          ? scheme.onPrimary
-                          : scheme.onSurfaceVariant,
-                      child: Icon(
-                        profile.type == ProfileType.link
-                            ? Icons.link
-                            : Icons.rss_feed_outlined,
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(
-                      profile.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      profile.type == ProfileType.link
-                          ? 'Direct link'
-                          : 'Subscription',
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (selected)
-                          Icon(Icons.check_circle, color: scheme.primary),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () {
-                            ref
-                                .read(profilesProvider.notifier)
-                                .removeProfile(profile.id);
-                            if (selectedProfile?.id == profile.id) {
-                              ref
-                                  .read(selectedProfileProvider.notifier)
-                                  .state = null;
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      ref.read(selectedProfileProvider.notifier).state =
-                          profile;
-                    },
+          ...profiles.map((profile) {
+            final selected = selectedProfile?.id == profile.id;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Card(
+                color: selected
+                    ? scheme.primaryContainer.withValues(alpha: 0.45)
+                    : null,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
                   ),
+                  leading: CircleAvatar(
+                    backgroundColor: selected
+                        ? scheme.primary
+                        : scheme.surfaceContainerHigh,
+                    foregroundColor: selected
+                        ? scheme.onPrimary
+                        : scheme.onSurfaceVariant,
+                    child: Icon(
+                      profile.type == ProfileType.link
+                          ? Icons.link
+                          : Icons.rss_feed_outlined,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    profile.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    profile.type == ProfileType.link
+                        ? 'Direct link'
+                        : profile.autoSelectBestServer
+                        ? (profile.selectedServerName != null
+                              ? 'Auto · ${profile.selectedServerName}'
+                              : 'Subscription · Auto (best)')
+                        : profile.selectedServerName != null
+                        ? 'Subscription · ${profile.selectedServerName}'
+                        : 'Subscription',
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (selected)
+                        Icon(Icons.check_circle, color: scheme.primary),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () {
+                          ref
+                              .read(profilesProvider.notifier)
+                              .removeProfile(profile.id);
+                          if (selectedProfile?.id == profile.id) {
+                            ref.read(selectedProfileProvider.notifier).state =
+                                null;
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    // Prefer latest persisted copy (includes server selection).
+                    final matches = ref
+                        .read(profilesProvider)
+                        .where((p) => p.id == profile.id);
+                    ref.read(selectedProfileProvider.notifier).state =
+                        matches.isEmpty ? profile : matches.first;
+                  },
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
       ],
     );
   }

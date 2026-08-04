@@ -8,9 +8,11 @@ import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/credentials.dart';
 import '../models/profile.dart';
+import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_parser.dart';
 import '../utils/link_config_builder.dart';
+import '../utils/server_latency.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
 
@@ -20,8 +22,8 @@ class VpnService {
     CredentialService? credentialService,
     this.applicationId = 'com.example.secure_vpn_client',
     this.socksPort = ConfigParser.defaultSocksPort,
-  })  : _v2rayBox = v2rayBox ?? V2rayBox(),
-        _credentialService = credentialService ?? CredentialService();
+  }) : _v2rayBox = v2rayBox ?? V2rayBox(),
+       _credentialService = credentialService ?? CredentialService();
 
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
@@ -65,24 +67,24 @@ class VpnService {
       return;
     }
     await _v2rayBox.initialize(notificationStopButtonText: 'Stop');
-    final desktopProxy = !kIsWeb &&
-        (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    final desktopProxy =
+        !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     if (desktopProxy) {
       await _v2rayBox.setConfigOptions(
         const ConfigOptions(enableTun: false, setSystemProxy: true),
       );
     }
-    await _v2rayBox.setServiceMode(
-      desktopProxy ? VpnMode.proxy : VpnMode.vpn,
-    );
+    await _v2rayBox.setServiceMode(desktopProxy ? VpnMode.proxy : VpnMode.vpn);
     await _v2rayBox.setCoreEngine(_engine.coreName);
     await _configurePerAppProxy();
-    _statusSubscription ??=
-        _v2rayBox.watchStatus().listen(_publishStatus);
+    _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
     _initialized = true;
   }
 
-  Future<void> setEngine(VpnEngine engine, {bool disconnectIfNeeded = true}) async {
+  Future<void> setEngine(
+    VpnEngine engine, {
+    bool disconnectIfNeeded = true,
+  }) async {
     if (_engine == engine) {
       return;
     }
@@ -102,6 +104,7 @@ class VpnService {
         ? await ConfigParser.parseFromUrl(
             profile.configLink,
             engine: _engine,
+            serverIndex: profile.selectedServerIndex,
           )
         : profile.configLink.trim();
 
@@ -127,9 +130,59 @@ class VpnService {
     }
   }
 
-  Future<void> connect(Profile profile) async {
+  /// Fetches subscription and returns selectable non-decoy servers.
+  Future<List<SubscriptionServer>> listSubscriptionServers(
+    Profile profile,
+  ) async {
+    if (profile.type != ProfileType.subscription) {
+      return const [];
+    }
+    return ConfigParser.listServersFromUrl(profile.configLink, engine: _engine);
+  }
+
+  /// Probes TCP latency for all servers in [profile]'s subscription.
+  Future<List<ServerLatencyResult>> probeSubscriptionServers(
+    Profile profile, {
+    void Function(ServerLatencyResult result)? onResult,
+    Duration timeout = ServerLatencyProbe.defaultTimeout,
+  }) async {
+    final servers = await listSubscriptionServers(profile);
+    return ServerLatencyProbe.probeAll(
+      servers,
+      timeout: timeout,
+      onResult: onResult,
+    );
+  }
+
+  /// Returns the lowest-latency reachable server, or throws if none respond.
+  Future<ServerLatencyResult> selectBestSubscriptionServer(
+    Profile profile, {
+    void Function(ServerLatencyResult result)? onResult,
+    Duration timeout = ServerLatencyProbe.defaultTimeout,
+  }) async {
+    final results = await probeSubscriptionServers(
+      profile,
+      onResult: onResult,
+      timeout: timeout,
+    );
+    final best = ServerLatencyProbe.selectBest(results);
+    if (best == null) {
+      throw ServerLatencyException(
+        'No reachable servers in subscription. Check network and try again.',
+      );
+    }
+    AppLog.info(
+      'Best server=${best.server.name} latency=${best.latencyMs}ms '
+      'index=${best.server.index}',
+    );
+    return best;
+  }
+
+  Future<Profile> connect(Profile profile) async {
     await initialize();
-    AppLog.info('Connect requested profile=${profile.name} engine=${_engine.coreName}');
+    AppLog.info(
+      'Connect requested profile=${profile.name} engine=${_engine.coreName}',
+    );
 
     if (_sessionCredentials != null) {
       await disconnect();
@@ -137,11 +190,22 @@ class VpnService {
 
     await _ensureVpnPermission();
 
-    final rawConfig = await resolveProfileConfig(profile);
+    var effectiveProfile = profile;
+    if (profile.type == ProfileType.subscription &&
+        profile.autoSelectBestServer) {
+      final best = await selectBestSubscriptionServer(profile);
+      effectiveProfile = profile.copyWith(
+        selectedServerIndex: best.server.index,
+        selectedServerName: best.server.name,
+        autoSelectBestServer: true,
+      );
+    }
+
+    final rawConfig = await resolveProfileConfig(effectiveProfile);
     AppLog.info('Resolved profile config (${rawConfig.length} bytes)');
     final credentials = _credentialService.generate();
-    final desktopProxy = !kIsWeb &&
-        (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    final desktopProxy =
+        !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final secureConfig = ConfigParser.injectSecureSocksInbound(
       rawConfig,
       credentials,
@@ -164,7 +228,7 @@ class VpnService {
     await _setSessionCredentials(credentials);
     final started = await _v2rayBox.connectWithJson(
       secureConfig,
-      name: profile.name,
+      name: effectiveProfile.name,
       socksUsername: credentials.username,
       socksPassword: credentials.password,
       socksPort: socksPort,
@@ -192,6 +256,7 @@ class VpnService {
     // Ensure UI flips to Disconnect even if a status event was raced/missed.
     _publishStatus(VpnStatus.started);
     AppLog.info('VPN connected');
+    return effectiveProfile;
   }
 
   String _inboundSummary(String configJson) {

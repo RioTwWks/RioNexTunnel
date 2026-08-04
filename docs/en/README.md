@@ -77,7 +77,8 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Xray / sing-box engine switch
 - [x] Security unit tests
 - [x] Linux desktop: proxy mode, all 4 engine × profile combinations
-- [ ] Server picker from subscription list
+- [x] Server picker from subscription list
+- [x] Auto-select best server by latency
 - [ ] Full E2E on Android / iOS / Windows / macOS
 - [ ] CI: `flutter analyze` + `flutter test`
 

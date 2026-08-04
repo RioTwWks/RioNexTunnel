@@ -51,8 +51,8 @@ void main() {
           .toList();
       expect(tags, containsAll(['tun-in', 'secure-socks-in']));
       final socks = inbounds.whereType<Map>().firstWhere(
-            (inbound) => inbound['tag'] == 'secure-socks-in',
-          );
+        (inbound) => inbound['tag'] == 'secure-socks-in',
+      );
       expect(socks['listen'], '127.0.0.1');
       expect(socks['port'], ConfigParser.defaultSocksPort);
       expect(socks['settings']['auth'], 'password');
@@ -162,6 +162,72 @@ void main() {
       expect(decoded['remarks'], 'server-1');
     });
 
+    test('lists and selects v2rayNG servers by index', () {
+      const body = '''
+[
+  {
+    "remarks": "decoy",
+    "outbounds": [{"protocol": "freedom", "tag": "direct"}]
+  },
+  {
+    "remarks": "Frankfurt",
+    "outbounds": [{"protocol": "vless", "tag": "proxy-a"}]
+  },
+  {
+    "remarks": "Amsterdam",
+    "outbounds": [{"protocol": "vmess", "tag": "proxy-b"}]
+  }
+]
+''';
+      final servers = ConfigParser.listSubscriptionServers(body);
+      expect(servers.length, 2);
+      expect(servers[0].name, 'Frankfurt');
+      expect(servers[1].name, 'Amsterdam');
+      expect(servers[0].index, 0);
+      expect(servers[1].index, 1);
+
+      final second = ConfigParser.normalizeSubscriptionContent(
+        body,
+        serverIndex: 1,
+      );
+      expect(jsonDecode(second)['remarks'], 'Amsterdam');
+    });
+
+    test('lists link-based subscription servers with fragment names', () {
+      const body = '''
+#No Time Limit
+trojan://1@20.07--2026.06.09.time:2007?sni=fake_ip_for_sub_link&security=tls
+vless://11111111-2222-3333-4444-555555555555@example.com:443?security=tls#Node%20A
+trojan://secret@node.example:8443?security=tls#Node%20B
+''';
+      final servers = ConfigParser.listSubscriptionServers(body);
+      expect(servers.length, 2);
+      expect(servers[0].name, 'Node A');
+      expect(servers[1].name, 'Node B');
+
+      final selected = ConfigParser.normalizeSubscriptionContent(
+        body,
+        serverIndex: 1,
+      );
+      expect(selected.startsWith('trojan://'), isTrue);
+      expect(selected.contains('node.example'), isTrue);
+    });
+
+    test('rejects out-of-range server index', () {
+      const body = '''
+[
+  {
+    "remarks": "only",
+    "outbounds": [{"protocol": "vless", "tag": "proxy"}]
+  }
+]
+''';
+      expect(
+        () => ConfigParser.normalizeSubscriptionContent(body, serverIndex: 3),
+        throwsA(isA<ConfigParserException>()),
+      );
+    });
+
     test('rewrites placeholder proxy routing tag for xray subscriptions', () {
       const subscription = '''
 {
@@ -179,8 +245,9 @@ void main() {
         credentials,
         VpnEngine.xray,
       );
-      final rules = ((jsonDecode(result) as Map)['routing'] as Map)['rules']
-          as List<dynamic>;
+      final rules =
+          ((jsonDecode(result) as Map)['routing'] as Map)['rules']
+              as List<dynamic>;
       expect(rules.length, 1);
       expect((rules.first as Map)['outboundTag'], 'node-1');
     });
@@ -203,8 +270,9 @@ void main() {
         credentials,
         VpnEngine.singbox,
       );
-      final servers = ((jsonDecode(result) as Map)['dns'] as Map)['servers']
-          as List<dynamic>;
+      final servers =
+          ((jsonDecode(result) as Map)['dns'] as Map)['servers']
+              as List<dynamic>;
       expect(servers.first['type'], 'udp');
       expect(servers.first['server'], '8.8.8.8');
       expect(servers[1]['type'], 'tcp');

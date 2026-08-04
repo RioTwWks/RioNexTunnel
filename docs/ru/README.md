@@ -77,7 +77,8 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Переключение ядер xray / sing-box
 - [x] Модульные тесты безопасности
 - [x] Linux desktop: proxy mode, все 4 комбинации engine × profile
-- [ ] Выбор сервера из списка подписки
+- [x] Выбор сервера из списка подписки
+- [x] Автовыбор сервера с лучшей задержкой
 - [ ] Полноценный E2E на Android / iOS / Windows / macOS
 - [ ] CI: `flutter analyze` + `flutter test`
 

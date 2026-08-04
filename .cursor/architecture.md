@@ -39,7 +39,7 @@ sequenceDiagram
 ### VpnService
 
 - `initialize()` — sets `VpnMode.proxy` on desktop, `enableTun: false` in `ConfigOptions`.
-- `resolveProfileConfig()` — subscription URL → normalized link or JSON; config link → `LinkConfigBuilder`.
+- `resolveProfileConfig()` — subscription URL → selected server (by `selectedServerIndex`) as link or JSON; config link → `LinkConfigBuilder`.
 - `connect()` — inject secure inbound → `checkConfigJson` → set credentials channel → `connectWithJson`.
 
 ## v2ray_box fork (`packages/v2ray_box`)

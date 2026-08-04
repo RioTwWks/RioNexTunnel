@@ -6,6 +6,7 @@ import '../models/profile.dart';
 import '../providers/vpn_providers.dart';
 import '../widgets/connection_button.dart';
 import '../widgets/proxy_credentials_card.dart';
+import '../widgets/server_picker_tile.dart';
 import '../widgets/status_indicator.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -32,7 +33,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     try {
-      await ref.read(vpnServiceProvider).connect(profile);
+      final connectedProfile = await ref
+          .read(vpnServiceProvider)
+          .connect(profile);
+      if (connectedProfile.autoSelectBestServer ||
+          connectedProfile.selectedServerIndex != profile.selectedServerIndex) {
+        final updated = await ref
+            .read(profilesProvider.notifier)
+            .selectServer(
+              profileId: connectedProfile.id,
+              serverIndex: connectedProfile.selectedServerIndex,
+              serverName: connectedProfile.selectedServerName,
+              autoSelectBestServer: connectedProfile.autoSelectBestServer,
+            );
+        if (updated != null) {
+          ref.read(selectedProfileProvider.notifier).state = updated;
+        }
+      }
     } catch (error) {
       setState(() => _error = error.toString());
     } finally {
@@ -66,7 +83,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final engine = ref.watch(engineProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
-    final showProxyCard = status == VpnStatus.started &&
+    final showProxyCard =
+        status == VpnStatus.started &&
         ProxyCredentialsCard.isDesktopProxy &&
         sessionCredentials != null;
     final scheme = Theme.of(context).colorScheme;
@@ -96,21 +114,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ? 'No profile selected'
                       : selectedProfile.name,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   selectedProfile == null
                       ? 'Add a config link or subscription in Profiles'
                       : selectedProfile.type == ProfileType.subscription
-                          ? 'Subscription profile'
-                          : 'Direct config link',
+                      ? 'Subscription profile'
+                      : 'Direct config link',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
+                if (selectedProfile != null &&
+                    selectedProfile.type == ProfileType.subscription) ...[
+                  const SizedBox(height: 14),
+                  ServerPickerTile(profile: selectedProfile),
+                ],
                 if (stats != null && status == VpnStatus.started) ...[
                   const SizedBox(height: 18),
                   Row(
@@ -203,9 +226,9 @@ class _MetaChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -243,17 +266,17 @@ class _StatTile extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),

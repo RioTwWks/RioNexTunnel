@@ -41,7 +41,7 @@ sequenceDiagram
 ### VpnService
 
 - `initialize()` — на desktop `VpnMode.proxy`, `enableTun: false`.
-- `resolveProfileConfig()` — URL подписки → ссылка или JSON; config link → `LinkConfigBuilder`.
+- `resolveProfileConfig()` — URL подписки → выбранный сервер (`selectedServerIndex`) как ссылка или JSON; config link → `LinkConfigBuilder`.
 - `connect()` — secure inbound → `checkConfigJson` → credentials channel → `connectWithJson`.
 
 ## Форк v2ray_box (`packages/v2ray_box`)

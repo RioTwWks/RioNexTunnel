@@ -53,9 +53,10 @@
 
 ## Backlog — UX & profiles
 
-- [ ] Server picker when subscription returns multiple v2rayNG entries (currently first real entry)
+- [x] Server picker when subscription returns multiple v2rayNG entries (currently first real entry)
+- [x] Auto-select best subscription server by TCP latency
 - [ ] Profile import from clipboard / QR
-- [ ] Connection stats + latency test in UI
+- [ ] Connection stats in UI
 - [ ] Full app localization (RU/EN) beyond proxy/browser helper strings
 - [ ] Publish browser extension to Chrome Web Store / Firefox AMO
 

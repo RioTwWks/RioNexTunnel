@@ -20,9 +20,18 @@ Always send `Accept-Encoding: identity`.
 ## Normalization pipeline
 
 1. Try base64 decode of body
-2. If `[` → `_selectV2rayNgConfig` (skip decoy entries)
-3. If `{` → raw JSON (rare on desktop; sanitize heavily)
-4. Else → first non-decoy config link per line
+2. If `[` → list non-decoy v2rayNG entries (`listSubscriptionServers`)
+3. If `{` → single JSON config
+4. Else → all non-decoy config links (one per line)
+5. Select by `serverIndex` (default `0` = first real server)
+
+`normalizeSubscriptionContent(body, serverIndex: n)` and `parseFromUrl(..., serverIndex: n)` use that list.
+UI persists `Profile.selectedServerIndex` / `selectedServerName`.
+
+## Auto best server
+
+`ServerLatencyProbe` measures TCP connect RTT to each node host:port (portable; Linux has no native `url_test`).
+`Profile.autoSelectBestServer` → `VpnService.connect` re-probes and picks the lowest latency before start.
 
 ## Post-processing (`injectSecureSocksInbound`)
 

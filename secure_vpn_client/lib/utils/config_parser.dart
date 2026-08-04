@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/credentials.dart';
+import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 
 class ConfigParserException implements Exception {
@@ -26,7 +27,7 @@ class ConfigParser {
         ((config['outbounds'] as List).first as Map).containsKey('type');
   }
 
-  static Future<String> parseFromUrl(
+  static Future<String> fetchSubscriptionBody(
     String url, {
     required VpnEngine engine,
   }) async {
@@ -42,8 +43,24 @@ class ConfigParser {
         'Failed to fetch subscription: HTTP ${response.statusCode}',
       );
     }
+    return response.body.trim();
+  }
 
-    return normalizeSubscriptionContent(response.body.trim());
+  static Future<String> parseFromUrl(
+    String url, {
+    required VpnEngine engine,
+    int serverIndex = 0,
+  }) async {
+    final body = await fetchSubscriptionBody(url, engine: engine);
+    return normalizeSubscriptionContent(body, serverIndex: serverIndex);
+  }
+
+  static Future<List<SubscriptionServer>> listServersFromUrl(
+    String url, {
+    required VpnEngine engine,
+  }) async {
+    final body = await fetchSubscriptionBody(url, engine: engine);
+    return listSubscriptionServers(body);
   }
 
   /// Subscription panels return different formats depending on User-Agent.
@@ -54,7 +71,29 @@ class ConfigParser {
   }
 
   /// Converts subscription body to either JSON config or a single config link.
-  static String normalizeSubscriptionContent(String body) {
+  ///
+  /// [serverIndex] selects among non-decoy entries (0 = first real server).
+  static String normalizeSubscriptionContent(
+    String body, {
+    int serverIndex = 0,
+  }) {
+    final servers = listSubscriptionServers(body);
+    if (servers.isEmpty) {
+      throw ConfigParserException(
+        'Subscription does not contain JSON config or supported config links',
+      );
+    }
+    if (serverIndex < 0 || serverIndex >= servers.length) {
+      throw ConfigParserException(
+        'Server index $serverIndex out of range '
+        '(0..${servers.length - 1})',
+      );
+    }
+    return servers[serverIndex].content;
+  }
+
+  /// Lists all non-decoy servers from a raw (or base64) subscription body.
+  static List<SubscriptionServer> listSubscriptionServers(String body) {
     var content = body;
     try {
       final decoded = utf8.decode(base64.decode(_padBase64(body)));
@@ -68,44 +107,112 @@ class ConfigParser {
     final trimmed = content.trim();
     if (trimmed.startsWith('[')) {
       final decoded = jsonDecode(trimmed);
-      if (decoded is List && decoded.isNotEmpty) {
-        return jsonEncode(_selectV2rayNgConfig(decoded));
+      if (decoded is! List || decoded.isEmpty) {
+        throw ConfigParserException('Subscription JSON array is empty');
       }
-      throw ConfigParserException('Subscription JSON array is empty');
+      return _listV2rayNgServers(decoded);
     }
 
     if (trimmed.startsWith('{')) {
-      return trimmed;
+      final decoded = jsonDecode(trimmed);
+      if (decoded is! Map) {
+        throw ConfigParserException('Subscription JSON object is invalid');
+      }
+      final config = Map<String, dynamic>.from(decoded);
+      if (_isDecoyXraySubscription(config)) {
+        throw ConfigParserException(
+          'Subscription does not contain a valid Xray server config',
+        );
+      }
+      return [
+        SubscriptionServer(
+          index: 0,
+          name: _nameFromXrayConfig(config, fallbackIndex: 0),
+          content: trimmed,
+        ),
+      ];
     }
 
+    final servers = <SubscriptionServer>[];
     for (final line in content.split('\n')) {
       final lineTrimmed = line.trim();
       if (lineTrimmed.isEmpty || lineTrimmed.startsWith('#')) {
         continue;
       }
       if (_looksLikeConfigLink(lineTrimmed) && !_isDecoyLink(lineTrimmed)) {
-        return lineTrimmed;
+        final index = servers.length;
+        servers.add(
+          SubscriptionServer(
+            index: index,
+            name: _nameFromConfigLink(lineTrimmed, fallbackIndex: index),
+            content: lineTrimmed,
+          ),
+        );
       }
     }
-
-    throw ConfigParserException(
-      'Subscription does not contain JSON config or supported config links',
-    );
+    if (servers.isEmpty) {
+      throw ConfigParserException(
+        'Subscription does not contain JSON config or supported config links',
+      );
+    }
+    return servers;
   }
 
-  static Map<String, dynamic> _selectV2rayNgConfig(List<dynamic> configs) {
+  static List<SubscriptionServer> _listV2rayNgServers(List<dynamic> configs) {
+    final servers = <SubscriptionServer>[];
     for (final raw in configs) {
       if (raw is! Map) {
         continue;
       }
       final config = Map<String, dynamic>.from(raw);
-      if (!_isDecoyXraySubscription(config)) {
-        return config;
+      if (_isDecoyXraySubscription(config)) {
+        continue;
+      }
+      final index = servers.length;
+      servers.add(
+        SubscriptionServer(
+          index: index,
+          name: _nameFromXrayConfig(config, fallbackIndex: index),
+          content: jsonEncode(config),
+        ),
+      );
+    }
+    if (servers.isEmpty) {
+      throw ConfigParserException(
+        'Subscription does not contain a valid Xray server config',
+      );
+    }
+    return servers;
+  }
+
+  static String _nameFromXrayConfig(
+    Map<String, dynamic> config, {
+    required int fallbackIndex,
+  }) {
+    final remarks = config['remarks']?.toString().trim();
+    if (remarks != null && remarks.isNotEmpty) {
+      return remarks;
+    }
+    return 'Server ${fallbackIndex + 1}';
+  }
+
+  static String _nameFromConfigLink(String link, {required int fallbackIndex}) {
+    final hash = link.indexOf('#');
+    if (hash >= 0 && hash < link.length - 1) {
+      final fragment = Uri.decodeComponent(link.substring(hash + 1)).trim();
+      if (fragment.isNotEmpty) {
+        return fragment;
       }
     }
-    throw ConfigParserException(
-      'Subscription does not contain a valid Xray server config',
-    );
+    try {
+      final uri = Uri.parse(link);
+      if (uri.host.isNotEmpty) {
+        return uri.hasPort ? '${uri.host}:${uri.port}' : uri.host;
+      }
+    } catch (_) {
+      // Fall through to numbered label.
+    }
+    return 'Server ${fallbackIndex + 1}';
   }
 
   static bool _isDecoyXraySubscription(Map<String, dynamic> config) {
@@ -215,11 +322,7 @@ class ConfigParser {
       inbounds.insert(0, {
         'tag': 'tun-in',
         'protocol': 'tun',
-        'settings': {
-          'name': 'xray0',
-          'MTU': 1500,
-          'userLevel': 8,
-        },
+        'settings': {'name': 'xray0', 'MTU': 1500, 'userLevel': 8},
         'sniffing': {
           'enabled': true,
           'destOverride': ['http', 'tls'],
@@ -279,10 +382,7 @@ class ConfigParser {
       'settings': {
         'auth': 'password',
         'accounts': [
-          {
-            'user': credentials.username,
-            'pass': credentials.password,
-          },
+          {'user': credentials.username, 'pass': credentials.password},
         ],
         'udp': true,
       },
@@ -300,10 +400,7 @@ class ConfigParser {
       'protocol': 'http',
       'settings': {
         'accounts': [
-          {
-            'user': credentials.username,
-            'pass': credentials.password,
-          },
+          {'user': credentials.username, 'pass': credentials.password},
         ],
       },
     };
@@ -319,10 +416,7 @@ class ConfigParser {
       'listen': '127.0.0.1',
       'listen_port': httpPort,
       'users': [
-        {
-          'username': credentials.username,
-          'password': credentials.password,
-        },
+        {'username': credentials.username, 'password': credentials.password},
       ],
     };
   }
@@ -337,10 +431,7 @@ class ConfigParser {
       'listen': '127.0.0.1',
       'listen_port': socksPort,
       'users': [
-        {
-          'username': credentials.username,
-          'password': credentials.password,
-        },
+        {'username': credentials.username, 'password': credentials.password},
       ],
     };
   }
@@ -501,11 +592,7 @@ class ConfigParser {
       } else if (address.startsWith('https://') ||
           address.startsWith('h3://') ||
           address.startsWith('quic://')) {
-        migratedServer = {
-          'type': 'https',
-          'server': address,
-          'tag': tag,
-        };
+        migratedServer = {'type': 'https', 'server': address, 'tag': tag};
       } else if (address.startsWith('rcode://')) {
         migratedServer = {'type': 'empty', 'tag': tag};
       } else {
@@ -555,16 +642,8 @@ class ConfigParser {
 
     if (servers.isEmpty) {
       servers.addAll([
-        {
-          'type': 'udp',
-          'tag': 'dns-direct',
-          'server': '8.8.8.8',
-        },
-        {
-          'type': 'udp',
-          'tag': 'dns-backup',
-          'server': '1.1.1.1',
-        },
+        {'type': 'udp', 'tag': 'dns-direct', 'server': '8.8.8.8'},
+        {'type': 'udp', 'tag': 'dns-backup', 'server': '1.1.1.1'},
       ]);
     }
 
@@ -579,8 +658,9 @@ class ConfigParser {
     config['dns'] = dnsMap;
 
     final route = config['route'];
-    final routeMap =
-        route is Map ? Map<String, dynamic>.from(route) : <String, dynamic>{};
+    final routeMap = route is Map
+        ? Map<String, dynamic>.from(route)
+        : <String, dynamic>{};
     routeMap['default_domain_resolver'] = {
       'server': resolverTag,
       'strategy': dnsMap['strategy'] ?? 'prefer_ipv4',
@@ -658,9 +738,7 @@ class ConfigParser {
         }
         final inboundTag = rule['inboundTag'];
         if (inboundTag is List) {
-          return !inboundTag.any(
-            (tag) => removedTags.contains(tag.toString()),
-          );
+          return !inboundTag.any((tag) => removedTags.contains(tag.toString()));
         }
         if (inboundTag is String) {
           return !removedTags.contains(inboundTag);
@@ -714,10 +792,7 @@ class ConfigParser {
     }).toList();
   }
 
-  static bool _isSocksInbound(
-    Map<String, dynamic> inbound,
-    VpnEngine engine,
-  ) {
+  static bool _isSocksInbound(Map<String, dynamic> inbound, VpnEngine engine) {
     if (engine == VpnEngine.singbox) {
       return inbound['type'] == 'socks';
     }
@@ -762,16 +837,14 @@ class ConfigParser {
     return false;
   }
 
-  static void validateSecure(
-    String jsonConfig, {
-    VpnEngine? engine,
-  }) {
+  static void validateSecure(String jsonConfig, {VpnEngine? engine}) {
     final decoded = jsonDecode(jsonConfig);
     if (decoded is! Map<String, dynamic>) {
       throw ConfigParserException('Config root must be a JSON object');
     }
 
-    final detectedEngine = engine ??
+    final detectedEngine =
+        engine ??
         (isSingboxConfig(decoded) ? VpnEngine.singbox : VpnEngine.xray);
     final inbounds = decoded['inbounds'];
     if (inbounds is! List || inbounds.isEmpty) {
@@ -798,13 +871,17 @@ class ConfigParser {
           ? inbound['listen_port'] ?? inbound['port']
           : inbound['port'];
       if (port == vulnerablePort) {
-        throw ConfigParserException('Vulnerable port $vulnerablePort is not allowed');
+        throw ConfigParserException(
+          'Vulnerable port $vulnerablePort is not allowed',
+        );
       }
 
       if (detectedEngine == VpnEngine.xray) {
         final settings = inbound['settings'];
         if (settings is! Map || settings['auth'] != 'password') {
-          throw ConfigParserException('Xray SOCKS inbound must use password auth');
+          throw ConfigParserException(
+            'Xray SOCKS inbound must use password auth',
+          );
         }
         final accounts = settings['accounts'];
         if (accounts is! List || accounts.isEmpty) {
