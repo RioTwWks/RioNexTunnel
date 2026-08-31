@@ -17,7 +17,7 @@ void main() {
     }
 
     testWidgets('restores last selected profile on startup', (tester) async {
-      final profile = Profile(
+      const profile = Profile(
         id: 'profile-1',
         name: 'My VPN',
         configLink: 'https://example.com/sub',
