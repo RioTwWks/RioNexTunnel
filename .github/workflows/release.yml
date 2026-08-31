@@ -278,6 +278,16 @@ jobs:
         shell: bash
         run: ./scripts/fetch_cores.sh
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.5'
+          cache: false
+
+      - name: Build Libbox.xcframework
+        shell: bash
+        run: ./scripts/build_libbox_ios.sh
+
       - name: Setup iOS signing
         shell: bash
         env:
