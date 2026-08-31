@@ -8,21 +8,59 @@ DEST="${ROOT_DIR}/secure_vpn_client/assets/binaries"
 XRAY_VERSION="${XRAY_VERSION:-}"
 SINGBOX_VERSION="${SINGBOX_VERSION:-}"
 
+# Used when GitHub API is unavailable (rate limit, offline dev machine, etc.)
+DEFAULT_XRAY_VERSION="${DEFAULT_XRAY_VERSION:-26.3.27}"
+DEFAULT_SINGBOX_VERSION="${DEFAULT_SINGBOX_VERSION:-1.14.0}"
+
 mkdir -p "${DEST}"/{android/arm64-v8a,android/armeabi-v7a,ios,windows/x64,linux/x64,macos}
+
+curl_github() {
+  local url="$1"
+  local attempt
+  local -a curl_args=(
+    -fsSL
+    -H "Accept: application/vnd.github+json"
+    -H "User-Agent: RioNexTunnel-fetch-cores"
+  )
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  fi
+
+  for attempt in 1 2 3 4 5; do
+    if curl "${curl_args[@]}" "${url}"; then
+      return 0
+    fi
+    if (( attempt < 5 )); then
+      sleep $((attempt * 2))
+    fi
+  done
+
+  return 1
+}
 
 fetch_latest_tag() {
   local repo="$1"
+  local fallback="$2"
   local tag
-  tag="$(curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
-    | python3 -c "import sys, json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))")"
-  echo "${tag}"
+
+  if tag="$(curl_github "https://api.github.com/repos/${repo}/releases/latest" \
+    | python3 -c "import sys, json; print(json.load(sys.stdin)['tag_name'].lstrip('v'))" 2>/dev/null)"; then
+    if [[ -n "${tag}" ]]; then
+      echo "${tag}"
+      return 0
+    fi
+  fi
+
+  echo "Warning: could not resolve latest ${repo} release via GitHub API; using fallback v${fallback}" >&2
+  echo "${fallback}"
 }
 
 resolve_asset_url() {
   local repo="$1"
   local version="$2"
   local pattern="$3"
-  curl -fsSL "https://api.github.com/repos/${repo}/releases/tags/v${version}" \
+  curl_github "https://api.github.com/repos/${repo}/releases/tags/v${version}" \
     | python3 -c "
 import json, re, sys
 release = json.load(sys.stdin)
@@ -105,10 +143,15 @@ copy_if_exists() {
 }
 
 if [[ -z "${XRAY_VERSION}" ]]; then
-  XRAY_VERSION="$(fetch_latest_tag "XTLS/Xray-core")"
+  XRAY_VERSION="$(fetch_latest_tag "XTLS/Xray-core" "${DEFAULT_XRAY_VERSION}")"
 fi
 if [[ -z "${SINGBOX_VERSION}" ]]; then
-  SINGBOX_VERSION="$(fetch_latest_tag "SagerNet/sing-box")"
+  SINGBOX_VERSION="$(fetch_latest_tag "SagerNet/sing-box" "${DEFAULT_SINGBOX_VERSION}")"
+fi
+
+if [[ -z "${XRAY_VERSION}" || -z "${SINGBOX_VERSION}" ]]; then
+  echo "Could not resolve core versions. Set XRAY_VERSION and SINGBOX_VERSION explicitly." >&2
+  exit 1
 fi
 
 MACOS_ARCH="${MACOS_ARCH:-}"
