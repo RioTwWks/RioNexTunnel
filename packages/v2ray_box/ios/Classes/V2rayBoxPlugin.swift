@@ -456,9 +456,6 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                     return
                 }
                 
-                let stderrPath = tempDir.appendingPathComponent("stderr.log").path
-                LibboxRedirectStderr(stderrPath, &error)
-                
                 #if !targetEnvironment(simulator)
                 try await loadVPNPreference()
                 #endif
