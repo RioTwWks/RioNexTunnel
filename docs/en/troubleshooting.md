@@ -1,6 +1,9 @@
 # Troubleshooting
 
-[Русская версия](../ru/troubleshooting.md)
+<p align="right">
+  <a href="../ru/troubleshooting.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
 
 Diagnostic patterns for Linux desktop and general issues. Check console stderr from xray/sing-box — the Linux plugin forwards it to `PlatformException` details.
 

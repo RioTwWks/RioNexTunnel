@@ -1,6 +1,9 @@
 # Browser extension (proxy auth)
 
-[Русская версия](../ru/browser_extension.md)
+<p align="right">
+  <a href="../ru/browser_extension.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
 
 One-time setup for Chromium and Firefox on **Linux desktop**.
 

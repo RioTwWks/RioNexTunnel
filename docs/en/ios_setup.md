@@ -1,6 +1,9 @@
 # iOS setup
 
-[Русская версия](../ru/ios_setup.md)
+<p align="right">
+  <a href="../ru/ios_setup.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
 
 1. Open `secure_vpn_client/ios/Runner.xcworkspace` in Xcode.
 2. Add the **Network Extensions** capability and enable **Packet Tunnel**.

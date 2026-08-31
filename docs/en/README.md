@@ -1,5 +1,10 @@
 # RioNexTunnel (MVP)
 
+<p align="right">
+  <a href="../ru/README.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
+
 **Cross-platform VPN client on Flutter with Xray-core and sing-box support**  
 *RIO — Reliable Internet Overlay. Nexus + Tunnel — a secure linking channel.*  
 *Protection against unauthenticated local SOCKS5 proxy vulnerability (March 2026)*
@@ -8,8 +13,6 @@
 [![Xray-core](https://img.shields.io/badge/Xray--core-1.8.24+-green.svg)](https://github.com/XTLS/Xray-core)
 [![sing-box](https://img.shields.io/badge/sing--box-1.10+-orange.svg)](https://github.com/SagerNet/sing-box)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](../../LICENSE)
-
-[Русская версия](../ru/README.md)
 
 ---
 

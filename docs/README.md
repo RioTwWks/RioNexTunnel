@@ -1,13 +1,20 @@
-# Documentation
+<p align="right">
+  <a href="en/README.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English"></a>
+  <a href="ru/README.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русский"></a>
+</p>
+
+# Documentation / Документация
 
 **RioNexTunnel** — bilingual documentation index.
 
-| Language | Index |
-|----------|-------|
+| Language / Язык | Index |
+|-----------------|-------|
 | English | [docs/en/README.md](en/README.md) |
 | Русский | [docs/ru/README.md](ru/README.md) |
 
-## Topics
+Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.md) (RU)
+
+## Topics / Разделы
 
 | Topic | English | Русский |
 |-------|---------|---------|

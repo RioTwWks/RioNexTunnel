@@ -1,6 +1,9 @@
 # Настройка Android
 
-[English version](../en/android_setup.md)
+<p align="right">
+  <a href="../en/android_setup.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
+
 
 1. Откройте `secure_vpn_client/android/app/src/main/AndroidManifest.xml` и проверьте:
    - разрешения VPN (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `POST_NOTIFICATIONS`, …)

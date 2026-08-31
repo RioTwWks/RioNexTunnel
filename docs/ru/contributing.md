@@ -1,6 +1,11 @@
 # Участие в разработке
 
-[← Оглавление документации](README.md) · [English](../en/contributing.md)
+<p align="right">
+  <a href="../en/contributing.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
+
+[← Оглавление документации](README.md)
+
 
 ## Перед Pull Request
 

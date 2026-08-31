@@ -1,6 +1,9 @@
 # Getting started
 
-[Русская версия](../ru/getting_started.md)
+<p align="right">
+  <a href="../ru/getting_started.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
 
 ## Requirements
 

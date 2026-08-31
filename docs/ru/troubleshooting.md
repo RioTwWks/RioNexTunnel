@@ -1,6 +1,9 @@
 # Устранение неполадок
 
-[English version](../en/troubleshooting.md)
+<p align="right">
+  <a href="../en/troubleshooting.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
+
 
 Паттерны диагностики для Linux desktop и общих проблем. Проверьте stderr xray/sing-box — Linux plugin передаёт его в `PlatformException` details.
 

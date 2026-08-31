@@ -1,6 +1,9 @@
 # Security
 
-[Русская версия](../ru/security.md)
+<p align="right">
+  <a href="../ru/security.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
 
 ## Threat context (March 2026)
 

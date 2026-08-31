@@ -1,14 +1,16 @@
-# RioNexTunnel Proxy Auth (браузерное расширение)
+<p align="right">
+  <a href="README.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
 
-> **Язык / Language:** **Русский** | [English](README.md)
+# RioNexTunnel Proxy Auth (браузерное расширение)
 
 Одноразовая настройка для Chromium и Firefox на десктопном Linux.
 
-Полное руководство: [docs/ru/browser_extension.md](../../docs/ru/browser_extension.md) · [EN](../../docs/en/browser_extension.md)
+Полное руководство: [docs/ru/browser_extension.md](../../docs/ru/browser_extension.md)
 
 ## Установка расширения
 
-1. Откройте `chrome://extensions` (Chromium: `chrome://extensions`, Firefox: `about:debugging#/runtime/this-firefox`).
+1. Откройте `chrome://extensions` (Chromium) или `about:debugging#/runtime/this-firefox` (Firefox).
 2. Включите **Режим разработчика** (Chromium) или **Загрузить временное дополнение** (Firefox).
 3. Загрузите эту папку (`extensions/secure-vpn-proxy-auth`).
 
@@ -22,12 +24,12 @@ VPN-приложение устанавливает native host автомати
 
 Имя хоста: `com.secure.vpn.proxy_auth`
 
-Пути для ручной установки:
-
-- Бинарник: `~/.local/share/v2ray_box/native_host/secure_vpn_native_host`
-- Манифест Chrome: `~/.config/google-chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json`
-- Манифест Chromium: `~/.config/chromium/NativeMessagingHosts/com.secure.vpn.proxy_auth.json`
-- Манифест Firefox: `~/.mozilla/native-messaging-hosts/com.secure.vpn.proxy_auth.json`
+| Компонент | Путь |
+|-----------|------|
+| Бинарник | `~/.local/share/v2ray_box/native_host/secure_vpn_native_host` |
+| Манифест Chrome | `~/.config/google-chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Манифест Chromium | `~/.config/chromium/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Манифест Firefox | `~/.mozilla/native-messaging-hosts/com.secure.vpn.proxy_auth.json` |
 
 ## Проверка
 
