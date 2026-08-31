@@ -1,4 +1,4 @@
-# Secure VPN Client (MVP)
+# RioNexTunnel (MVP)
 
 This page moved to the bilingual documentation.
 

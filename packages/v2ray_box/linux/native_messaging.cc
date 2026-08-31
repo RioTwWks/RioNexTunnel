@@ -117,7 +117,7 @@ bool WriteNativeManifest(const std::string& path,
   std::ostringstream json;
   json << "{\n";
   json << "  \"name\": \"" << kNativeMessagingHostName << "\",\n";
-  json << "  \"description\": \"Secure VPN proxy auth bridge\",\n";
+  json << "  \"description\": \"RioNexTunnel proxy auth bridge\",\n";
   json << "  \"path\": \"" << JsonEscape(host_path) << "\",\n";
   json << "  \"type\": \"stdio\"\n";
   if (firefox) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'constants/app_branding.dart';
 import 'providers/vpn_providers.dart';
 import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
@@ -22,7 +23,7 @@ class SecureVpnApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
-      title: 'Secure VPN Client',
+      title: kAppName,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
@@ -59,7 +60,7 @@ class _MainShellState extends State<MainShell> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Secure VPN',
+              kAppName,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.4,

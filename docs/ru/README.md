@@ -1,6 +1,7 @@
-# Secure VPN Client (MVP)
+# RioNexTunnel (MVP)
 
 **Кроссплатформенный VPN-клиент на Flutter с поддержкой Xray-core и sing-box**  
+*RIO — надёжная интернет-прослойка. Nexus + Tunnel — «связующий туннель».*  
 *Защита от уязвимости неавторизованного локального SOCKS5-прокси (март 2026)*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue.svg)](https://flutter.dev)
@@ -14,7 +15,7 @@
 
 ## Описание
 
-**Secure VPN Client** — безопасный и гибкий VPN-клиент, разработанный в рамках MVP. Приложение подключается к VPN-серверам по протоколам VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH и другим (через ядра Xray-core и sing-box). Главное отличие от многих существующих клиентов — **полное устранение уязвимости неаутентифицированного локального SOCKS5-прокси**, обнаруженной весной 2026 года в Hiddify, v2rayNG, Happ и др.
+**RioNexTunnel** (RIO — надёжная интернет-прослойка; Nexus + Tunnel — «связующий туннель») — безопасный и гибкий VPN-клиент, разработанный в рамках MVP. Приложение объединяет конфиги и платформы в защищённый канал и подключается к VPN-серверам по протоколам VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH и другим (через ядра Xray-core и sing-box). Главное отличие от многих существующих клиентов — **полное устранение уязвимости неаутентифицированного локального SOCKS5-прокси**, обнаруженной весной 2026 года в Hiddify, v2rayNG, Happ и др.
 
 Проект создан на Flutter для пяти платформ: **Android, iOS, Windows, Linux, macOS**.
 

@@ -1,7 +1,7 @@
 # .cursorrules
 project:
-  name: "Secure Cross-Platform VPN Client"
-  description: "Flutter-based VPN client using Xray-core and sing-box with dynamic SOCKS5 authentication"
+  name: "RioNexTunnel"
+  description: "RIO — Reliable Internet Overlay. Flutter VPN client using Xray-core and sing-box with dynamic SOCKS5 authentication."
   tech_stack:
     - Flutter (Dart)
     - Xray-core (Go)

@@ -14,7 +14,7 @@
         tools:ignore="QueryAllPackagesPermission" />
 
     <application
-        android:label="secure_vpn_client"
+        android:label="RioNexTunnel"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"

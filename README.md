@@ -1,9 +1,9 @@
-# Secure VPN Client (MVP)
+# RioNexTunnel (MVP)
 
-**Cross-platform Flutter VPN client with Xray-core and sing-box**  
+**RIO — Reliable Internet Overlay.** Cross-platform Flutter VPN client with Xray-core and sing-box  
 *Immune to unauthenticated local SOCKS5 proxy vulnerability (March 2026)*
 
-**Кроссплатформенный VPN-клиент на Flutter с Xray-core и sing-box**  
+**RIO — надёжная интернет-прослойка.** Кроссплатформенный VPN-клиент на Flutter с Xray-core и sing-box  
 *Защита от неавторизованного локального SOCKS5-прокси (март 2026)*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue.svg)](https://flutter.dev)

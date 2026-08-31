@@ -1,6 +1,6 @@
 # Documentation
 
-**Secure VPN Client** — bilingual documentation index.
+**RioNexTunnel** — bilingual documentation index.
 
 | Language | Index |
 |----------|-------|
