@@ -1,6 +1,6 @@
 # Troubleshooting — Linux desktop (and general)
 
-Diagnostic patterns discovered during MVP integration. Check console stderr from xray/sing-box — the Linux plugin forwards it to `PlatformException` details.
+Diagnostic patterns discovered during integration. Check console stderr from xray/sing-box — the Linux plugin forwards it to `PlatformException` details.
 
 ## Connect fails — quick checklist
 

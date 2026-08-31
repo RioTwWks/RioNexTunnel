@@ -1,4 +1,4 @@
-# RioNexTunnel (MVP)
+# RioNexTunnel
 
 <p align="right">
   <a href="../en/README.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
@@ -18,7 +18,7 @@
 
 ## Описание
 
-**RioNexTunnel** (RIO — надёжная интернет-прослойка; Nexus + Tunnel — «связующий туннель») — безопасный и гибкий VPN-клиент, разработанный в рамках MVP. Приложение объединяет конфиги и платформы в защищённый канал и подключается к VPN-серверам по протоколам VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH и другим (через ядра Xray-core и sing-box). Главное отличие от многих существующих клиентов — **полное устранение уязвимости неаутентифицированного локального SOCKS5-прокси**, обнаруженной весной 2026 года в Hiddify, v2rayNG, Happ и др.
+**RioNexTunnel** (RIO — надёжная интернет-прослойка; Nexus + Tunnel — «связующий туннель») — безопасный и гибкий VPN-клиент. Приложение объединяет конфиги и платформы в защищённый канал и подключается к VPN-серверам по протоколам VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH и другим (через ядра Xray-core и sing-box). Главное отличие от многих существующих клиентов — **полное устранение уязвимости неаутентифицированного локального SOCKS5-прокси**, обнаруженной весной 2026 года в Hiddify, v2rayNG, Happ и др.
 
 Проект создан на Flutter для пяти платформ: **Android, iOS, Windows, Linux, macOS**.
 
@@ -75,7 +75,7 @@ Secure-Cross-Platform-VPN-Client/
 
 ---
 
-## Планы развития (после MVP)
+## Планы развития
 
 - [x] Подписки (engine-specific User-Agent)
 - [x] Переключение ядер xray / sing-box

@@ -1,4 +1,4 @@
-# RioNexTunnel (MVP)
+# RioNexTunnel
 
 <p align="right">
   <a href="../ru/README.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
@@ -18,7 +18,7 @@
 
 ## Overview
 
-**RioNexTunnel** (RIO — Reliable Internet Overlay; Nexus + Tunnel) is a secure and flexible VPN client built as an MVP. It unifies configs and platforms into a protected channel. The app connects to VPN servers via VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH, and other protocols (through Xray-core and sing-box engines). The main difference from many existing clients is **complete elimination of the unauthenticated local SOCKS5 proxy vulnerability** discovered in spring 2026 in apps such as Hiddify, v2rayNG, Happ, and others.
+**RioNexTunnel** (RIO — Reliable Internet Overlay; Nexus + Tunnel) is a secure and flexible VPN client. It unifies configs and platforms into a protected channel. The app connects to VPN servers via VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH, and other protocols (through Xray-core and sing-box engines). The main difference from many existing clients is **complete elimination of the unauthenticated local SOCKS5 proxy vulnerability** discovered in spring 2026 in apps such as Hiddify, v2rayNG, Happ, and others.
 
 The project is built from scratch on Flutter for five platforms: **Android, iOS, Windows, Linux, macOS**.
 
@@ -75,7 +75,7 @@ Secure-Cross-Platform-VPN-Client/
 
 ---
 
-## Roadmap (post-MVP)
+## Roadmap
 
 - [x] Subscriptions (engine-specific User-Agent)
 - [x] Xray / sing-box engine switch

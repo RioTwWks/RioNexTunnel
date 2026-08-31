@@ -68,7 +68,7 @@ flutter build linux --debug
 | v2ray_box fork | `scripts/sync_v2ray_box.sh` if syncing upstream | platform smoke test |
 | Subscription parsing | `test/config_parser_test.dart` | real subscription URL + config link |
 
-## Platform status (MVP)
+## Platform status
 
 | Platform | Mode | Status |
 |----------|------|--------|

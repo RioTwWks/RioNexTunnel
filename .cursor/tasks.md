@@ -2,7 +2,7 @@
 
 > Agent entrypoint: [AGENTS.md](AGENTS.md) · Architecture: [architecture.md](architecture.md)
 
-## Completed — MVP core
+## Completed — core
 
 - [x] Project structure, `.cursorrules`, Riverpod UI
 - [x] `CredentialService` + secure SOCKS injection (`ConfigParser`)
