@@ -34,9 +34,10 @@ flutter pub get
 | Платформа | Руководство |
 |-----------|-------------|
 | Linux | [linux_setup.md](linux_setup.md) |
+| Windows | [windows_setup.md](windows_setup.md) |
 | Android | [android_setup.md](android_setup.md) |
 | iOS | [ios_setup.md](ios_setup.md) |
-| Windows / macOS | Ядра через `fetch_cores.sh` в `windows/runner/resources/` или `macos/Runner/Resources/` |
+| macOS | Ядра через `fetch_cores.sh` в `macos/Runner/Resources/` |
 
 ## 4. Загрузка бинарников ядер
 
@@ -62,7 +63,7 @@ cd secure_vpn_client
 flutter run -d linux      # или android, windows, macos, ios
 ```
 
-После изменений нативного плагина (`packages/v2ray_box/linux/`) нужен **полный перезапуск**, не hot reload.
+После изменений нативного плагина (`packages/v2ray_box/linux/` или `packages/v2ray_box/windows/`) нужен **полный перезапуск**, не hot reload.
 
 ## Проверка безопасности
 

@@ -34,9 +34,10 @@ flutter pub get
 | Platform | Guide |
 |----------|-------|
 | Linux | [linux_setup.md](linux_setup.md) |
+| Windows | [windows_setup.md](windows_setup.md) |
 | Android | [android_setup.md](android_setup.md) |
 | iOS | [ios_setup.md](ios_setup.md) |
-| Windows / macOS | Copy cores via `fetch_cores.sh` to `windows/runner/resources/` or `macos/Runner/Resources/` |
+| macOS | Copy cores via `fetch_cores.sh` to `macos/Runner/Resources/` |
 
 ## 4. Fetch core binaries
 
@@ -62,7 +63,7 @@ cd secure_vpn_client
 flutter run -d linux      # or android, windows, macos, ios
 ```
 
-After native plugin changes (`packages/v2ray_box/linux/`), use a **full restart**, not hot reload.
+After native plugin changes (`packages/v2ray_box/linux/` or `packages/v2ray_box/windows/`), use a **full restart**, not hot reload.
 
 ## Verify security
 
