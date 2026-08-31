@@ -400,7 +400,16 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             
         case "set_locale":
             if let locale = call.arguments as? String {
-                LibboxSetLocale(locale)
+                var localeError: NSError?
+                LibboxSetLocale(locale, &localeError)
+                if let localeError = localeError {
+                    result(FlutterError(
+                        code: "SET_LOCALE_ERROR",
+                        message: localeError.localizedDescription,
+                        details: nil
+                    ))
+                    return
+                }
             }
             result(true)
             
@@ -432,18 +441,13 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 try fileManager.createDirectory(at: workingDir, withIntermediateDirectories: true)
                 try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
                 
-                let opts = MobileSetupOptions()
-                opts.basePath = baseDir.path
-                opts.workingDir = workingDir.path
-                opts.tempDir = tempDir.path
-                opts.listen = ""
-                opts.secret = ""
-                opts.debug = false
-                opts.mode = 0
-                opts.fixAndroidStack = false
+                let options = LibboxSetupOptions()
+                options.basePath = baseDir.path
+                options.workingPath = workingDir.path
+                options.tempPath = tempDir.path
                 
                 var error: NSError?
-                MobileSetup(opts, nil, &error)
+                LibboxSetup(options, &error)
                 
                 if let error = error {
                     await MainActor.run {
