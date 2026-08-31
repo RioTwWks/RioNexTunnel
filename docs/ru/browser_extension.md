@@ -1,6 +1,9 @@
 # Расширение браузера (авторизация прокси)
 
-[English version](../en/browser_extension.md)
+<p align="right">
+  <a href="../en/browser_extension.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
+
 
 Одноразовая настройка для Chromium и Firefox на **Linux desktop**.
 

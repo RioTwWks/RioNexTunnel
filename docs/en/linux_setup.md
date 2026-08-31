@@ -1,6 +1,9 @@
 # Linux setup
 
-[Русская версия](../ru/linux_setup.md)
+<p align="right">
+  <a href="../ru/linux_setup.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
 
 ## Prerequisites
 

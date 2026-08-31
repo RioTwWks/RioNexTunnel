@@ -1,6 +1,11 @@
 # Contributing
 
-[← Documentation index](README.md) · [Русский](../ru/contributing.md)
+<p align="right">
+  <a href="../ru/contributing.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
+
+[← Documentation index](README.md)
+
 
 ## Before opening a PR
 

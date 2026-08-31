@@ -1,14 +1,16 @@
-# RioNexTunnel Proxy Auth (browser extension)
+<p align="right">
+  <a href="README.ru.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
+</p>
 
-> **Language / Язык:** [English](README.md) | **Русский**
+# RioNexTunnel Proxy Auth (browser extension)
 
 One-time setup for Chromium and Firefox on Linux desktop.
 
-Full guide: [docs/en/browser_extension.md](../../docs/en/browser_extension.md) · [RU](../../docs/ru/browser_extension.md)
+Full guide: [docs/en/browser_extension.md](../../docs/en/browser_extension.md)
 
 ## Install extension
 
-1. Open `chrome://extensions` (Chromium: `chrome://extensions`, Firefox: `about:debugging#/runtime/this-firefox`).
+1. Open `chrome://extensions` (Chromium) or `about:debugging#/runtime/this-firefox` (Firefox).
 2. Enable **Developer mode** (Chromium) or **Load Temporary Add-on** (Firefox).
 3. Load this folder (`extensions/secure-vpn-proxy-auth`).
 
@@ -18,19 +20,19 @@ Full guide: [docs/en/browser_extension.md](../../docs/en/browser_extension.md) �
 
 ## Native messaging host
 
-The VPN app installs the native host automatically on first `setup()` (Connect once).
+The VPN app installs the native host automatically on first `setup()` (connect once).
 
 Host name: `com.secure.vpn.proxy_auth`
 
-Manual paths:
-
-- Binary: `~/.local/share/v2ray_box/native_host/secure_vpn_native_host`
-- Chrome manifest: `~/.config/google-chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json`
-- Chromium manifest: `~/.config/chromium/NativeMessagingHosts/com.secure.vpn.proxy_auth.json`
-- Firefox manifest: `~/.mozilla/native-messaging-hosts/com.secure.vpn.proxy_auth.json`
+| Component | Path |
+|-----------|------|
+| Binary | `~/.local/share/v2ray_box/native_host/secure_vpn_native_host` |
+| Chrome manifest | `~/.config/google-chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Chromium manifest | `~/.config/chromium/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Firefox manifest | `~/.mozilla/native-messaging-hosts/com.secure.vpn.proxy_auth.json` |
 
 ## Verify
 
 1. Connect VPN in the app.
-2. Open extension popup — should show `Ready: 127.0.0.1:1081`.
-3. Browse to an IP check site — no proxy login dialog.
+2. Open the extension popup — should show `Ready: 127.0.0.1:1081`.
+3. Open an IP check site — proxy login dialog should not appear.

@@ -1,10 +1,15 @@
+<p align="right">
+  <a href="en/ios_setup.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English"></a>
+  <a href="ru/ios_setup.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русский"></a>
+</p>
+
 # Настройка iOS
 
-This page moved to the bilingual documentation.
+Страница перенесена в двуязычную документацию.
 
-| Language | Link |
-|----------|------|
-| English | [en/ios_setup.md](en/ios_setup.md) |
-| Русский | [ru/ios_setup.md](ru/ios_setup.md) |
+| Язык | Ссылка |
+|------|--------|
+| English | [docs/en/ios_setup.md](en/ios_setup.md) |
+| Русский | [docs/ru/ios_setup.md](ru/ios_setup.md) |
 
-Index: [docs/README.md](README.md)
+Индекс: [docs/README.md](README.md)

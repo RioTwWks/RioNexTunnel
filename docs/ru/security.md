@@ -1,6 +1,9 @@
 # Безопасность
 
-[English version](../en/security.md)
+<p align="right">
+  <a href="../en/security.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
+
 
 ## Контекст угрозы (март 2026)
 

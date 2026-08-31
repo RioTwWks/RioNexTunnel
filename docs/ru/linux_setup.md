@@ -1,6 +1,9 @@
 # Настройка Linux
 
-[English version](../en/linux_setup.md)
+<p align="right">
+  <a href="../en/linux_setup.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
+</p>
+
 
 ## Предварительные требования
 
