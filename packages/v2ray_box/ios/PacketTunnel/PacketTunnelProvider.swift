@@ -44,23 +44,18 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sharedDir, withIntermediateDirectories: true)
         
-        // Setup libbox
+        // Setup libbox (stderr redirect and memory limit are configured inside LibboxSetup)
         let options = LibboxSetupOptions()
         options.basePath = sharedDir.path
         options.workingPath = workingDir.path
         options.tempPath = cacheDir.path
+        options.oomKillerEnabled = !disableMemoryLimit
         
         var error: NSError?
         LibboxSetup(options, &error)
         if let error = error {
             throw error
         }
-        
-        // Redirect stderr
-        LibboxRedirectStderr(cacheDir.appendingPathComponent("stderr.log").path, &error)
-        
-        // Set memory limit
-        LibboxSetMemoryLimit(!disableMemoryLimit)
         
         // Create platform interface
         platformInterface = TunnelPlatformInterface(tunnel: self)
