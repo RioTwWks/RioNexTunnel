@@ -52,6 +52,7 @@
 | [Быстрый старт](getting_started.md) | Клонирование, зависимости, ядра, запуск |
 | [Настройка Linux](linux_setup.md) | Proxy mode, расширение браузера |
 | [Настройка Windows](windows_setup.md) | Proxy mode, Visual Studio, бинарники ядер |
+| [Настройка macOS](macos_setup.md) | Proxy mode, Xcode, бинарники ядер |
 | [Настройка Android](android_setup.md) | VPN mode, manifest, jniLibs |
 | [Настройка iOS](ios_setup.md) | Network Extensions, entitlements |
 | [Архитектура](architecture.md) | Компоненты и поток данных |
