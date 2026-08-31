@@ -11,9 +11,23 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('SelectedProfileNotifier', () {
-    Future<void> waitForProviders(WidgetTester tester) async {
+    Future<void> pumpAsync(WidgetTester tester) async {
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 10));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    Future<void> waitForProfileRestore(
+      WidgetTester tester,
+      ProviderContainer container,
+    ) async {
+      await tester.pump();
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+        if (container.read(profilesProvider).isNotEmpty &&
+            container.read(selectedProfileProvider) != null) {
+          return;
+        }
+      }
     }
 
     testWidgets('restores last selected profile on startup', (tester) async {
@@ -32,7 +46,7 @@ void main() {
       });
 
       final container = ProviderContainer();
-      await waitForProviders(tester);
+      await waitForProfileRestore(tester, container);
 
       final selected = container.read(selectedProfileProvider);
       expect(selected?.id, profile.id);
@@ -47,11 +61,15 @@ void main() {
       SharedPreferences.setMockInitialValues({});
 
       final container = ProviderContainer();
-      await waitForProviders(tester);
+      await pumpAsync(tester);
 
       await container.read(profilesProvider.notifier).addProfile(
             name: 'Link profile',
             configLink: 'vless://example.com',
+          );
+      await container.read(profilesProvider.notifier).addProfile(
+            name: 'Other profile',
+            configLink: 'vless://other.example.com',
           );
 
       final saved = container.read(profilesProvider).first;
@@ -61,10 +79,11 @@ void main() {
       expect(prefs.getString('selected_profile_id'), saved.id);
 
       await container.read(profilesProvider.notifier).removeProfile(saved.id);
-      await waitForProviders(tester);
+      await pumpAsync(tester);
 
       expect(container.read(selectedProfileProvider), isNull);
       expect(prefs.getString('selected_profile_id'), isNull);
+      expect(container.read(profilesProvider).length, 1);
 
       container.dispose();
     });

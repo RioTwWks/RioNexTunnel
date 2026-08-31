@@ -105,7 +105,7 @@ class SelectedProfileNotifier extends StateNotifier<Profile?> {
   SelectedProfileNotifier(this._ref) : super(null) {
     _ref.listen<List<Profile>>(profilesProvider, (previous, next) {
       _applyFromProfiles(next);
-    });
+    }, fireImmediately: true);
     _loadSavedId();
   }
 
@@ -129,6 +129,11 @@ class SelectedProfileNotifier extends StateNotifier<Profile?> {
         state = profile;
         return;
       }
+    }
+
+    // Profiles may still be loading from SharedPreferences; do not wipe saved id.
+    if (profiles.isEmpty) {
+      return;
     }
 
     if (state?.id == targetId || _pendingProfileId == targetId) {
