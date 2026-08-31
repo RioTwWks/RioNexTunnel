@@ -244,22 +244,91 @@ jobs:
   publish-release-assets:
     name: Publish release assets
     needs:
+      - test
       - build-linux
       - build-windows
       - build-macos
       - build-android
+    if: ${{ always() && !cancelled() && needs.test.result == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download build artifacts
+      - name: Download Linux artifact
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
+          name: linux-x64
           path: release-assets
-          merge-multiple: true
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: windows-x64
+          path: release-assets
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: macos-ARM64
+          path: release-assets
+
+      - name: Download macOS artifact (Intel runner fallback)
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: macos-X64
+          path: release-assets
+
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: android-apks
+          path: release-assets
+
+      - name: Summarize platform build results
+        id: summary
+        shell: bash
+        run: |
+          echo "## Release build matrix" >> "${GITHUB_STEP_SUMMARY}"
+          printf '| Platform | Result |\n|----------|--------|\n' >> "${GITHUB_STEP_SUMMARY}"
+          printf '| Linux | %s |\n' "${{ needs.build-linux.result }}" >> "${GITHUB_STEP_SUMMARY}"
+          printf '| Windows | %s |\n' "${{ needs.build-windows.result }}" >> "${GITHUB_STEP_SUMMARY}"
+          printf '| macOS | %s |\n' "${{ needs.build-macos.result }}" >> "${GITHUB_STEP_SUMMARY}"
+          printf '| Android | %s |\n' "${{ needs.build-android.result }}" >> "${GITHUB_STEP_SUMMARY}"
+
+          shopt -s nullglob
+          files=(release-assets/*)
+          if (( ${#files[@]} == 0 )); then
+            echo "has_assets=false" >> "${GITHUB_OUTPUT}"
+            echo "No platform artifacts were uploaded; nothing to attach to the release." >&2
+            exit 1
+          fi
+
+          echo "has_assets=true" >> "${GITHUB_OUTPUT}"
+          echo "Uploading ${#files[@]} artifact(s):"
+          ls -la release-assets/
 
       - name: Upload assets to GitHub Release
+        if: steps.summary.outputs.has_assets == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: release-assets/*
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
+
+      - name: Fail workflow when any platform build failed
+        if: >-
+          contains(fromJSON('["failure","cancelled"]'), needs.build-linux.result) ||
+          contains(fromJSON('["failure","cancelled"]'), needs.build-windows.result) ||
+          contains(fromJSON('["failure","cancelled"]'), needs.build-macos.result) ||
+          contains(fromJSON('["failure","cancelled"]'), needs.build-android.result)
+        run: |
+          echo "Published available artifacts, but one or more platform builds failed:" >&2
+          echo "  linux:   ${{ needs.build-linux.result }}" >&2
+          echo "  windows: ${{ needs.build-windows.result }}" >&2
+          echo "  macos:   ${{ needs.build-macos.result }}" >&2
+          echo "  android: ${{ needs.build-android.result }}" >&2
+          exit 1
