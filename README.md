@@ -2,7 +2,7 @@
   <a href="README_RU.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
 </p>
 
-# RioNexTunnel (MVP)
+# RioNexTunnel
 
 **RIO — Reliable Internet Overlay.** Cross-platform Flutter VPN client with Xray-core and sing-box  
 *Nexus + Tunnel — a secure linking channel across configs and platforms.*  
