@@ -337,47 +337,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Linux artifact
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
-        continue-on-error: true
         with:
-          name: linux-x64
+          pattern: "*"
           path: release-assets
-
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: windows-x64
-          path: release-assets
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: macos-ARM64
-          path: release-assets
-
-      - name: Download macOS artifact (Intel runner fallback)
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: macos-X64
-          path: release-assets
-
-      - name: Download Android artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: android-apks
-          path: release-assets
-
-      - name: Download iOS artifact
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: ios
-          path: release-assets
+          merge-multiple: true
 
       - name: Summarize platform build results
         id: summary
@@ -403,6 +368,22 @@ jobs:
           echo "Uploading ${#files[@]} artifact(s):"
           ls -la release-assets/
 
+          failed_platforms=()
+          [[ "${{ needs.build-linux.result }}" == "failure" || "${{ needs.build-linux.result }}" == "cancelled" ]] && failed_platforms+=("linux")
+          [[ "${{ needs.build-windows.result }}" == "failure" || "${{ needs.build-windows.result }}" == "cancelled" ]] && failed_platforms+=("windows")
+          [[ "${{ needs.build-macos.result }}" == "failure" || "${{ needs.build-macos.result }}" == "cancelled" ]] && failed_platforms+=("macos")
+          [[ "${{ needs.build-android.result }}" == "failure" || "${{ needs.build-android.result }}" == "cancelled" ]] && failed_platforms+=("android")
+          [[ "${{ needs.build-ios.result }}" == "failure" || "${{ needs.build-ios.result }}" == "cancelled" ]] && failed_platforms+=("ios")
+
+          if (( ${#failed_platforms[@]} > 0 )); then
+            joined="$(IFS=', '; echo "${failed_platforms[*]}")"
+            echo "partial_release=true" >> "${GITHUB_OUTPUT}"
+            echo "::warning title=Partial release published::Attached available artifacts; failed platforms: ${joined}" >> "${GITHUB_STEP_SUMMARY}"
+            echo "Partial release: published available artifacts; failed platforms: ${joined}" >&2
+          else
+            echo "partial_release=false" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Upload assets to GitHub Release
         if: steps.summary.outputs.has_assets == 'true'
         uses: softprops/action-gh-release@v2
@@ -410,19 +391,3 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           files: release-assets/*
           fail_on_unmatched_files: false
-
-      - name: Fail workflow when any platform build failed
-        if: >-
-          contains(fromJSON('["failure","cancelled"]'), needs.build-linux.result) ||
-          contains(fromJSON('["failure","cancelled"]'), needs.build-windows.result) ||
-          contains(fromJSON('["failure","cancelled"]'), needs.build-macos.result) ||
-          contains(fromJSON('["failure","cancelled"]'), needs.build-android.result) ||
-          contains(fromJSON('["failure","cancelled"]'), needs.build-ios.result)
-        run: |
-          echo "Published available artifacts, but one or more platform builds failed:" >&2
-          echo "  linux:   ${{ needs.build-linux.result }}" >&2
-          echo "  windows: ${{ needs.build-windows.result }}" >&2
-          echo "  macos:   ${{ needs.build-macos.result }}" >&2
-          echo "  android: ${{ needs.build-android.result }}" >&2
-          echo "  ios:     ${{ needs.build-ios.result }}" >&2
-          exit 1
