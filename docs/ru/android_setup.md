@@ -37,4 +37,29 @@ flutter run -d android
 
 После изменений native/manifest/Gradle — полный перезапуск (hot reload недостаточен).
 
+## Подпись release (опционально)
+
+Для подписанных APK/AAB локально:
+
+1. Создайте keystore (один раз):
+
+```bash
+keytool -genkey -v -keystore rionextunnel-release.jks -keyalg RSA \
+  -keysize 2048 -validity 10000 -alias rionextunnel
+```
+
+2. Скопируйте `android/key.properties.example` → `android/key.properties` и заполните.
+3. Сборка: `flutter build apk --release` / `flutter build appbundle --release`.
+
+Без `key.properties` release-сборки используют **debug-подпись** (как CI без secrets).
+
+CI читает материалы подписи из secrets через `./scripts/setup-android-signing.sh`:
+
+| Secret | Описание |
+|--------|----------|
+| `ANDROID_KEYSTORE_BASE64` | `.jks` в base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | Пароль keystore |
+| `ANDROID_KEY_ALIAS` | Alias ключа |
+| `ANDROID_KEY_PASSWORD` | Пароль ключа (опционально) |
+
 Форк `v2ray_box` регистрирует свой `VpnService`; не добавляйте посторонние service-записи.

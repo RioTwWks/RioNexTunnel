@@ -39,4 +39,29 @@ flutter run -d android
 
 Full restart after native/manifest/Gradle changes (hot reload is not enough).
 
+## Release signing (optional)
+
+For signed release APK/AAB locally:
+
+1. Generate a keystore (once):
+
+```bash
+keytool -genkey -v -keystore rionextunnel-release.jks -keyalg RSA \
+  -keysize 2048 -validity 10000 -alias rionextunnel
+```
+
+2. Copy `android/key.properties.example` → `android/key.properties` and fill in paths/passwords.
+3. Build: `flutter build apk --release` / `flutter build appbundle --release`.
+
+Without `key.properties`, release builds use **debug signing** (same as CI when GitHub secrets are not configured).
+
+CI reads signing material from repository secrets via `./scripts/setup-android-signing.sh`:
+
+| Secret | Description |
+|--------|-------------|
+| `ANDROID_KEYSTORE_BASE64` | `.jks` file encoded as base64 |
+| `ANDROID_KEYSTORE_PASSWORD` | Keystore password |
+| `ANDROID_KEY_ALIAS` | Key alias |
+| `ANDROID_KEY_PASSWORD` | Key password (optional; defaults to store password) |
+
 The `v2ray_box` fork registers its own `VpnService`; do not add a custom orphan service entry outside the names above.

@@ -13,3 +13,18 @@
 6. Run `flutter run -d ios` from `secure_vpn_client/` on macOS.
 
 iOS requires a paid Apple Developer account for on-device VPN testing.
+
+## Release signing (optional)
+
+Signed App Store / ad-hoc builds use `./scripts/setup-ios-signing.sh` with these GitHub secrets (or the same env vars locally):
+
+| Secret / variable | Description |
+|-------------------|-------------|
+| `IOS_DISTRIBUTION_CERTIFICATE_BASE64` | Apple Distribution `.p12` (base64) |
+| `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` | Certificate password |
+| `IOS_PROVISIONING_PROFILE_BASE64` | `.mobileprovision` (base64) |
+| `IOS_DEVELOPMENT_TEAM` | Apple Team ID |
+| `KEYCHAIN_PASSWORD` | Temporary keychain password (CI) |
+| `IOS_EXPORT_METHOD` | Repository variable: `app-store` (default), `ad-hoc`, etc. |
+
+When secrets are **not** set, CI builds `flutter build ios --release --no-codesign` and packages an unsigned `.app` zip. With secrets, CI produces a signed `.ipa`.
