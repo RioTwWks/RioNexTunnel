@@ -13,6 +13,7 @@ import '../models/vpn_engine.dart';
 import '../services/vpn_service.dart';
 
 const _profilesKey = 'vpn_profiles';
+const _selectedProfileIdKey = 'selected_profile_id';
 const _engineKey = 'vpn_engine';
 const _enginePreferenceKey = 'vpn_engine_preference';
 
@@ -95,7 +96,66 @@ final profilesProvider = StateNotifierProvider<ProfilesNotifier, List<Profile>>(
   },
 );
 
-final selectedProfileProvider = StateProvider<Profile?>((ref) => null);
+final selectedProfileProvider =
+    StateNotifierProvider<SelectedProfileNotifier, Profile?>((ref) {
+      return SelectedProfileNotifier(ref);
+    });
+
+class SelectedProfileNotifier extends StateNotifier<Profile?> {
+  SelectedProfileNotifier(this._ref) : super(null) {
+    _ref.listen<List<Profile>>(profilesProvider, (previous, next) {
+      _applyFromProfiles(next);
+    });
+    _loadSavedId();
+  }
+
+  final Ref _ref;
+  String? _pendingProfileId;
+
+  Future<void> _loadSavedId() async {
+    final prefs = await SharedPreferences.getInstance();
+    _pendingProfileId = prefs.getString(_selectedProfileIdKey);
+    _applyFromProfiles(_ref.read(profilesProvider));
+  }
+
+  void _applyFromProfiles(List<Profile> profiles) {
+    final targetId = _pendingProfileId ?? state?.id;
+    if (targetId == null) {
+      return;
+    }
+
+    for (final profile in profiles) {
+      if (profile.id == targetId) {
+        state = profile;
+        return;
+      }
+    }
+
+    if (state?.id == targetId || _pendingProfileId == targetId) {
+      state = null;
+      _pendingProfileId = null;
+      _clearPersisted();
+    }
+  }
+
+  Future<void> select(Profile profile) async {
+    state = profile;
+    _pendingProfileId = profile.id;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_selectedProfileIdKey, profile.id);
+  }
+
+  Future<void> clear() async {
+    state = null;
+    _pendingProfileId = null;
+    await _clearPersisted();
+  }
+
+  Future<void> _clearPersisted() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_selectedProfileIdKey);
+  }
+}
 
 class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
   EnginePreferenceNotifier(

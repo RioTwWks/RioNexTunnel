@@ -221,8 +221,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                               .read(profilesProvider.notifier)
                               .removeProfile(profile.id);
                           if (selectedProfile?.id == profile.id) {
-                            ref.read(selectedProfileProvider.notifier).state =
-                                null;
+                            ref.read(selectedProfileProvider.notifier).clear();
                           }
                         },
                       ),
@@ -233,8 +232,9 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     final matches = ref
                         .read(profilesProvider)
                         .where((p) => p.id == profile.id);
-                    ref.read(selectedProfileProvider.notifier).state =
+                    final selected =
                         matches.isEmpty ? profile : matches.first;
+                    ref.read(selectedProfileProvider.notifier).select(selected);
                   },
                 ),
               ),

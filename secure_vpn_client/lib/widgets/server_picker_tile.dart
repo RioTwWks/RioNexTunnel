@@ -121,7 +121,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
           autoSelectBestServer: autoSelectBestServer,
         );
     if (updated != null) {
-      ref.read(selectedProfileProvider.notifier).state = updated;
+      await ref.read(selectedProfileProvider.notifier).select(updated);
     }
   }
 
