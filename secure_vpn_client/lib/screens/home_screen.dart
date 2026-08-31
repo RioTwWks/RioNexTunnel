@@ -47,7 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               autoSelectBestServer: connectedProfile.autoSelectBestServer,
             );
         if (updated != null) {
-          ref.read(selectedProfileProvider.notifier).state = updated;
+          await ref.read(selectedProfileProvider.notifier).select(updated);
         }
       }
     } catch (error) {
