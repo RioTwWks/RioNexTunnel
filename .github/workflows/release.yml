@@ -17,6 +17,10 @@ permissions:
 env:
   APP_DIR: secure_vpn_client
   RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  GITHUB_TOKEN: ${{ github.token }}
+  # Pin core versions in CI for reproducible builds and fewer GitHub API calls.
+  XRAY_VERSION: "26.3.27"
+  SINGBOX_VERSION: "1.14.0"
 
 jobs:
   test:
