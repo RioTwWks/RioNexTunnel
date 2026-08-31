@@ -1,6 +1,6 @@
-# Secure VPN patches for v2ray_box
+# RioNexTunnel patches for v2ray_box
 
-This directory is a fork of [pesaregorg/v2ray_box](https://github.com/pesaregorg/v2ray_box) with security-focused changes for Secure VPN Client.
+This directory is a fork of [pesaregorg/v2ray_box](https://github.com/pesaregorg/v2ray_box) with security-focused changes for RioNexTunnel.
 
 ## Changes vs upstream
 

@@ -1,4 +1,4 @@
-# Agent Guide — Secure Cross-Platform VPN Client
+# Agent Guide — RioNexTunnel
 
 **Start here.** This file orients Cursor agents to the repo layout, constraints, and safe edit paths.
 

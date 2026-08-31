@@ -9,7 +9,7 @@ Several popular VPN clients exposed an **unauthenticated local SOCKS5 proxy** (o
 - Read the user's real IP through the proxy
 - Exfiltrate VPN configuration and routing rules
 
-**Secure VPN Client** is designed to be immune to this class of vulnerability.
+**RioNexTunnel** is designed to be immune to this class of vulnerability.
 
 ## Design principles
 

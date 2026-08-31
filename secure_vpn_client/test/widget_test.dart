@@ -11,7 +11,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Secure VPN'), findsOneWidget);
+    expect(find.text('RioNexTunnel'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Profiles'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);

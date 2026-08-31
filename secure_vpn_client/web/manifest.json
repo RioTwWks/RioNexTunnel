@@ -1,6 +1,6 @@
 {
-    "name": "secure_vpn_client",
-    "short_name": "secure_vpn_client",
+    "name": "RioNexTunnel",
+    "short_name": "RioNexTunnel",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

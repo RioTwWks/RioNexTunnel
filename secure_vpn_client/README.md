@@ -1,6 +1,6 @@
-# Secure VPN Client (Flutter app)
+# RioNexTunnel (Flutter app)
 
-Main Flutter application of [Secure-Cross-Platform-VPN-Client](../README.md).
+Main Flutter application of the RioNexTunnel project ([repository root](../README.md)).
 
 Cross-platform VPN client on **Xray-core** and **sing-box** with dynamic local SOCKS5 authentication (`127.0.0.1:1080`).
 

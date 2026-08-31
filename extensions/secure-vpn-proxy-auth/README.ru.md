@@ -1,4 +1,4 @@
-# Secure VPN Proxy Auth (браузерное расширение)
+# RioNexTunnel Proxy Auth (браузерное расширение)
 
 > **Язык / Language:** **Русский** | [English](README.md)
 

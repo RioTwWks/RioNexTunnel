@@ -1,9 +1,9 @@
 ---
-description: Secure VPN Client — project context, layout, and agent constraints
+description: RioNexTunnel — project context, layout, and agent constraints
 alwaysApply: true
 ---
 
-# Secure Cross-Platform VPN Client
+# RioNexTunnel
 
 Flutter VPN app in `secure_vpn_client/`. Local plugin fork in `packages/v2ray_box/`.
 
