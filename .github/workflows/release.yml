@@ -223,25 +223,104 @@ jobs:
         shell: bash
         run: ./scripts/fetch_cores.sh
 
-      - name: Build Android APKs
+      - name: Setup Android signing
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: ./scripts/setup-android-signing.sh
+
+      - name: Build Android APKs and App Bundle
         working-directory: ${{ env.APP_DIR }}
         run: |
           flutter pub get
           flutter build apk --release --split-per-abi
+          flutter build appbundle --release
 
-      - name: Package Android APKs
+      - name: Package Android artifacts
         shell: bash
         run: |
           VERSION="${RELEASE_TAG#v}"
-          ARTIFACT="RioNexTunnel-${VERSION}-android-apks.zip"
+          ARTIFACT="RioNexTunnel-${VERSION}-android.zip"
           APK_DIR="${APP_DIR}/build/app/outputs/flutter-apk"
+          AAB_PATH="${APP_DIR}/build/app/outputs/bundle/release/app-release.aab"
           zip -j "${ARTIFACT}" "${APK_DIR}"/*-release.apk
+          if [[ -f "${AAB_PATH}" ]]; then
+            zip -j "${ARTIFACT}" "${AAB_PATH}"
+          fi
           echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
+          path: ${{ env.ARTIFACT }}
+          if-no-files-found: error
+
+  build-ios:
+    name: Build iOS
+    needs: test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Fetch core binaries
+        shell: bash
+        run: ./scripts/fetch_cores.sh
+
+      - name: Setup iOS signing
+        shell: bash
+        env:
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_DEVELOPMENT_TEAM: ${{ secrets.IOS_DEVELOPMENT_TEAM }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD }}
+        run: ./scripts/setup-ios-signing.sh
+
+      - name: Build Flutter (iOS)
+        working-directory: ${{ env.APP_DIR }}
+        run: |
+          flutter pub get
+          if [[ -f ios/ExportOptions.plist ]]; then
+            flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+          else
+            flutter build ios --release --no-codesign
+          fi
+
+      - name: Package iOS artifact
+        shell: bash
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          if compgen -G "${APP_DIR}/build/ios/ipa/"'*.ipa' > /dev/null; then
+            ARTIFACT="RioNexTunnel-${VERSION}-ios.ipa"
+            cp "${APP_DIR}"/build/ios/ipa/*.ipa "${ARTIFACT}"
+          else
+            ARTIFACT="RioNexTunnel-${VERSION}-ios-unsigned.zip"
+            APP_PATH="$(find "${APP_DIR}/build/ios/iphoneos" -maxdepth 1 -name '*.app' -type d | head -n 1)"
+            if [[ -z "${APP_PATH}" ]]; then
+              echo "No iOS .app or .ipa found after build" >&2
+              exit 1
+            fi
+            ditto -c -k --sequesterRsrc --keepParent "${APP_PATH}" "${ARTIFACT}"
+          fi
+          echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios
           path: ${{ env.ARTIFACT }}
           if-no-files-found: error
 
@@ -253,6 +332,7 @@ jobs:
       - build-windows
       - build-macos
       - build-android
+      - build-ios
     if: ${{ always() && !cancelled() && needs.test.result == 'success' }}
     runs-on: ubuntu-latest
 
@@ -292,6 +372,13 @@ jobs:
           name: android-apks
           path: release-assets
 
+      - name: Download iOS artifact
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ios
+          path: release-assets
+
       - name: Summarize platform build results
         id: summary
         shell: bash
@@ -302,6 +389,7 @@ jobs:
           printf '| Windows | %s |\n' "${{ needs.build-windows.result }}" >> "${GITHUB_STEP_SUMMARY}"
           printf '| macOS | %s |\n' "${{ needs.build-macos.result }}" >> "${GITHUB_STEP_SUMMARY}"
           printf '| Android | %s |\n' "${{ needs.build-android.result }}" >> "${GITHUB_STEP_SUMMARY}"
+          printf '| iOS | %s |\n' "${{ needs.build-ios.result }}" >> "${GITHUB_STEP_SUMMARY}"
 
           shopt -s nullglob
           files=(release-assets/*)
@@ -328,11 +416,13 @@ jobs:
           contains(fromJSON('["failure","cancelled"]'), needs.build-linux.result) ||
           contains(fromJSON('["failure","cancelled"]'), needs.build-windows.result) ||
           contains(fromJSON('["failure","cancelled"]'), needs.build-macos.result) ||
-          contains(fromJSON('["failure","cancelled"]'), needs.build-android.result)
+          contains(fromJSON('["failure","cancelled"]'), needs.build-android.result) ||
+          contains(fromJSON('["failure","cancelled"]'), needs.build-ios.result)
         run: |
           echo "Published available artifacts, but one or more platform builds failed:" >&2
           echo "  linux:   ${{ needs.build-linux.result }}" >&2
           echo "  windows: ${{ needs.build-windows.result }}" >&2
           echo "  macos:   ${{ needs.build-macos.result }}" >&2
           echo "  android: ${{ needs.build-android.result }}" >&2
+          echo "  ios:     ${{ needs.build-ios.result }}" >&2
           exit 1

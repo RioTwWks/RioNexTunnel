@@ -1,0 +1,10 @@
+# Template for Android release signing.
+# Copy to key.properties and fill in (file is gitignored).
+#
+# keytool -genkey -v -keystore rionextunnel-release.jks -keyalg RSA \
+#   -keysize 2048 -validity 10000 -alias rionextunnel
+
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=rionextunnel
+storeFile=rionextunnel-release.jks

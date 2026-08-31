@@ -17,3 +17,18 @@ flutter run -d ios
 ```
 
 Для тестирования VPN на устройстве нужен Apple Developer account.
+
+## Подпись release (опционально)
+
+Подписанные сборки App Store / ad-hoc используют `./scripts/setup-ios-signing.sh` с secrets GitHub (или те же переменные локально):
+
+| Secret / переменная | Описание |
+|---------------------|----------|
+| `IOS_DISTRIBUTION_CERTIFICATE_BASE64` | Apple Distribution `.p12` (base64) |
+| `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD` | Пароль сертификата |
+| `IOS_PROVISIONING_PROFILE_BASE64` | `.mobileprovision` (base64) |
+| `IOS_DEVELOPMENT_TEAM` | Apple Team ID |
+| `KEYCHAIN_PASSWORD` | Пароль временного keychain (CI) |
+| `IOS_EXPORT_METHOD` | Variable репозитория: `app-store` (по умолчанию), `ad-hoc` и т.д. |
+
+Без secrets CI собирает `flutter build ios --release --no-codesign` и упаковывает unsigned `.app` zip. С secrets — подписанный `.ipa`.
