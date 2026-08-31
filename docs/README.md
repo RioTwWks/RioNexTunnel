@@ -21,6 +21,7 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Getting started | [en/getting_started.md](en/getting_started.md) | [ru/getting_started.md](ru/getting_started.md) |
 | Linux setup | [en/linux_setup.md](en/linux_setup.md) | [ru/linux_setup.md](ru/linux_setup.md) |
 | Windows setup | [en/windows_setup.md](en/windows_setup.md) | [ru/windows_setup.md](ru/windows_setup.md) |
+| macOS setup | [en/macos_setup.md](en/macos_setup.md) | [ru/macos_setup.md](ru/macos_setup.md) |
 | Android setup | [en/android_setup.md](en/android_setup.md) | [ru/android_setup.md](ru/android_setup.md) |
 | iOS setup | [en/ios_setup.md](en/ios_setup.md) | [ru/ios_setup.md](ru/ios_setup.md) |
 | Architecture | [en/architecture.md](en/architecture.md) | [ru/architecture.md](ru/architecture.md) |
