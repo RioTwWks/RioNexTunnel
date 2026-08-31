@@ -174,15 +174,23 @@ jobs:
         shell: bash
         run: |
           VERSION="${RELEASE_TAG#v}"
-          ARTIFACT="RioNexTunnel-${VERSION}-macos-x64.zip"
-          APP_PATH="${APP_DIR}/build/macos/Build/Products/Release/secure_vpn_client.app"
+          MACOS_ARCH="$(uname -m)"
+          ARTIFACT="RioNexTunnel-${VERSION}-macos-${MACOS_ARCH}.zip"
+          RELEASE_DIR="${APP_DIR}/build/macos/Build/Products/Release"
+          APP_PATH="$(find "${RELEASE_DIR}" -maxdepth 1 -name '*.app' -type d | head -n 1)"
+          if [[ -z "${APP_PATH}" ]]; then
+            echo "No .app bundle found in ${RELEASE_DIR}"
+            ls -la "${RELEASE_DIR}" || true
+            exit 1
+          fi
+          echo "Packaging ${APP_PATH}"
           ditto -c -k --sequesterRsrc --keepParent "${APP_PATH}" "${ARTIFACT}"
           echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-x64
+          name: macos-${{ runner.arch }}
           path: ${{ env.ARTIFACT }}
           if-no-files-found: error
 

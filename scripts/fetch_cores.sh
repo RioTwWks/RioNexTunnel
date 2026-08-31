@@ -111,7 +111,25 @@ if [[ -z "${SINGBOX_VERSION}" ]]; then
   SINGBOX_VERSION="$(fetch_latest_tag "SagerNet/sing-box")"
 fi
 
+MACOS_ARCH="${MACOS_ARCH:-}"
+if [[ -z "${MACOS_ARCH}" ]]; then
+  case "$(uname -m 2>/dev/null || echo unknown)" in
+    arm64 | aarch64) MACOS_ARCH="arm64" ;;
+    x86_64 | amd64) MACOS_ARCH="amd64" ;;
+    *) MACOS_ARCH="amd64" ;;
+  esac
+fi
+
+if [[ "${MACOS_ARCH}" == "arm64" ]]; then
+  XRAY_MACOS_PATTERN='^Xray-macos-arm64-v8a\.zip$'
+  SINGBOX_MACOS_PATTERN="^sing-box-${SINGBOX_VERSION}-darwin-arm64\\.tar\\.gz\$"
+else
+  XRAY_MACOS_PATTERN='^Xray-macos-64\.zip$'
+  SINGBOX_MACOS_PATTERN="^sing-box-${SINGBOX_VERSION}-darwin-amd64\\.tar\\.gz\$"
+fi
+
 echo "Fetching Xray-core v${XRAY_VERSION}..."
+echo "macOS core arch: ${MACOS_ARCH}"
 download_and_extract \
   "$(resolve_asset_url "XTLS/Xray-core" "${XRAY_VERSION}" '^Xray-linux-64\.zip$')" \
   "${DEST}/linux/x64" "xray"
@@ -119,7 +137,7 @@ download_and_extract \
   "$(resolve_asset_url "XTLS/Xray-core" "${XRAY_VERSION}" '^Xray-windows-64\.zip$')" \
   "${DEST}/windows/x64" "xray.exe"
 download_and_extract \
-  "$(resolve_asset_url "XTLS/Xray-core" "${XRAY_VERSION}" '^Xray-macos-64\.zip$')" \
+  "$(resolve_asset_url "XTLS/Xray-core" "${XRAY_VERSION}" "${XRAY_MACOS_PATTERN}")" \
   "${DEST}/macos" "xray"
 download_and_extract \
   "$(resolve_asset_url "XTLS/Xray-core" "${XRAY_VERSION}" '^Xray-android-arm64-v8a\.zip$')" \
@@ -137,7 +155,7 @@ download_and_extract \
   "$(resolve_asset_url "SagerNet/sing-box" "${SINGBOX_VERSION}" "^sing-box-${SINGBOX_VERSION}-windows-amd64\\.zip\$")" \
   "${DEST}/windows/x64" "sing-box.exe"
 download_and_extract \
-  "$(resolve_asset_url "SagerNet/sing-box" "${SINGBOX_VERSION}" "^sing-box-${SINGBOX_VERSION}-darwin-amd64\\.tar\\.gz\$")" \
+  "$(resolve_asset_url "SagerNet/sing-box" "${SINGBOX_VERSION}" "${SINGBOX_MACOS_PATTERN}")" \
   "${DEST}/macos" "sing-box"
 download_and_extract \
   "$(resolve_asset_url "SagerNet/sing-box" "${SINGBOX_VERSION}" "^sing-box-${SINGBOX_VERSION}-android-arm64\\.tar\\.gz\$")" \
