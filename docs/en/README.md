@@ -51,6 +51,7 @@ The project is built from scratch on Flutter for five platforms: **Android, iOS,
 |-------|-------------|
 | [Getting started](getting_started.md) | Clone, dependencies, cores, run |
 | [Linux setup](linux_setup.md) | Desktop proxy mode, browser extension |
+| [Windows setup](windows_setup.md) | Desktop proxy mode, Visual Studio, core binaries |
 | [Android setup](android_setup.md) | VPN mode, manifest, jniLibs |
 | [iOS setup](ios_setup.md) | Network Extensions, entitlements |
 | [Architecture](architecture.md) | Components and data flow |
