@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../../secure_vpn_client/assets/images/app_logo.png" alt="RioNexTunnel mascot" width="220">
+</p>
+
 # RioNexTunnel
 
 <p align="right">
