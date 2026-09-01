@@ -47,7 +47,7 @@ class QuickConnectCoordinator {
     _ref.listen<Profile?>(selectedProfileProvider, (_, profile) {
       unawaited(_syncNotification());
     });
-    _ref.listen<AsyncValue<VpnStatus>>(vpnStatusProvider, (_, __) {
+    _ref.listen<AsyncValue<VpnStatus>>(vpnStatusProvider, (_, _) {
       unawaited(_syncNotification());
     });
 

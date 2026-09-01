@@ -947,9 +947,6 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
 
     func setQuickConnectEventSink(_ sink: FlutterEventSink?) {
         quickConnectEventSink = sink
-        if sink != nil, QuickConnectNotificationManager.shared.consumePendingLaunch() {
-            dispatchQuickConnectRequest()
-        }
     }
 
     func dispatchQuickConnectRequest() {
