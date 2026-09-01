@@ -29,8 +29,8 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   final logsChannel = const EventChannel('v2ray_box/logs', JSONMethodCodec());
 
-  final quickConnectChannel = const EventChannel(
-    'v2ray_box/quick_connect',
+  final quickSettingsTileChannel = const EventChannel(
+    'v2ray_box/quick_settings_tile',
     JSONMethodCodec(),
   );
 
@@ -162,39 +162,36 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
   }
 
   @override
-  Future<bool> setQuickConnectButtonText(String text) async {
-    final result = await methodChannel.invokeMethod<bool>(
-      'set_quick_connect_button_text',
-      text,
-    );
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> updateQuickConnect({
-    required bool visible,
+  Future<bool> syncQuickSettingsTile({
+    required bool hasProfile,
     String profileName = '',
-    String statusText = '',
   }) async {
-    final result = await methodChannel.invokeMethod<bool>('update_quick_connect', {
-      'visible': visible,
-      'profileName': profileName,
-      'statusText': statusText,
-    });
-    return result ?? false;
-  }
-
-  @override
-  Future<bool> consumePendingQuickConnect() async {
     final result = await methodChannel.invokeMethod<bool>(
-      'consume_pending_quick_connect',
+      'sync_quick_settings_tile',
+      {
+        'hasProfile': hasProfile,
+        'profileName': profileName,
+      },
     );
     return result ?? false;
   }
 
   @override
-  Stream<void> watchQuickConnectRequests() {
-    return quickConnectChannel.receiveBroadcastStream().map((_) {});
+  Future<String?> consumePendingTileAction() async {
+    final result = await methodChannel.invokeMethod<String?>(
+      'consume_pending_tile_action',
+    );
+    return result;
+  }
+
+  @override
+  Stream<String> watchQuickSettingsTileRequests() {
+    return quickSettingsTileChannel.receiveBroadcastStream().map((event) {
+      if (event is Map && event['action'] != null) {
+        return event['action'].toString();
+      }
+      return 'connect';
+    });
   }
 
   @override

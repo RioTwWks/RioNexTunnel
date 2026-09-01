@@ -70,32 +70,25 @@ class V2rayBox {
     return V2rayBoxPlatform.instance.setNotificationIcon(iconName);
   }
 
-  /// Label for the Connect action in the disconnected notification shade.
-  Future<bool> setQuickConnectButtonText(String text) {
-    return V2rayBoxPlatform.instance.setQuickConnectButtonText(text);
-  }
-
-  /// Show or hide quick-connect notification when VPN is disconnected (Android/iOS).
-  Future<bool> updateQuickConnect({
-    required bool visible,
+  /// Sync Quick Settings tile label/state (Android).
+  Future<bool> syncQuickSettingsTile({
+    required bool hasProfile,
     String profileName = '',
-    String statusText = '',
   }) {
-    return V2rayBoxPlatform.instance.updateQuickConnect(
-      visible: visible,
+    return V2rayBoxPlatform.instance.syncQuickSettingsTile(
+      hasProfile: hasProfile,
       profileName: profileName,
-      statusText: statusText,
     );
   }
 
-  /// Whether the app was opened from a quick-connect notification tap.
-  Future<bool> consumePendingQuickConnect() {
-    return V2rayBoxPlatform.instance.consumePendingQuickConnect();
+  /// Pending tile action after cold start (`connect` / `disconnect`).
+  Future<String?> consumePendingTileAction() {
+    return V2rayBoxPlatform.instance.consumePendingTileAction();
   }
 
-  /// User tapped Connect in the notification shade.
-  Stream<void> watchQuickConnectRequests() {
-    return V2rayBoxPlatform.instance.watchQuickConnectRequests();
+  /// Quick Settings tile tapped (Android).
+  Stream<String> watchQuickSettingsTileRequests() {
+    return V2rayBoxPlatform.instance.watchQuickSettingsTileRequests();
   }
 
   /// Set configuration options for the VPN service
