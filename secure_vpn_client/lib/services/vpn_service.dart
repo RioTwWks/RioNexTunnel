@@ -87,7 +87,6 @@ class VpnService {
     }
     await _v2rayBox.setServiceMode(desktopProxy ? VpnMode.proxy : VpnMode.vpn);
     await _v2rayBox.setCoreEngine(_engine.coreName);
-    await _configurePerAppProxy();
     _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
     _initialized = true;
   }
@@ -398,16 +397,6 @@ class VpnService {
         'VPN failed to reach Connected (status=${_currentStatus.name})',
       );
     }
-  }
-
-  Future<void> _configurePerAppProxy() async {
-    if (kIsWeb || !Platform.isAndroid) {
-      return;
-    }
-    // Full-device VPN: route all apps except this package (OFF excludes self
-    // in VPNService). INCLUDE with only our packageName is a no-op on Android
-    // (cannot include oneself) and previously left traffic unrouted / confusing.
-    await _v2rayBox.setPerAppProxyMode(PerAppProxyMode.off);
   }
 
   Future<void> _setSessionCredentials(SessionCredentials credentials) async {
