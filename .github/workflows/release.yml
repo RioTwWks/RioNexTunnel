@@ -93,19 +93,17 @@ jobs:
           flutter pub get
           flutter build linux --release
 
-      - name: Package Linux bundle
+      - name: Package
         shell: bash
         run: |
           VERSION="${RELEASE_TAG#v}"
-          ARTIFACT="RioNexTunnel-${VERSION}-linux-x64.tar.gz"
-          tar -czf "${ARTIFACT}" -C "${APP_DIR}/build/linux/x64/release/bundle" .
-          echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
+          ./scripts/package-release.sh linux "${VERSION}" dist
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: ${{ env.ARTIFACT }}
+          path: dist/*.tar.gz
           if-no-files-found: error
 
   build-windows:
@@ -133,20 +131,17 @@ jobs:
           flutter pub get
           flutter build windows --release
 
-      - name: Package Windows bundle
+      - name: Package
         shell: pwsh
         run: |
           $version = "${{ env.RELEASE_TAG }}".TrimStart('v')
-          $artifact = "RioNexTunnel-$version-windows-x64.zip"
-          $source = Join-Path "${{ env.APP_DIR }}" "build/windows/x64/runner/Release"
-          Compress-Archive -Path (Join-Path $source '*') -DestinationPath $artifact -Force
-          "ARTIFACT=$artifact" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          ./scripts/package-release.ps1 -Version $version -OutputDir dist
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: ${{ env.ARTIFACT }}
+          path: dist/*.zip
           if-no-files-found: error
 
   build-macos:
@@ -174,28 +169,17 @@ jobs:
           flutter pub get
           flutter build macos --release
 
-      - name: Package macOS app
+      - name: Package
         shell: bash
         run: |
           VERSION="${RELEASE_TAG#v}"
-          MACOS_ARCH="$(uname -m)"
-          ARTIFACT="RioNexTunnel-${VERSION}-macos-${MACOS_ARCH}.zip"
-          RELEASE_DIR="${APP_DIR}/build/macos/Build/Products/Release"
-          APP_PATH="$(find "${RELEASE_DIR}" -maxdepth 1 -name '*.app' -type d | head -n 1)"
-          if [[ -z "${APP_PATH}" ]]; then
-            echo "No .app bundle found in ${RELEASE_DIR}"
-            ls -la "${RELEASE_DIR}" || true
-            exit 1
-          fi
-          echo "Packaging ${APP_PATH}"
-          ditto -c -k --sequesterRsrc --keepParent "${APP_PATH}" "${ARTIFACT}"
-          echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
+          ./scripts/package-release.sh macos "${VERSION}" dist
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-${{ runner.arch }}
-          path: ${{ env.ARTIFACT }}
+          name: macos-arm64
+          path: dist/*.zip
           if-no-files-found: error
 
   build-android:
@@ -239,24 +223,17 @@ jobs:
           flutter build apk --release --split-per-abi
           flutter build appbundle --release
 
-      - name: Package Android artifacts
+      - name: Package
         shell: bash
         run: |
           VERSION="${RELEASE_TAG#v}"
-          ARTIFACT="RioNexTunnel-${VERSION}-android.zip"
-          APK_DIR="${APP_DIR}/build/app/outputs/flutter-apk"
-          AAB_PATH="${APP_DIR}/build/app/outputs/bundle/release/app-release.aab"
-          zip -j "${ARTIFACT}" "${APK_DIR}"/*-release.apk
-          if [[ -f "${AAB_PATH}" ]]; then
-            zip -j "${ARTIFACT}" "${AAB_PATH}"
-          fi
-          echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
+          ./scripts/package-release.sh android "${VERSION}" dist
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apks
-          path: ${{ env.ARTIFACT }}
+          name: android
+          path: dist/*
           if-no-files-found: error
 
   build-ios:
@@ -309,29 +286,17 @@ jobs:
             flutter build ios --release --no-codesign
           fi
 
-      - name: Package iOS artifact
+      - name: Package
         shell: bash
         run: |
           VERSION="${RELEASE_TAG#v}"
-          if compgen -G "${APP_DIR}/build/ios/ipa/"'*.ipa' > /dev/null; then
-            ARTIFACT="RioNexTunnel-${VERSION}-ios.ipa"
-            cp "${APP_DIR}"/build/ios/ipa/*.ipa "${ARTIFACT}"
-          else
-            ARTIFACT="RioNexTunnel-${VERSION}-ios-unsigned.zip"
-            APP_PATH="$(find "${APP_DIR}/build/ios/iphoneos" -maxdepth 1 -name '*.app' -type d | head -n 1)"
-            if [[ -z "${APP_PATH}" ]]; then
-              echo "No iOS .app or .ipa found after build" >&2
-              exit 1
-            fi
-            ditto -c -k --sequesterRsrc --keepParent "${APP_PATH}" "${ARTIFACT}"
-          fi
-          echo "ARTIFACT=${ARTIFACT}" >> "${GITHUB_ENV}"
+          ./scripts/package-release.sh ios "${VERSION}" dist
 
       - name: Upload iOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios
-          path: ${{ env.ARTIFACT }}
+          path: dist/*
           if-no-files-found: error
 
   publish-release-assets:
@@ -350,8 +315,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "*"
-          path: release-assets
+          path: dist
           merge-multiple: true
 
       - name: Summarize platform build results
@@ -367,7 +331,7 @@ jobs:
           printf '| iOS | %s |\n' "${{ needs.build-ios.result }}" >> "${GITHUB_STEP_SUMMARY}"
 
           shopt -s nullglob
-          files=(release-assets/*)
+          files=(dist/*)
           if (( ${#files[@]} == 0 )); then
             echo "has_assets=false" >> "${GITHUB_OUTPUT}"
             echo "No platform artifacts were uploaded; nothing to attach to the release." >&2
@@ -376,7 +340,7 @@ jobs:
 
           echo "has_assets=true" >> "${GITHUB_OUTPUT}"
           echo "Uploading ${#files[@]} artifact(s):"
-          ls -la release-assets/
+          ls -la dist/
 
           failed_platforms=()
           [[ "${{ needs.build-linux.result }}" == "failure" || "${{ needs.build-linux.result }}" == "cancelled" ]] && failed_platforms+=("linux")
@@ -399,5 +363,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          files: release-assets/*
+          files: dist/**
           fail_on_unmatched_files: false
