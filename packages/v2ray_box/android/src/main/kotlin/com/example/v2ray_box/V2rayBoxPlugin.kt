@@ -28,7 +28,6 @@ import com.example.v2ray_box.bg.PlatformInterfaceWrapper
 import com.example.v2ray_box.bg.QuickSettingsTileHelper
 import com.example.v2ray_box.bg.ServiceConnection
 import com.example.v2ray_box.constant.Alert
-import com.example.v2ray_box.constant.Action
 import com.example.v2ray_box.constant.CoreEngine
 import com.example.v2ray_box.constant.ServiceMode
 import com.example.v2ray_box.constant.Status
