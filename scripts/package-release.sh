@@ -33,14 +33,14 @@ case "${PLATFORM}" in
     ;;
   macos)
     release_dir="${APP_ROOT}/build/macos/Build/Products/Release"
-    app_name="$(find "${release_dir}" -maxdepth 1 -name '*.app' -type d -printf '%f\n' | head -n 1)"
-    if [[ -z "${app_name}" ]]; then
+    app_path="$(find "${release_dir}" -maxdepth 1 -name '*.app' -type d | head -n 1)"
+    if [[ -z "${app_path}" ]]; then
       echo "package-release.sh: no .app bundle found in ${release_dir}" >&2
       ls -la "${release_dir}" || true
       exit 1
     fi
-    macos_arch="$(uname -m)"
-    (cd "${release_dir}" && zip -qr "${OUT_DIR}/${NAME}-macos-${macos_arch}.zip" "${app_name}")
+    app_name="$(basename "${app_path}")"
+    (cd "${release_dir}" && zip -qr "${OUT_DIR}/${NAME}-macos-arm64.zip" "${app_name}")
     ;;
   android)
     apk_dir="${APP_ROOT}/build/app/outputs/flutter-apk"
