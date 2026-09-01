@@ -7,6 +7,7 @@ import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_log.dart';
+import 'services/quick_connect_coordinator.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -32,15 +33,23 @@ class SecureVpnApp extends ConsumerWidget {
   }
 }
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   const MainShell({super.key});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(quickConnectCoordinatorProvider);
+    });
+  }
 
   static const _pages = [
     HomeScreen(),

@@ -23,6 +23,7 @@ object SettingsKey {
     const val NOTIFICATION_STOP_BUTTON_TEXT = "${KEY_PREFIX}notification_stop_button_text"
     const val NOTIFICATION_TITLE = "${KEY_PREFIX}notification_title"
     const val NOTIFICATION_ICON_NAME = "${KEY_PREFIX}notification_icon_name"
+    const val QUICK_CONNECT_BUTTON_TEXT = "${KEY_PREFIX}quick_connect_button_text"
 
     // Traffic storage
     const val TOTAL_UPLOAD_TRAFFIC = "${KEY_PREFIX}total_upload_traffic"

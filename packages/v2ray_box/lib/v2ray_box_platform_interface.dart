@@ -100,6 +100,36 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
     throw UnimplementedError('setNotificationIcon() has not been implemented.');
   }
 
+  /// Set quick-connect button label in the disconnected notification shade.
+  Future<bool> setQuickConnectButtonText(String text) {
+    throw UnimplementedError(
+      'setQuickConnectButtonText() has not been implemented.',
+    );
+  }
+
+  /// Show or hide the disconnected quick-connect notification (mobile only).
+  Future<bool> updateQuickConnect({
+    required bool visible,
+    String profileName = '',
+    String statusText = '',
+  }) {
+    throw UnimplementedError('updateQuickConnect() has not been implemented.');
+  }
+
+  /// True when app was opened from a quick-connect notification tap.
+  Future<bool> consumePendingQuickConnect() {
+    throw UnimplementedError(
+      'consumePendingQuickConnect() has not been implemented.',
+    );
+  }
+
+  /// Fires when user taps Connect in the notification shade.
+  Stream<void> watchQuickConnectRequests() {
+    throw UnimplementedError(
+      'watchQuickConnectRequests() has not been implemented.',
+    );
+  }
+
   /// Get list of installed apps
   Future<List<AppInfo>> getInstalledPackages() {
     throw UnimplementedError(
