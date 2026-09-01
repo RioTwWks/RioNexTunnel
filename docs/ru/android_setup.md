@@ -63,3 +63,36 @@ CI читает материалы подписи из secrets через `./scr
 | `ANDROID_KEY_PASSWORD` | Пароль ключа (опционально) |
 
 Форк `v2ray_box` регистрирует свой `VpnService`; не добавляйте посторонние service-записи.
+
+## Установка release APK с GitHub
+
+Скачайте нужный файл из [Releases](https://github.com/RioTwWks/RioNexTunnel/releases):
+
+| Файл | Когда использовать |
+|------|-------------------|
+| `RioNexTunnel-*-android-arm64.apk` | Большинство телефонов/планшетов с ~2017 года |
+| `RioNexTunnel-*-android-armv7.apk` | Только старые 32-bit ARM устройства |
+| `RioNexTunnel-*-android-universal.apk` | Если не уверены в архитектуре CPU |
+| `RioNexTunnel-*-android.aab` | **Только Google Play / bundletool** — напрямую не ставится |
+
+### «Приложение не установлено»
+
+1. **Сначала удалите старую версию** — Настройки → Приложения → RioNexTunnel → Удалить.  
+   Обязательно, если раньше ставили через `flutter run`, старый release или сборку с другой подписью (локальный debug vs CI debug vs release keystore).
+2. **Выберите правильный APK** — файл `.aab` на устройстве не открывается.
+3. **Разрешите установку из неизвестных источников** для браузера/файлового менеджера (Android 8+).
+4. **Настройте подпись release в CI** — без secrets `ANDROID_KEYSTORE_*` APK из CI подписываются debug-ключом runner'а. На чистое устройство ставятся нормально, но поверх приложения с другой подписью — нет.
+
+Установка через `adb`:
+
+```bash
+adb uninstall com.example.secure_vpn_client || true
+adb install -r RioNexTunnel-0.2.4-android-arm64.apk
+```
+
+Если не помогло — точная причина в выводе:
+
+```bash
+adb install -r RioNexTunnel-0.2.4-android-arm64.apk
+# или: adb logcat -d | tail -50
+```

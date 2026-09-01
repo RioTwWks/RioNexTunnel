@@ -65,3 +65,36 @@ CI reads signing material from repository secrets via `./scripts/setup-android-s
 | `ANDROID_KEY_PASSWORD` | Key password (optional; defaults to store password) |
 
 The `v2ray_box` fork registers its own `VpnService`; do not add a custom orphan service entry outside the names above.
+
+## Installing release APK from GitHub
+
+Download the correct file from [Releases](https://github.com/RioTwWks/RioNexTunnel/releases):
+
+| File | When to use |
+|------|-------------|
+| `RioNexTunnel-*-android-arm64.apk` | Most phones/tablets from ~2017 onward |
+| `RioNexTunnel-*-android-armv7.apk` | Older 32-bit ARM devices only |
+| `RioNexTunnel-*-android-universal.apk` | If unsure about CPU architecture |
+| `RioNexTunnel-*-android.aab` | **Google Play / bundletool only** — cannot be installed directly |
+
+### "App not installed" (Приложение не установлено)
+
+1. **Uninstall the old app first** — Settings → Apps → RioNexTunnel → Uninstall.  
+   This is required if you previously installed via `flutter run`, an older release, or a build signed with a different key (local debug vs CI debug vs release keystore).
+2. **Pick the right APK** — do not open the `.aab` file on the device.
+3. **Enable "Install unknown apps"** for your browser/files app (Android 8+).
+4. **Configure release signing in CI** — without `ANDROID_KEYSTORE_*` GitHub secrets, CI APKs are debug-signed. They install cleanly on a device with no prior RioNexTunnel, but not over an app signed with another key.
+
+To sideload with `adb`:
+
+```bash
+adb uninstall com.example.secure_vpn_client || true
+adb install -r RioNexTunnel-0.2.4-android-arm64.apk
+```
+
+If install still fails, capture the exact reason:
+
+```bash
+adb install -r RioNexTunnel-0.2.4-android-arm64.apk
+# or: adb logcat -d | tail -50
+```
