@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="secure_vpn_client/assets/images/app_logo.png" alt="Логотип RioNexTunnel" width="220">
+</p>
+
 <p align="right">
   <a href="README.md"><img src="https://img.shields.io/badge/lang-English-blue?style=for-the-badge" alt="English version"></a>
 </p>
