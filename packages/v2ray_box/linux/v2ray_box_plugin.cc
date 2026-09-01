@@ -215,6 +215,9 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
   } else if (strcmp(method, "set_notification_stop_button_text") == 0 ||
              strcmp(method, "set_notification_title") == 0 ||
              strcmp(method, "set_notification_icon") == 0 ||
+             strcmp(method, "set_quick_connect_button_text") == 0 ||
+             strcmp(method, "update_quick_connect") == 0 ||
+             strcmp(method, "consume_pending_quick_connect") == 0 ||
              strcmp(method, "set_debug_mode") == 0 ||
              strcmp(method, "set_locale") == 0 ||
              strcmp(method, "set_ping_test_url") == 0 ||

@@ -29,6 +29,11 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   final logsChannel = const EventChannel('v2ray_box/logs', JSONMethodCodec());
 
+  final quickConnectChannel = const EventChannel(
+    'v2ray_box/quick_connect',
+    JSONMethodCodec(),
+  );
+
   /// Shared broadcast streams — EventChannel allows only one native listener.
   /// Multiple [receiveBroadcastStream] calls cancel the previous sink (breaks
   /// Android UI status updates when connect() also waits on status).
@@ -154,6 +159,42 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
       iconName,
     );
     return result ?? false;
+  }
+
+  @override
+  Future<bool> setQuickConnectButtonText(String text) async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'set_quick_connect_button_text',
+      text,
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> updateQuickConnect({
+    required bool visible,
+    String profileName = '',
+    String statusText = '',
+  }) async {
+    final result = await methodChannel.invokeMethod<bool>('update_quick_connect', {
+      'visible': visible,
+      'profileName': profileName,
+      'statusText': statusText,
+    });
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> consumePendingQuickConnect() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'consume_pending_quick_connect',
+    );
+    return result ?? false;
+  }
+
+  @override
+  Stream<void> watchQuickConnectRequests() {
+    return quickConnectChannel.receiveBroadcastStream().map((_) {});
   }
 
   @override

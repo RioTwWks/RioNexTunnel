@@ -47,6 +47,12 @@ void main() {
           return true;
         case 'set_notification_icon':
           return true;
+        case 'set_quick_connect_button_text':
+          return true;
+        case 'update_quick_connect':
+          return true;
+        case 'consume_pending_quick_connect':
+          return false;
         case 'get_installed_packages':
           return '[{"package-name":"com.test","name":"Test","is-system-app":false}]';
         case 'get_package_icon':

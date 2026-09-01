@@ -17,6 +17,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     private var statsEventSink: FlutterEventSink?
     private var pingEventSink: FlutterEventSink?
     private var logsEventSink: FlutterEventSink?
+    private var quickConnectEventSink: FlutterEventSink?
     
     private var debugMode: Bool {
         get { UserDefaults.standard.bool(forKey: "v2ray_box_debug_mode") }
@@ -103,6 +104,17 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         )
         logsChannel.setStreamHandler(LogsStreamHandler(plugin: instance))
         instance.logsChannel = logsChannel
+
+        let quickConnectChannel = FlutterEventChannel(
+            name: "v2ray_box/quick_connect",
+            binaryMessenger: registrar.messenger(),
+            codec: FlutterJSONMethodCodec.sharedInstance()
+        )
+        quickConnectChannel.setStreamHandler(QuickConnectStreamHandler(plugin: instance))
+
+        QuickConnectNotificationManager.shared.setConnectHandler { [weak instance] in
+            instance?.dispatchQuickConnectRequest()
+        }
         
         instance.setupVPNObserver()
     }
@@ -129,8 +141,12 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             statusString = "Stopping"
         case .disconnected, .invalid:
             statusString = "Stopped"
+            QuickConnectNotificationManager.shared.dismiss()
         @unknown default:
             statusString = "Stopped"
+        }
+        if status == .connected || status == .connecting || status == .reasserting {
+            QuickConnectNotificationManager.shared.dismiss()
         }
         statusEventSink?(["status": statusString])
     }
@@ -262,6 +278,33 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             
         case "set_notification_icon":
             result(true)
+
+        case "set_quick_connect_button_text":
+            if let text = call.arguments as? String {
+                QuickConnectNotificationManager.shared.configure(connectButtonText: text)
+            }
+            result(true)
+
+        case "update_quick_connect":
+            guard let args = call.arguments as? [String: Any] else {
+                result(false)
+                return
+            }
+            let visible = args["visible"] as? Bool ?? false
+            let profileName = args["profileName"] as? String ?? ""
+            let statusText = args["statusText"] as? String ?? ""
+            if visible {
+                QuickConnectNotificationManager.shared.show(
+                    profileName: profileName,
+                    statusText: statusText
+                )
+            } else {
+                QuickConnectNotificationManager.shared.dismiss()
+            }
+            result(true)
+
+        case "consume_pending_quick_connect":
+            result(QuickConnectNotificationManager.shared.consumePendingLaunch())
             
         case "get_total_traffic":
             result(["upload": 0, "download": 0])
@@ -901,6 +944,19 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     func setLogsEventSink(_ sink: FlutterEventSink?) {
         logsEventSink = sink
     }
+
+    func setQuickConnectEventSink(_ sink: FlutterEventSink?) {
+        quickConnectEventSink = sink
+        if sink != nil, QuickConnectNotificationManager.shared.consumePendingLaunch() {
+            dispatchQuickConnectRequest()
+        }
+    }
+
+    func dispatchQuickConnectRequest() {
+        DispatchQueue.main.async { [weak self] in
+            self?.quickConnectEventSink?(["action": "connect"])
+        }
+    }
     
     private func startStatsTimer() {
         stopStatsTimer()
@@ -1076,6 +1132,24 @@ class LogsStreamHandler: NSObject, FlutterStreamHandler {
     
     func onCancel(withArguments arguments: Any?) -> FlutterError? {
         plugin?.setLogsEventSink(nil)
+        return nil
+    }
+}
+
+class QuickConnectStreamHandler: NSObject, FlutterStreamHandler {
+    weak var plugin: V2rayBoxPlugin?
+
+    init(plugin: V2rayBoxPlugin) {
+        self.plugin = plugin
+    }
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        plugin?.setQuickConnectEventSink(events)
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        plugin?.setQuickConnectEventSink(nil)
         return nil
     }
 }
