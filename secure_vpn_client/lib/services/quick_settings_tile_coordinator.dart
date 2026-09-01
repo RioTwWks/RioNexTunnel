@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
@@ -51,6 +52,11 @@ class QuickSettingsTileCoordinator {
       unawaited(_syncTile());
     });
 
+    // Sync tile after profiles finish loading from SharedPreferences.
+    _ref.listen<List<Profile>>(profilesProvider, (_, _) {
+      unawaited(_syncTile());
+    });
+
     await _syncTile();
   }
 
@@ -69,6 +75,12 @@ class QuickSettingsTileCoordinator {
     if (_actionInProgress) {
       return;
     }
+
+    // Profiles may still be loading when app opens from a tile tap.
+    if (action == 'connect') {
+      await _waitForSelectedProfile();
+    }
+
     final status = _ref.read(vpnStatusProvider).value ?? VpnStatus.stopped;
     if (action == 'disconnect') {
       if (status == VpnStatus.stopped) {
@@ -119,6 +131,22 @@ class QuickSettingsTileCoordinator {
     } finally {
       _actionInProgress = false;
       await _syncTile();
+    }
+  }
+
+  Future<void> _waitForSelectedProfile() async {
+    if (_ref.read(selectedProfileProvider) != null) {
+      return;
+    }
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    while (DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      if (_ref.read(selectedProfileProvider) != null) {
+        return;
+      }
+      if (_ref.read(profilesProvider).isNotEmpty) {
+        return;
+      }
     }
   }
 
