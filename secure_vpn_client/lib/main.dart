@@ -62,18 +62,40 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDark
+                  ? [
+                      const Color(0xFF0A1628),
+                      const Color(0xFF112240),
+                    ]
+                  : [
+                      const Color(0xFFF0F4FA),
+                      const Color(0xFFE8EEF8),
+                    ],
+            ),
+          ),
+        ),
         title: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                kAppLogoAsset,
-                width: 40,
-                height: 40,
-                fit: BoxFit.cover,
+            Hero(
+              tag: 'app_logo',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  kAppLogoAsset,
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -88,11 +110,15 @@ class _MainShellState extends ConsumerState<MainShell> {
                           letterSpacing: -0.4,
                         ),
                   ),
-                  Text(
-                    _titles[_index],
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: Text(
+                      _titles[_index],
+                      key: ValueKey(_titles[_index]),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                    ),
                   ),
                 ],
               ),
@@ -100,9 +126,29 @@ class _MainShellState extends ConsumerState<MainShell> {
           ],
         ),
       ),
-      body: IndexedStack(
-        index: _index,
-        children: _pages,
+      body: Padding(
+        padding: EdgeInsets.only(
+          top: MediaQuery.paddingOf(context).top + kToolbarHeight,
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 320),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            final offsetAnimation = Tween<Offset>(
+              begin: const Offset(0.04, 0),
+              end: Offset.zero,
+            ).animate(animation);
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(position: offsetAnimation, child: child),
+            );
+          },
+          child: KeyedSubtree(
+            key: ValueKey(_index),
+            child: _pages[_index],
+          ),
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
