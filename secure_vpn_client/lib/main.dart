@@ -7,7 +7,7 @@ import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/app_log.dart';
-import 'services/quick_connect_coordinator.dart';
+import 'services/quick_settings_tile_coordinator.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -47,7 +47,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(quickConnectCoordinatorProvider);
+      ref.read(quickSettingsTileCoordinatorProvider);
     });
   }
 

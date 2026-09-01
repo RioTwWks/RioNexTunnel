@@ -150,10 +150,6 @@ object Settings {
         get() = preferences.getString(SettingsKey.NOTIFICATION_ICON_NAME, "")!!
         set(value) = preferences.edit().putString(SettingsKey.NOTIFICATION_ICON_NAME, value).apply()
 
-    var quickConnectButtonText: String
-        get() = preferences.getString(SettingsKey.QUICK_CONNECT_BUTTON_TEXT, "Connect")!!
-        set(value) = preferences.edit().putString(SettingsKey.QUICK_CONNECT_BUTTON_TEXT, value).apply()
-
     var pingTestUrl: String
         get() = preferences.getString(SettingsKey.PING_TEST_URL, "https://www.gstatic.com/generate_204")!!
         set(value) = preferences.edit().putString(SettingsKey.PING_TEST_URL, value).apply()
