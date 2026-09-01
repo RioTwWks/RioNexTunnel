@@ -17,6 +17,7 @@ KEYSTORE_PATH="${ANDROID_DIR}/app/rionextunnel-release.jks"
 KEY_PROPERTIES="${ANDROID_DIR}/key.properties"
 
 if [[ -z "${ANDROID_KEYSTORE_BASE64:-}" ]]; then
+  echo "::warning title=Debug signing::ANDROID_KEYSTORE_BASE64 is not set — release APK uses CI debug keystore. Uninstall any locally built RioNexTunnel before sideloading; configure GitHub signing secrets for production releases."
   echo "ANDROID_KEYSTORE_BASE64 is not set — release build will use debug signing"
   exit 0
 fi

@@ -48,6 +48,20 @@ Diagnostic patterns discovered during integration. Check console stderr from xra
 
 **Fix:** `./scripts/fetch_cores.sh` (installs jniLibs) + `useLegacyPackaging = true` in app `build.gradle.kts`. Or keep engine on **xray** (uses `libxray.aar`).
 
+### Release APK: «App not installed» / «Приложение не установлено»
+
+**Cause A:** Signature mismatch — device already has RioNexTunnel from `flutter run`, an older GitHub release, or a build signed with a different key.
+
+**Fix:** Uninstall first (`adb uninstall com.example.secure_vpn_client`), then install `*-android-arm64.apk` (or `*-android-universal.apk`). Do **not** try to install `.aab` directly.
+
+**Cause B:** Wrong architecture — e.g. `armv7` APK on an arm64-only device (rare on modern phones).
+
+**Fix:** Use `*-android-arm64.apk` or `*-android-universal.apk`.
+
+**Cause C:** CI builds without `ANDROID_KEYSTORE_*` secrets use the runner debug keystore — incompatible with a locally debug-signed install.
+
+**Fix:** Uninstall old app; for production releases configure GitHub signing secrets (see `docs/en/android_setup.md`).
+
 **Cause D:** Missing `geosite.dat` / `geoip.dat` — Xray looks under `/system/bin/` by default.
 
 **Symptom:** `failed to open geosite.dat > stat /system/bin/geosite.dat`
