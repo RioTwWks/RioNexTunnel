@@ -9,13 +9,18 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${APP_DIR:-secure_vpn_client}"
 RAW_VERSION="${1:-${RELEASE_TAG:-}}"
 RAW_VERSION="${RAW_VERSION#v}"
+# Drop Flutter build suffix (e.g. 0.2.6+12) before semver parsing.
+RAW_VERSION="${RAW_VERSION%%+*}"
 
 if [[ -z "${RAW_VERSION}" ]]; then
   echo "build-android-release.sh: version required (arg or RELEASE_TAG)" >&2
   exit 1
 fi
 
-IFS='.' read -r MAJOR MINOR PATCH <<< "${RAW_VERSION}.0.0"
+# Use cut so extra semver segments never merge into PATCH (bash read joins leftovers).
+MAJOR="$(cut -d. -f1 <<< "${RAW_VERSION}")"
+MINOR="$(cut -d. -f2 <<< "${RAW_VERSION}")"
+PATCH="$(cut -d. -f3 <<< "${RAW_VERSION}")"
 MAJOR="${MAJOR:-0}"
 MINOR="${MINOR:-0}"
 PATCH="${PATCH:-0}"
