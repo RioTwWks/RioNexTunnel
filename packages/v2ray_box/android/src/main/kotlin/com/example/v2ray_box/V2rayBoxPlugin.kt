@@ -28,7 +28,6 @@ import com.example.v2ray_box.bg.PlatformInterfaceWrapper
 import com.example.v2ray_box.bg.QuickSettingsTileHelper
 import com.example.v2ray_box.bg.ServiceConnection
 import com.example.v2ray_box.constant.Alert
-import com.example.v2ray_box.constant.Action
 import com.example.v2ray_box.constant.CoreEngine
 import com.example.v2ray_box.constant.ServiceMode
 import com.example.v2ray_box.constant.Status
@@ -189,10 +188,22 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val launchIntent = context.packageManager
                 .getLaunchIntentForPackage(context.packageName)
                 ?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                    )
                     putExtra(EXTRA_QUICK_TILE_ACTION, "connect")
                 }
-            launchIntent?.let { context.startActivity(it) }
+            if (launchIntent == null) {
+                Log.w(TAG, "Quick Settings tile: no launch intent for ${context.packageName}")
+                return
+            }
+            runCatching {
+                context.startActivity(launchIntent)
+            }.onFailure { error ->
+                Log.e(TAG, "Quick Settings tile: failed to open app: ${error.message}")
+            }
         }
 
         var applicationContext: Context? = null
@@ -1766,13 +1777,6 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     private fun dispatchTileAction(action: String) {
-        val sink = quickSettingsTileEventSink
-        if (sink != null) {
-            activity?.runOnUiThread {
-                sink.success(mapOf("action" to action))
-            }
-            return
-        }
         if (action == "disconnect") {
             scope.launch {
                 val context = applicationContext ?: return@launch
@@ -1784,10 +1788,29 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 }
                 QuickSettingsTileHelper.requestTileRefresh()
             }
+            notifyQuickSettingsTileSink(action)
             return
         }
+
+        // Connect needs Dart (secure credentials). Use in-app handler only when foreground.
+        if (canDeliverTileActionToDart()) {
+            notifyQuickSettingsTileSink(action)
+            return
+        }
+
         pendingTileAction = action
         applicationContext?.let { openAppForQuickAction(it) }
+    }
+
+    private fun canDeliverTileActionToDart(): Boolean {
+        return quickSettingsTileEventSink != null && startedActivityCount > 0
+    }
+
+    private fun notifyQuickSettingsTileSink(action: String) {
+        val sink = quickSettingsTileEventSink ?: return
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            sink.success(mapOf("action" to action))
+        }
     }
 }
 
