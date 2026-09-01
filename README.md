@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="secure_vpn_client/assets/images/app_logo.png" alt="RioNexTunnel mascot" width="220">
-</p>
+![pic1](secure_vpn_client/assets/images/app_logo.png)
 
 <p align="right">
   <a href="README_RU.md"><img src="https://img.shields.io/badge/lang-Русский-red?style=for-the-badge" alt="Русская версия"></a>
