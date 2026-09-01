@@ -22,7 +22,7 @@ class Profile {
   /// Last known display name for [selectedServerIndex] (optional cache).
   final String? selectedServerName;
 
-  /// When true, [VpnService.connect] probes TCP latency and picks the best node.
+  /// When true, [VpnService.connect] probes latency and picks the best node.
   final bool autoSelectBestServer;
 
   Map<String, dynamic> toJson() => {

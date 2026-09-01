@@ -203,8 +203,8 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                         ? 'Direct link'
                         : profile.autoSelectBestServer
                         ? (profile.selectedServerName != null
-                              ? 'Auto · ${profile.selectedServerName}'
-                              : 'Subscription · Auto (best)')
+                              ? 'Automatic · ${profile.selectedServerName}'
+                              : 'Subscription · Automatic')
                         : profile.selectedServerName != null
                         ? 'Subscription · ${profile.selectedServerName}'
                         : 'Subscription',
