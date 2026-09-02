@@ -2,44 +2,65 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/split_tunnel_settings.dart';
+import '../services/split_tunnel_service.dart';
 import 'vpn_providers.dart';
 
-/// User-facing split tunneling state (Android VPN mode only).
+/// User-facing split tunneling state (Android VPN mode).
 class PerAppProxySettings {
   const PerAppProxySettings({
-    this.mode = PerAppProxyMode.off,
-    this.excludedPackages = const {},
+    this.mode = SplitTunnelMode.off,
+    this.selectedPackages = const {},
     this.loading = true,
   });
 
-  final PerAppProxyMode mode;
-  final Set<String> excludedPackages;
+  final SplitTunnelMode mode;
+  final Set<String> selectedPackages;
   final bool loading;
 
-  bool get excludeEnabled => mode == PerAppProxyMode.exclude;
+  bool get isEnabled => mode.isEnabled;
+  bool get isIncludeMode => mode == SplitTunnelMode.include;
+  bool get isExcludeMode => mode == SplitTunnelMode.exclude;
+
+  /// Backwards-compatible alias for exclude-only UI/tests.
+  bool get excludeEnabled => isExcludeMode;
+
+  Set<String> get excludedPackages =>
+      isExcludeMode ? selectedPackages : const {};
+
+  Set<String> get includedPackages =>
+      isIncludeMode ? selectedPackages : const {};
+
+  SplitTunnelSettings toSettings() => SplitTunnelSettings(
+    mode: mode,
+    selectedPackages: selectedPackages,
+  );
 
   PerAppProxySettings copyWith({
-    PerAppProxyMode? mode,
-    Set<String>? excludedPackages,
+    SplitTunnelMode? mode,
+    Set<String>? selectedPackages,
     bool? loading,
   }) {
     return PerAppProxySettings(
       mode: mode ?? this.mode,
-      excludedPackages: excludedPackages ?? this.excludedPackages,
+      selectedPackages: selectedPackages ?? this.selectedPackages,
       loading: loading ?? this.loading,
     );
   }
 }
 
+final splitTunnelServiceProvider = Provider<SplitTunnelService>((ref) {
+  return SplitTunnelService(ref.watch(vpnServiceProvider).v2rayBox);
+});
+
 final perAppProxyProvider =
     StateNotifierProvider<PerAppProxyNotifier, PerAppProxySettings>((ref) {
-      return PerAppProxyNotifier(ref.watch(vpnServiceProvider).v2rayBox);
+      return PerAppProxyNotifier(ref.watch(splitTunnelServiceProvider));
     });
 
 class PerAppProxyNotifier extends StateNotifier<PerAppProxySettings> {
-  PerAppProxyNotifier(this._v2rayBox) : super(const PerAppProxySettings()) {
+  PerAppProxyNotifier(this._service) : super(const PerAppProxySettings()) {
     if (!kIsWeb && Platform.isAndroid) {
       _load();
     } else {
@@ -47,20 +68,14 @@ class PerAppProxyNotifier extends StateNotifier<PerAppProxySettings> {
     }
   }
 
-  final V2rayBox _v2rayBox;
+  final SplitTunnelService _service;
 
   Future<void> _load() async {
     try {
-      final mode = await _v2rayBox.getPerAppProxyMode();
-      var excluded = <String>{};
-      if (mode == PerAppProxyMode.exclude) {
-        excluded = (await _v2rayBox.getPerAppProxyList(
-          PerAppProxyMode.exclude,
-        )).toSet();
-      }
+      final settings = await _service.load();
       state = PerAppProxySettings(
-        mode: mode,
-        excludedPackages: excluded,
+        mode: settings.mode,
+        selectedPackages: settings.selectedPackages,
         loading: false,
       );
     } catch (_) {
@@ -68,31 +83,54 @@ class PerAppProxyNotifier extends StateNotifier<PerAppProxySettings> {
     }
   }
 
-  Future<void> setExcludeEnabled(bool enabled) async {
-    final mode = enabled ? PerAppProxyMode.exclude : PerAppProxyMode.off;
-    await _v2rayBox.setPerAppProxyMode(mode);
+  Future<void> setMode(SplitTunnelMode mode) async {
+    await _service.setMode(mode);
     state = state.copyWith(mode: mode);
   }
 
-  Future<void> setExcludedPackages(Set<String> packages) async {
-    await _v2rayBox.setPerAppProxyMode(PerAppProxyMode.exclude);
-    await _v2rayBox.setPerAppProxyList(
-      packages.toList(),
-      PerAppProxyMode.exclude,
-    );
+  Future<void> setExcludeEnabled(bool enabled) async {
+    await setMode(enabled ? SplitTunnelMode.exclude : SplitTunnelMode.off);
+  }
+
+  Future<void> setSelectedPackages(
+    Set<String> packages, {
+    SplitTunnelMode? mode,
+  }) async {
+    final effectiveMode = mode ?? state.mode;
+    if (!effectiveMode.isEnabled) {
+      return;
+    }
+    await _service.setSelectedPackages(packages, effectiveMode);
     state = state.copyWith(
-      mode: PerAppProxyMode.exclude,
-      excludedPackages: packages,
+      mode: effectiveMode,
+      selectedPackages: packages,
     );
   }
 
-  Future<void> toggleExcludedApp(String packageName, {required bool excluded}) {
-    final updated = Set<String>.from(state.excludedPackages);
-    if (excluded) {
+  Future<void> setExcludedPackages(Set<String> packages) {
+    return setSelectedPackages(packages, mode: SplitTunnelMode.exclude);
+  }
+
+  Future<void> toggleApp(
+    String packageName, {
+    required bool selected,
+    SplitTunnelMode? mode,
+  }) {
+    final effectiveMode = mode ?? state.mode;
+    final updated = Set<String>.from(state.selectedPackages);
+    if (selected) {
       updated.add(packageName);
     } else {
       updated.remove(packageName);
     }
-    return setExcludedPackages(updated);
+    return setSelectedPackages(updated, mode: effectiveMode);
+  }
+
+  Future<void> toggleExcludedApp(String packageName, {required bool excluded}) {
+    return toggleApp(
+      packageName,
+      selected: excluded,
+      mode: SplitTunnelMode.exclude,
+    );
   }
 }

@@ -21,6 +21,15 @@ flutter run -d ios
 
 Для тестирования VPN на устройстве нужен Apple Developer account.
 
+## Раздельное туннелирование
+
+Per-app split tunneling (whitelist/blacklist по установленным приложениям) **на iOS недоступен** как на Android:
+
+- Network Extension маршрутизирует на уровне **интерфейса туннеля**; нет публичного API, аналогичного `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`.
+- UI split tunneling в RioNexTunnel **только на Android**. На iOS используйте **правила маршрутизации в конфиге ядра** (домены/IP в xray/sing-box).
+
+Подробнее: [split_tunneling.md](split_tunneling.md).
+
 ## Подпись release (опционально)
 
 Подписанные сборки App Store / ad-hoc используют `./scripts/setup-ios-signing.sh` с secrets GitHub (или те же переменные локально):

@@ -118,14 +118,14 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 > Route selected apps through VPN; others direct. Requires strict isolation (see `.cursorrules`).
 
-- [ ] Model design — whitelist (only these via VPN) vs blacklist (all except these)
-- [ ] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
-- [ ] iOS — document NE limitations; per-app split tunneling is limited on iOS
-- [ ] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
+- [x] Model design — whitelist (only these via VPN) vs blacklist (all except these)
+- [x] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
+- [x] iOS — document NE limitations; per-app split tunneling is limited on iOS
+- [x] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
 - [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan
-- [ ] UI — installed app list with toggles (mobile) or desktop warning
-- [ ] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
-- [ ] Tests — unit + platform smoke for whitelist/blacklist
+- [x] UI — installed app list with toggles (mobile) or desktop warning
+- [x] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
+- [x] Tests — unit + platform smoke for whitelist/blacklist
 
 ### Traffic obfuscation (DPI bypass UX)
 
@@ -157,11 +157,11 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 2.1 — `PanelManager` module
 
-- [ ] New service: `lib/services/panel_manager.dart` (or `lib/services/panel/`)
-- [ ] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials)
-- [ ] REST client with timeouts, exponential backoff (max 3–5 retries), `X-API-Version: v1` header
-- [ ] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
-- [ ] Riverpod provider wiring; Settings screen for panel URL + login/register
+- [x] New service: `lib/services/panel_manager.dart` (or `lib/services/panel/`)
+- [x] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials) — SharedPreferences MVP; migrate to secure storage later
+- [x] REST client with timeouts, exponential backoff (max 3–5 retries), `X-API-Version: v1` header
+- [x] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
+- [x] Riverpod provider wiring; Settings screen for panel URL + login/register (`PanelSettingsSection`, `PanelStatusCard`)
 
 **Expected server API (implemented in RioNexGate, consumed here):**
 
@@ -175,20 +175,20 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 2.2 — Registration & config sync
 
-- [ ] On first setup with `panel_url` + credentials → `POST /api/client/register`; store `device_token`
-- [ ] Periodic sync + manual **Refresh** → `GET /api/client/config`
-- [ ] Compare `config_hash` from server with local hash; skip rewrite if unchanged
-- [ ] Apply config: server list, DNS, inbound hints → existing `Profile` / `ConfigParser` pipeline
-- [ ] Cache last good config on disk (SharedPreferences / app support dir); use when offline
-- [ ] Invalid JSON from panel → log error, keep previous config, show non-blocking warning (no crash)
+- [x] On first setup with `panel_url` + credentials → `POST /api/client/register`; store `device_token`
+- [x] Manual **Refresh** → `GET /api/client/config` (periodic sync — **partial**, not yet scheduled)
+- [x] Compare `config_hash` from server with local hash; skip rewrite if unchanged
+- [x] Apply config: subscription URL → `Profile` named RioNexGate + `ConfigParser` pipeline (**partial** — full JSON config apply pending)
+- [x] Cache last good config on disk (SharedPreferences); use when offline (**stale** status)
+- [x] Invalid JSON from panel → log error, keep previous config, show non-blocking warning (no crash)
 
 ### 2.3 — Stats upload
 
-- [ ] Collect bytes in/out from core or platform counters during active session
-- [ ] Background flush every ~60s and on disconnect → `POST /api/client/stats`
-- [ ] Local queue when panel unreachable; batch replay when back online
-- [ ] `session_id` per connect session for server-side deduplication
-- [ ] Never include SOCKS passwords or transport secrets in stats payload
+- [x] Collect bytes in/out from core counters on disconnect (`VpnStats` uplink/downlink totals)
+- [ ] Background flush every ~60s and on disconnect → `POST /api/client/stats` (**partial** — disconnect flush only)
+- [x] Local queue when panel unreachable; batch replay when back online
+- [x] `session_id` per connect session for server-side deduplication
+- [x] Never include SOCKS passwords or transport secrets in stats payload
 
 ### 2.4 — Remote commands (push)
 
@@ -207,33 +207,34 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 2.6 — Errors & fallback
 
-- [ ] All panel HTTP calls wrapped; failures never block connect if cached config exists
-- [ ] User-visible state: `PanelSyncStatus` — synced / stale / offline / error (no secrets in message)
-- [ ] First launch without panel or cache → existing manual link / subscription URL flow
-- [ ] Subscription URL from panel works through standard `ConfigParser.parseFromUrl()` as universal path
+- [x] All panel HTTP calls wrapped; failures never block connect if cached config exists
+- [x] User-visible state: `PanelSyncStatus` — synced / stale / offline / error (no secrets in message)
+- [x] First launch without panel or cache → existing manual link / subscription URL flow
+- [x] Subscription URL from panel works through standard `ConfigParser.parseFromUrl()` as universal path
 
 ### 2.7 — Third-party server compatibility
 
-- [ ] No changes to `vless://` / `vmess://` / `trojan://` import parsers
-- [ ] Panel-managed profiles and manual profiles coexist in same profile list
-- [ ] Engine auto-select and server picker unchanged for non-panel subscriptions
+- [x] No changes to `vless://` / `vmess://` / `trojan://` import parsers
+- [x] Panel-managed profiles and manual profiles coexist in same profile list
+- [x] Engine auto-select and server picker unchanged for non-panel subscriptions
 - [ ] Document: panel integration is additive; uninstalling panel config does not remove manual profiles
 
 ### 3 — Client testing & observability (with RioNexGate)
 
+- [x] Unit tests (Dart): register → config fetch → stats queue (`test/panel_manager_test.dart`)
 - [ ] Integration tests (Dart): register → config fetch → mock connect → stats queue → disconnect
 - [ ] Test: panel pushes new `config_hash` → client refreshes without full app restart
 - [ ] Test: network offline → cached config used → queued stats sent after restore
 - [ ] Test: malformed config JSON → no throw; previous profile remains active
-- [ ] Debug logging for sync lifecycle (device id hash only, never `device_token` in release logs)
+- [x] Debug logging for sync lifecycle (device id hash only, never `device_token` in release logs)
 - [ ] Optional: `integration_test/` scenario against local RioNexGate docker/instance (document in `docs/`)
 
 ### Client roadmap (RioNexGate track)
 
 | Phase | RioNexTunnel tasks |
 |-------|-------------------|
-| **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` |
-| **2** | Stats collector + offline queue + `session_id` |
+| **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` — **done (MVP)** |
+| **2** | Stats collector + offline queue + `session_id` — **partial** (disconnect flush; no 60s timer) |
 | **3** | WebSocket / long-poll commands; reconnect on `refresh_config` |
 | **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing |
 
@@ -444,7 +445,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
 | Kill Switch | ❌ Missing | **P1** |
-| Split Tunneling | ❌ Missing | **P1** |
+| Split Tunneling | ✅ Android + docs | **P1** |
 | Obfuscation / DPI (UX) | ⚠️ Via protocols, no UI | **P1** |
 | XHTTP + stream-one | ❌ Missing | **P1** |
 | TLS fingerprint UI (uTLS) | ⚠️ Link `fp` only; defaults chrome | **P1** |
@@ -458,7 +459,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Auto-reconnect | ✅ Done | — |
 | Minimalist UI | ⚠️ Partial | P3 |
 | Connection stats | ✅ Done | — |
-| RioNexGate panel API (optional) | ❌ Missing | **P1** |
+| RioNexGate panel API (optional) | ⚠️ MVP (register, sync, stats queue, Settings UI) | **P1** |
 
 ---
 

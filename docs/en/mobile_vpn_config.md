@@ -37,3 +37,8 @@ When a config uses Xray-style `geosite:` or `geoip:` routing and **geo assets ar
 
 - `secure_vpn_client/test/config_parser_test.dart` — proxyOnly strips mixed, DNS migration
 - `secure_vpn_client/test/engine_auto_selector_test.dart` — geo rule detection
+- `secure_vpn_client/test/split_tunnel_settings_test.dart` — whitelist/blacklist model
+
+## Split tunneling (per-app)
+
+Android VPN mode supports per-app include/exclude via `VpnService`. See [split_tunneling.md](split_tunneling.md). iOS has no equivalent per-app API.

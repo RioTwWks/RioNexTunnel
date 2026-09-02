@@ -17,6 +17,15 @@ See [platform_parity_checklist.md](platform_parity_checklist.md) for a full devi
 
 iOS requires a paid Apple Developer account for on-device VPN testing.
 
+## Split tunneling
+
+Per-app split tunneling (whitelist/blacklist by installed app) is **not available on iOS** the way it is on Android:
+
+- Network Extension routes at the **tunnel interface** level; there is no public API equivalent to `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`.
+- RioNexTunnel exposes split tunneling UI **on Android only**. On iOS, use **core routing rules** (domain/IP lists in xray/sing-box config) for selective routing.
+
+See [split_tunneling.md](split_tunneling.md) for the full platform matrix.
+
 ## Release signing (optional)
 
 Signed App Store / ad-hoc builds use `./scripts/setup-ios-signing.sh` with these GitHub secrets (or the same env vars locally):
