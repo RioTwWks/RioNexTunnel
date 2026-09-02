@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/profile.dart';
+import '../models/transport_preset.dart';
 import '../providers/vpn_providers.dart';
+import '../screens/censorship_wizard_screen.dart';
 import '../widgets/animated_entrance.dart';
+import '../widgets/transport_stack_chip.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
   const ConfigScreen({super.key});
@@ -42,9 +45,27 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
       return;
     }
 
-    await ref
-        .read(profilesProvider.notifier)
-        .addProfile(name: name, configLink: link, type: _type);
+    final wizardResult = await Navigator.of(context).push<CensorshipWizardResult>(
+      MaterialPageRoute(
+        builder: (_) => CensorshipWizardScreen(
+          profileName: name,
+          configLink: link,
+          profileType: _type,
+        ),
+      ),
+    );
+
+    await ref.read(profilesProvider.notifier).addProfile(
+          name: name,
+          configLink: wizardResult?.updatedLink ?? link,
+          type: _type,
+          censorshipModeEnabled: wizardResult?.enabled ?? false,
+          transportPreset: wizardResult?.preset,
+          tlsFingerprint:
+              wizardResult?.fingerprint ?? TlsFingerprint.firefox,
+          muxEnabled: wizardResult?.muxEnabled ?? false,
+          ruDirectRouting: wizardResult?.ruDirectRouting ?? false,
+        );
 
     _nameController.clear();
     _linkController.clear();
@@ -54,6 +75,41 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Profile added')));
     }
+  }
+
+  Future<void> _editCensorship(Profile profile) async {
+    final result = await Navigator.of(context).push<CensorshipWizardResult>(
+      MaterialPageRoute(
+        builder: (_) => CensorshipWizardScreen(
+          profileName: profile.name,
+          configLink: profile.configLink,
+          profileType: profile.type,
+          initial: profile,
+        ),
+      ),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+    final updated = profile.copyWith(
+      configLink: result.updatedLink ?? profile.configLink,
+      censorshipModeEnabled: result.enabled,
+      transportPreset: result.preset,
+      clearTransportPreset: !result.enabled,
+      tlsFingerprint: result.fingerprint,
+      muxEnabled: result.muxEnabled,
+      ruDirectRouting: result.ruDirectRouting,
+    );
+    await ref.read(profilesProvider.notifier).updateProfile(updated);
+    if (ref.read(selectedProfileProvider)?.id == profile.id) {
+      await ref.read(selectedProfileProvider.notifier).select(updated);
+    }
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Censorship settings updated')),
+    );
   }
 
   @override
@@ -213,20 +269,34 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                       profile.name,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: Text(
-                      profile.type == ProfileType.link
-                          ? 'Direct link'
-                          : profile.autoSelectBestServer
-                              ? (profile.selectedServerName != null
-                                    ? 'Automatic · ${profile.selectedServerName}'
-                                    : 'Subscription · Automatic')
-                              : profile.selectedServerName != null
-                                  ? 'Subscription · ${profile.selectedServerName}'
-                                  : 'Subscription',
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.type == ProfileType.link
+                              ? 'Direct link'
+                              : profile.autoSelectBestServer
+                                  ? (profile.selectedServerName != null
+                                        ? 'Automatic · ${profile.selectedServerName}'
+                                        : 'Subscription · Automatic')
+                                  : profile.selectedServerName != null
+                                      ? 'Subscription · ${profile.selectedServerName}'
+                                      : 'Subscription',
+                        ),
+                        if (profile.censorshipModeEnabled) ...[
+                          const SizedBox(height: 6),
+                          TransportStackChip(profile: profile, compact: true),
+                        ],
+                      ],
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        IconButton(
+                          tooltip: 'Censorship mode',
+                          icon: const Icon(Icons.shield_outlined),
+                          onPressed: () => _editCensorship(profile),
+                        ),
                         if (selected)
                           Icon(Icons.check_circle, color: scheme.primary),
                         IconButton(

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
+import 'config_enhancer.dart';
 import 'config_parser.dart';
+import 'transport_presets.dart';
 
 class LinkConfigBuilder {
   /// Share-link schemes accepted by the app (subscription lines + profiles).
@@ -43,7 +46,11 @@ class LinkConfigBuilder {
     return scheme != null && singboxOnlySchemes.contains(scheme);
   }
 
-  static String buildFromLink(String link, VpnEngine engine) {
+  static String buildFromLink(
+    String link,
+    VpnEngine engine, {
+    LinkBuildOptions options = const LinkBuildOptions(),
+  }) {
     final normalized = link.trim();
     if (!isConfigLink(normalized)) {
       throw ConfigParserException('Unsupported config link format');
@@ -58,8 +65,8 @@ class LinkConfigBuilder {
     }
 
     return engine == VpnEngine.singbox
-        ? _buildSingbox(normalized)
-        : _buildXray(normalized);
+        ? _buildSingbox(normalized, options)
+        : _buildXray(normalized, options);
   }
 
   static String? _schemeOf(String value) {
@@ -71,8 +78,8 @@ class LinkConfigBuilder {
     return trimmed.substring(0, sep).toLowerCase();
   }
 
-  static String _buildXray(String link) {
-    final outbound = _parseXrayOutbound(link);
+  static String _buildXray(String link, LinkBuildOptions options) {
+    final outbound = _parseXrayOutbound(link, options);
     final config = {
       'log': {'loglevel': 'warning'},
       'inbounds': <dynamic>[],
@@ -86,8 +93,8 @@ class LinkConfigBuilder {
     return const JsonEncoder.withIndent('  ').convert(config);
   }
 
-  static String _buildSingbox(String link) {
-    final outbound = _parseSingboxOutbound(link);
+  static String _buildSingbox(String link, LinkBuildOptions options) {
+    final outbound = _parseSingboxOutbound(link, options);
     final config = {
       'log': {'level': 'warn'},
       // Never use type:local on Android VPN — system resolver hits [::1]:53
@@ -120,16 +127,19 @@ class LinkConfigBuilder {
     return const JsonEncoder.withIndent('  ').convert(config);
   }
 
-  static Map<String, dynamic> _parseXrayOutbound(String link) {
+  static Map<String, dynamic> _parseXrayOutbound(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final lower = link.toLowerCase();
     if (lower.startsWith('vless://')) {
-      return _parseXrayVless(link);
+      return _parseXrayVless(link, options);
     }
     if (lower.startsWith('trojan://')) {
-      return _parseXrayTrojan(link);
+      return _parseXrayTrojan(link, options);
     }
     if (lower.startsWith('vmess://')) {
-      return _parseXrayVmess(link);
+      return _parseXrayVmess(link, options);
     }
     if (lower.startsWith('ss://')) {
       return _parseXrayShadowsocks(link);
@@ -137,16 +147,19 @@ class LinkConfigBuilder {
     throw ConfigParserException('Unsupported Xray link');
   }
 
-  static Map<String, dynamic> _parseSingboxOutbound(String link) {
+  static Map<String, dynamic> _parseSingboxOutbound(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final lower = link.toLowerCase();
     if (lower.startsWith('vless://')) {
-      return _parseSingboxVless(link);
+      return _parseSingboxVless(link, options);
     }
     if (lower.startsWith('trojan://')) {
-      return _parseSingboxTrojan(link);
+      return _parseSingboxTrojan(link, options);
     }
     if (lower.startsWith('vmess://')) {
-      return _parseSingboxVmess(link);
+      return _parseSingboxVmess(link, options);
     }
     if (lower.startsWith('ss://')) {
       return _parseSingboxShadowsocks(link);
@@ -169,7 +182,10 @@ class LinkConfigBuilder {
     throw ConfigParserException('Unsupported sing-box link');
   }
 
-  static Map<String, dynamic> _parseXrayVless(String link) {
+  static Map<String, dynamic> _parseXrayVless(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final uri = Uri.parse(link);
     final uuid = uri.userInfo;
     final server = uri.host;
@@ -197,12 +213,16 @@ class LinkConfigBuilder {
           },
         ],
       },
-      'streamSettings': _xrayStreamSettings(params, server),
+      'streamSettings': _xrayStreamSettings(params, server, options),
     };
+    _maybeApplyXrayMux(outbound, options);
     return outbound;
   }
 
-  static Map<String, dynamic> _parseXrayTrojan(String link) {
+  static Map<String, dynamic> _parseXrayTrojan(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final uri = Uri.parse(link);
     final password = uri.userInfo;
     final server = uri.host;
@@ -210,7 +230,7 @@ class LinkConfigBuilder {
       throw ConfigParserException('Invalid trojan link');
     }
     final port = uri.port > 0 ? uri.port : 443;
-    return {
+    final outbound = <String, dynamic>{
       'tag': 'proxy',
       'protocol': 'trojan',
       'settings': {
@@ -218,11 +238,16 @@ class LinkConfigBuilder {
           {'address': server, 'port': port, 'password': password},
         ],
       },
-      'streamSettings': _xrayStreamSettings(uri.queryParameters, server),
+      'streamSettings': _xrayStreamSettings(uri.queryParameters, server, options),
     };
+    _maybeApplyXrayMux(outbound, options);
+    return outbound;
   }
 
-  static Map<String, dynamic> _parseXrayVmess(String link) {
+  static Map<String, dynamic> _parseXrayVmess(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final encoded = link.substring('vmess://'.length);
     final decoded = utf8.decode(base64.decode(_padBase64(encoded)));
     final json = jsonDecode(decoded) as Map<String, dynamic>;
@@ -239,7 +264,7 @@ class LinkConfigBuilder {
       if (json['host'] != null) 'host': json['host'].toString(),
       if (json['path'] != null) 'path': json['path'].toString(),
     };
-    return {
+    final outbound = <String, dynamic>{
       'tag': 'proxy',
       'protocol': 'vmess',
       'settings': {
@@ -257,8 +282,10 @@ class LinkConfigBuilder {
           },
         ],
       },
-      'streamSettings': _xrayStreamSettings(params, server),
+      'streamSettings': _xrayStreamSettings(params, server, options),
     };
+    _maybeApplyXrayMux(outbound, options);
+    return outbound;
   }
 
   static Map<String, dynamic> _parseXrayShadowsocks(String link) {
@@ -283,7 +310,10 @@ class LinkConfigBuilder {
     };
   }
 
-  static Map<String, dynamic> _parseSingboxVless(String link) {
+  static Map<String, dynamic> _parseSingboxVless(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final uri = Uri.parse(link);
     final uuid = uri.userInfo;
     final server = uri.host;
@@ -291,37 +321,47 @@ class LinkConfigBuilder {
       throw ConfigParserException('Invalid vless link');
     }
     final params = uri.queryParameters;
-    return {
+    final outbound = <String, dynamic>{
       'type': 'vless',
       'tag': 'proxy',
       'server': server,
       'server_port': uri.port > 0 ? uri.port : 443,
       'uuid': uuid,
       if (params['flow']?.isNotEmpty == true) 'flow': params['flow'],
-      ..._singboxTls(params, server),
+      ..._singboxTls(params, server, options),
       ..._singboxTransport(params),
     };
+    _maybeApplySingboxMux(outbound, options);
+    return outbound;
   }
 
-  static Map<String, dynamic> _parseSingboxTrojan(String link) {
+  static Map<String, dynamic> _parseSingboxTrojan(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final uri = Uri.parse(link);
     final password = uri.userInfo;
     final server = uri.host;
     if (password.isEmpty || server.isEmpty) {
       throw ConfigParserException('Invalid trojan link');
     }
-    return {
+    final outbound = <String, dynamic>{
       'type': 'trojan',
       'tag': 'proxy',
       'server': server,
       'server_port': uri.port > 0 ? uri.port : 443,
       'password': password,
-      ..._singboxTls(uri.queryParameters, server),
+      ..._singboxTls(uri.queryParameters, server, options),
       ..._singboxTransport(uri.queryParameters),
     };
+    _maybeApplySingboxMux(outbound, options);
+    return outbound;
   }
 
-  static Map<String, dynamic> _parseSingboxVmess(String link) {
+  static Map<String, dynamic> _parseSingboxVmess(
+    String link, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final encoded = link.substring('vmess://'.length);
     final decoded = utf8.decode(base64.decode(_padBase64(encoded)));
     final json = jsonDecode(decoded) as Map<String, dynamic>;
@@ -337,7 +377,7 @@ class LinkConfigBuilder {
       if (json['host'] != null) 'host': json['host'].toString(),
       if (json['path'] != null) 'path': json['path'].toString(),
     };
-    return {
+    final outbound = <String, dynamic>{
       'type': 'vmess',
       'tag': 'proxy',
       'server': server,
@@ -345,9 +385,11 @@ class LinkConfigBuilder {
       'uuid': uuid,
       'alter_id': int.tryParse(json['aid']?.toString() ?? '') ?? 0,
       'security': json['scy']?.toString() ?? 'auto',
-      ..._singboxTls(params, server),
+      ..._singboxTls(params, server, options),
       ..._singboxTransport(params),
     };
+    _maybeApplySingboxMux(outbound, options);
+    return outbound;
   }
 
   static Map<String, dynamic> _parseSingboxShadowsocks(String link) {
@@ -539,10 +581,12 @@ class LinkConfigBuilder {
 
   static Map<String, dynamic> _xrayStreamSettings(
     Map<String, String> params,
-    String server,
-  ) {
+    String server, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
     final network = params['type'] ?? 'tcp';
     final stream = <String, dynamic>{'network': network};
+    final fingerprint = _resolveFingerprint(params, options);
 
     final security = params['security'];
     if (security == 'reality') {
@@ -551,34 +595,94 @@ class LinkConfigBuilder {
         'serverName': params['sni'] ?? server,
         'publicKey': params['pbk'] ?? '',
         'shortId': params['sid'] ?? '',
-        'fingerprint': params['fp'] ?? 'chrome',
+        'fingerprint': fingerprint,
       };
     } else if (security == 'tls' || params['sni']?.isNotEmpty == true) {
       stream['security'] = 'tls';
       stream['tlsSettings'] = {
         'serverName': params['sni'] ?? server,
-        if (params['fp']?.isNotEmpty == true) 'fingerprint': params['fp'],
-        // Do not emit allowInsecure — removed in modern Xray (use pcs/vcn).
+        'fingerprint': fingerprint,
       };
     } else {
       stream['security'] = 'none';
     }
 
-    if (network == 'ws') {
-      stream['wsSettings'] = {
-        'path': params['path'] ?? '/',
-        if (params['host']?.isNotEmpty == true)
-          'headers': {'Host': params['host']},
-      };
+    switch (network) {
+      case 'ws':
+        stream['wsSettings'] = {
+          'path': params['path'] ?? '/',
+          if (params['host']?.isNotEmpty == true)
+            'headers': {'Host': params['host']},
+        };
+      case 'grpc':
+        stream['grpcSettings'] = {
+          'serviceName': params['serviceName'] ?? 'grpc',
+          if (params['authority']?.isNotEmpty == true)
+            'authority': params['authority'],
+        };
+      case 'httpupgrade':
+        stream['httpupgradeSettings'] = {
+          'path': params['path'] ?? '/',
+          if (params['host']?.isNotEmpty == true) 'host': params['host'],
+        };
+      case 'xhttp':
+        final mode = params['mode'];
+        final resolvedMode = (mode == null || mode.isEmpty || mode == 'auto')
+            ? TransportPresets.defaultXhttpMode
+            : mode;
+        stream['xhttpSettings'] = {
+          'path': params['path'] ?? '/',
+          'mode': resolvedMode,
+          if (params['host']?.isNotEmpty == true) 'host': params['host'],
+        };
     }
 
     return stream;
   }
 
+  static String _resolveFingerprint(
+    Map<String, String> params,
+    LinkBuildOptions options,
+  ) {
+    final fromLink = params['fp'];
+    if (fromLink != null && fromLink.isNotEmpty) {
+      return fromLink;
+    }
+    return options.fingerprint.wireValue;
+  }
+
+  static void _maybeApplyXrayMux(
+    Map<String, dynamic> outbound,
+    LinkBuildOptions options,
+  ) {
+    if (!options.muxEnabled) {
+      return;
+    }
+    outbound['mux'] = {
+      'enabled': true,
+      'concurrency': options.muxConcurrency,
+    };
+  }
+
+  static void _maybeApplySingboxMux(
+    Map<String, dynamic> outbound,
+    LinkBuildOptions options,
+  ) {
+    if (!options.muxEnabled) {
+      return;
+    }
+    outbound['multiplex'] = {
+      'enabled': true,
+      'max_connections': options.muxConcurrency,
+    };
+  }
+
   static Map<String, dynamic> _singboxTls(
     Map<String, String> params,
-    String server,
-  ) {
+    String server, [
+    LinkBuildOptions options = const LinkBuildOptions(),
+  ]) {
+    final fingerprint = _resolveFingerprint(params, options);
     final security = params['security'];
     if (security == 'reality') {
       return {
@@ -590,8 +694,7 @@ class LinkConfigBuilder {
             'public_key': params['pbk'] ?? '',
             'short_id': params['sid'] ?? '',
           },
-          if (params['fp']?.isNotEmpty == true)
-            'utls': {'enabled': true, 'fingerprint': params['fp']},
+          'utls': {'enabled': true, 'fingerprint': fingerprint},
         },
       };
     }
@@ -600,8 +703,7 @@ class LinkConfigBuilder {
         'tls': {
           'enabled': true,
           'server_name': params['sni'] ?? server,
-          if (params['fp']?.isNotEmpty == true)
-            'utls': {'enabled': true, 'fingerprint': params['fp']},
+          'utls': {'enabled': true, 'fingerprint': fingerprint},
         },
       };
     }
@@ -651,17 +753,47 @@ class LinkConfigBuilder {
 
   static Map<String, dynamic> _singboxTransport(Map<String, String> params) {
     final network = params['type'] ?? 'tcp';
-    if (network == 'ws') {
-      return {
-        'transport': {
-          'type': 'ws',
-          'path': params['path'] ?? '/',
-          if (params['host']?.isNotEmpty == true)
-            'headers': {'Host': params['host']},
-        },
-      };
+    switch (network) {
+      case 'ws':
+        return {
+          'transport': {
+            'type': 'ws',
+            'path': params['path'] ?? '/',
+            if (params['host']?.isNotEmpty == true)
+              'headers': {'Host': params['host']},
+          },
+        };
+      case 'grpc':
+        return {
+          'transport': {
+            'type': 'grpc',
+            'service_name': params['serviceName'] ?? 'grpc',
+          },
+        };
+      case 'httpupgrade':
+        return {
+          'transport': {
+            'type': 'httpupgrade',
+            'path': params['path'] ?? '/',
+            if (params['host']?.isNotEmpty == true) 'host': params['host'],
+          },
+        };
+      case 'xhttp':
+        final mode = params['mode'];
+        final resolvedMode = (mode == null || mode.isEmpty || mode == 'auto')
+            ? TransportPresets.defaultXhttpMode
+            : mode;
+        return {
+          'transport': {
+            'type': 'xhttp',
+            'path': params['path'] ?? '/',
+            'mode': resolvedMode,
+            if (params['host']?.isNotEmpty == true) 'host': params['host'],
+          },
+        };
+      default:
+        return {};
     }
-    return {};
   }
 
   static String _padBase64(String value) {
