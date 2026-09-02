@@ -8,7 +8,9 @@ import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/engine_preference.dart';
 import '../models/vpn_engine.dart';
+import '../providers/per_app_proxy_provider.dart';
 import '../providers/vpn_providers.dart';
+import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
@@ -79,6 +81,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final desktopProxy =
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
+    final perAppProxy = ref.watch(perAppProxyProvider);
+    final androidVpn = !kIsWeb && Platform.isAndroid;
     final scheme = Theme.of(context).colorScheme;
     final engineSubtitle = preference.isAuto
         ? (_coreVersion.isEmpty
@@ -180,6 +184,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const FadeSlideIn(
             delay: Duration(milliseconds: 140),
             child: BrowserHelperCard(),
+          ),
+        ],
+        if (androidVpn) ...[
+          const SizedBox(height: 14),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 175),
+            child: _SectionCard(
+              title: 'Split tunneling',
+              subtitle: 'Selected apps connect directly, without VPN',
+              child: perAppProxy.loading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SwitchListTile(
+                          key: const ValueKey('per_app_proxy_toggle'),
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Exclude selected apps'),
+                          subtitle: const Text(
+                            'Traffic from excluded apps bypasses the VPN tunnel',
+                          ),
+                          value: perAppProxy.excludeEnabled,
+                          onChanged: (enabled) => ref
+                              .read(perAppProxyProvider.notifier)
+                              .setExcludeEnabled(enabled),
+                        ),
+                        if (perAppProxy.excludeEnabled) ...[
+                          const SizedBox(height: 4),
+                          ListTile(
+                            key: const ValueKey('manage_excluded_apps'),
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.apps_outlined,
+                              color: scheme.primary,
+                            ),
+                            title: const Text('Manage excluded apps'),
+                            subtitle: Text(
+                              perAppProxy.excludedPackages.isEmpty
+                                  ? 'No apps selected'
+                                  : '${perAppProxy.excludedPackages.length} app(s) excluded',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const PerAppProxyScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          if (status == VpnStatus.started)
+                            Text(
+                              'Reconnect VPN after changing excluded apps.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                        ],
+                      ],
+                    ),
+            ),
           ),
         ],
         const SizedBox(height: 14),
