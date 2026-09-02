@@ -793,38 +793,39 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             "get_installed_packages" -> {
                 scope.launch(Dispatchers.IO) {
                     result.runCatching {
-                        val pm = packageManager ?: return@runCatching
-                        val context = applicationContext ?: return@runCatching
-                        val flag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            PackageManager.GET_PERMISSIONS or PackageManager.MATCH_UNINSTALLED_PACKAGES
-                        } else {
-                            @Suppress("DEPRECATION")
-                            PackageManager.GET_PERMISSIONS or PackageManager.GET_UNINSTALLED_PACKAGES
+                        val pm = packageManager ?: run {
+                            success("[]")
+                            return@runCatching
                         }
-                        val installedPackages =
+                        val context = applicationContext ?: run {
+                            success("[]")
+                            return@runCatching
+                        }
+                        // List installed apps for split tunneling. Do not filter by
+                        // INTERNET permission — requestedPermissions is often null on
+                        // Android 11+ even with QUERY_ALL_PACKAGES, which yielded an empty list.
+                        val applications =
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(flag.toLong()))
+                                pm.getInstalledApplications(
+                                    PackageManager.ApplicationInfoFlags.of(0L),
+                                )
                             } else {
                                 @Suppress("DEPRECATION")
-                                pm.getInstalledPackages(flag)
+                                pm.getInstalledApplications(0)
                             }
-                        val list = mutableListOf<AppItem>()
-                        installedPackages.forEach { packageInfo ->
-                            val appInfo = packageInfo.applicationInfo
-                            if (packageInfo.packageName != context.packageName && appInfo != null &&
-                                (packageInfo.requestedPermissions?.contains(Manifest.permission.INTERNET) == true
-                                        || packageInfo.packageName == "android")
-                            ) {
-                                list.add(
-                                    AppItem(
-                                        packageInfo.packageName,
-                                        appInfo.loadLabel(pm).toString(),
-                                        appInfo.flags and ApplicationInfo.FLAG_SYSTEM == 1
-                                    )
+                        val list = applications
+                            .asSequence()
+                            .filter { it.packageName != context.packageName }
+                            .map { appInfo ->
+                                val label = appInfo.loadLabel(pm)?.toString()?.trim().orEmpty()
+                                AppItem(
+                                    appInfo.packageName,
+                                    label.ifEmpty { appInfo.packageName },
+                                    (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
                                 )
                             }
-                        }
-                        list.sortBy { it.name }
+                            .sortedBy { it.name }
+                            .toList()
                         success(gson.toJson(list))
                     }
                 }
