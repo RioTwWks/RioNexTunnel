@@ -46,3 +46,21 @@ jobs:
       - name: Run v2ray_box tests
         working-directory: packages/v2ray_box
         run: flutter test
+
+  linux-security-probe:
+    name: Linux SOCKS security probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install probe dependencies
+        run: sudo apt-get update && sudo apt-get install -y curl openssl
+
+      - name: Fetch xray core for Linux
+        run: ./scripts/fetch_cores.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run security_probe against authenticated SOCKS
+        run: chmod +x scripts/ci_security_probe_linux.sh scripts/security_probe.sh && ./scripts/ci_security_probe_linux.sh

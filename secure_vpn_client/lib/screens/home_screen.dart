@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/connection_detail.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
@@ -90,7 +91,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(vpnStatusProvider).value ?? VpnStatus.stopped;
+    final connectionDetail = ref.watch(connectionDetailProvider).value;
     final stats = ref.watch(vpnStatsProvider).value;
+    final uptime = ref.watch(connectionUptimeProvider).value;
     final engine = ref.watch(engineProvider);
     final enginePreference = ref.watch(enginePreferenceProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
@@ -109,6 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         FadeSlideIn(
           child: _StatusCard(
             status: status,
+            connectionDetail: connectionDetail,
             connected: connected,
             isDark: isDark,
             scheme: scheme,
@@ -116,6 +120,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             engine: engine,
             selectedProfile: selectedProfile,
             stats: stats,
+            uptime: uptime,
           ),
         ),
         const SizedBox(height: 32),
@@ -187,6 +192,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 class _StatusCard extends StatelessWidget {
   const _StatusCard({
     required this.status,
+    required this.connectionDetail,
     required this.connected,
     required this.isDark,
     required this.scheme,
@@ -194,9 +200,11 @@ class _StatusCard extends StatelessWidget {
     required this.engine,
     required this.selectedProfile,
     required this.stats,
+    required this.uptime,
   });
 
   final VpnStatus status;
+  final ConnectionDetail? connectionDetail;
   final bool connected;
   final bool isDark;
   final ColorScheme scheme;
@@ -204,6 +212,7 @@ class _StatusCard extends StatelessWidget {
   final VpnEngine engine;
   final Profile? selectedProfile;
   final VpnStats? stats;
+  final Duration? uptime;
 
   @override
   Widget build(BuildContext context) {
@@ -232,7 +241,10 @@ class _StatusCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  StatusIndicator(status: status),
+                  StatusIndicator(
+                    status: status,
+                    detail: connectionDetail,
+                  ),
                   const Spacer(),
                   _MetaChip(
                     icon: enginePreference.isAuto
@@ -291,6 +303,14 @@ class _StatusCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (uptime != null) ...[
+                  const SizedBox(height: 10),
+                  _StatTile(
+                    label: 'Uptime',
+                    value: _formatUptime(uptime!),
+                    icon: Icons.schedule_rounded,
+                  ),
+                ],
               ],
             ],
           ),
@@ -298,6 +318,19 @@ class _StatusCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatUptime(Duration duration) {
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes.remainder(60);
+  final seconds = duration.inSeconds.remainder(60);
+  if (hours > 0) {
+    return '${hours}h ${minutes}m';
+  }
+  if (minutes > 0) {
+    return '${minutes}m ${seconds}s';
+  }
+  return '${seconds}s';
 }
 
 class _MetaChip extends StatelessWidget {

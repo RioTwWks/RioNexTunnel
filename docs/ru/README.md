@@ -65,6 +65,8 @@
 | [Расширение браузера](browser_extension.md) | Авто-авторизация прокси |
 | [Устранение неполадок](troubleshooting.md) | Типичные ошибки и решения |
 | [Участие в разработке](contributing.md) | Чеклист PR и пути правок |
+| [Форк v2ray_box](v2ray_box_fork.md) | Патчи относительно upstream, зачем example |
+| [Мобильный VPN config](mobile_vpn_config.md) | Аудит sing-box `mixed` и DNS |
 
 ---
 
@@ -92,7 +94,7 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Автовыбор сервера с лучшей задержкой
 - [x] Автовыбор ядра (доступность / формат / fallback connect)
 - [ ] Полноценный E2E на Android / iOS / Windows / macOS
-- [ ] CI: `flutter analyze` + `flutter test`
+- [x] CI: `flutter analyze` + `flutter test` + Linux `security_probe.sh`
 
 ---
 

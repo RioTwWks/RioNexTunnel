@@ -143,6 +143,19 @@ void main() {
       expect(tags, ['secure-socks-in', 'secure-http-in']);
     });
 
+    test('detects xray geosite/geoip rule requirements', () {
+      expect(
+        ConfigParser.configRequiresXrayGeoRules(
+          '{"routing":{"rules":[{"domain":["geosite:cn"]}]}}',
+        ),
+        isTrue,
+      );
+      expect(
+        ConfigParser.configRequiresXrayGeoRules('{"outbounds":[]}'),
+        isFalse,
+      );
+    });
+
     test('strips deprecated allowInsecure from xray TLS settings', () {
       const withInsecure = '''
 {

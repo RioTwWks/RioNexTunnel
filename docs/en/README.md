@@ -65,6 +65,8 @@ The project is built from scratch on Flutter for five platforms: **Android, iOS,
 | [Browser extension](browser_extension.md) | Proxy auth helper for Chromium/Firefox |
 | [Troubleshooting](troubleshooting.md) | Common errors and fixes |
 | [Contributing](contributing.md) | PR checklist and edit targets |
+| [v2ray_box fork](v2ray_box_fork.md) | Patch set vs upstream, example app rationale |
+| [Mobile VPN config](mobile_vpn_config.md) | sing-box `mixed` inbound and DNS migration audit |
 
 ---
 
@@ -92,7 +94,7 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Auto-select best server by latency
 - [x] Auto engine selection (availability / format / connect fallback)
 - [ ] Full E2E on Android / iOS / Windows / macOS
-- [ ] CI: `flutter analyze` + `flutter test`
+- [x] CI: `flutter analyze` + `flutter test` + Linux `security_probe.sh`
 
 ---
 
