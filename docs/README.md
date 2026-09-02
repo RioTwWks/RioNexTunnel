@@ -26,7 +26,10 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | iOS setup | [en/ios_setup.md](en/ios_setup.md) | [ru/ios_setup.md](ru/ios_setup.md) |
 | Architecture | [en/architecture.md](en/architecture.md) | [ru/architecture.md](ru/architecture.md) |
 | Security | [en/security.md](en/security.md) | [ru/security.md](ru/security.md) |
+| Split tunneling | [en/split_tunneling.md](en/split_tunneling.md) | [ru/split_tunneling.md](ru/split_tunneling.md) |
 | Censorship resistance | [en/censorship_resistance.md](en/censorship_resistance.md) | [ru/censorship_resistance.md](ru/censorship_resistance.md) |
+| Platform parity checklist | [en/platform_parity_checklist.md](en/platform_parity_checklist.md) | [ru/platform_parity_checklist.md](ru/platform_parity_checklist.md) |
+| v2ray_box fork | [en/v2ray_box_fork.md](en/v2ray_box_fork.md) | [ru/v2ray_box_fork.md](ru/v2ray_box_fork.md) |
 | Browser extension | [en/browser_extension.md](en/browser_extension.md) | [ru/browser_extension.md](ru/browser_extension.md) |
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
 | Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
