@@ -47,9 +47,11 @@
 
 - [ ] Android: end-to-end connect on physical device
 - [ ] iOS: Network Extension + connect smoke test
-- [ ] Windows: implement desktop plugin (mirror Linux `desktop_core.cc`)
+- [x] Windows: implement desktop plugin (mirror Linux `desktop_core.cc`)
 - [ ] macOS: verify proxy mode connect with bundled cores
-- [ ] Windows/macOS: `SystemProxy` integration (Linux-only today)
+- [x] Windows: `SystemProxy` integration (registry + WinINet)
+- [ ] macOS: session credentials channel + HTTP port 1081 parity with Linux
+- [ ] Windows: browser helper (native messaging host + extension)
 
 ## Backlog — UX & profiles
 

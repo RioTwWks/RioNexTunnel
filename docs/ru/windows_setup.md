@@ -25,10 +25,10 @@ flutter config --enable-windows-desktop
 |---------|--------|
 | Оболочка Flutter-приложения | Собирается и запускается |
 | Бинарники ядер в bundle | CMake копирует `runner/resources/` → `{exe_dir}/resources/` |
-| Плагин `v2ray_box` для Windows | **Заглушка** — сейчас только `getPlatformVersion` |
+| Плагин `v2ray_box` для Windows | **Реализован** — proxy mode, `start_with_json`, credentials channel, системный прокси |
 | Connect / proxy mode | **Ещё нет** — нужны `desktop_core` + `SystemProxy` (см. backlog в `.cursor/tasks.md`) |
 
-На Windows desktop планируется **proxy mode** (`VpnMode.proxy`), как на Linux: аутентифицированные inbound только на `127.0.0.1`, без системного TUN VPN. Пока нативный плагин не реализован, можно собрать и изучить UI, но **Connect не запустит xray/sing-box**.
+На Windows desktop используется **proxy mode** (`VpnMode.proxy`), как на Linux: аутентифицированные inbound только на `127.0.0.1`, без системного TUN VPN. **Connect** запускает xray/sing-box и при включённом `set-system-proxy` выставляет системный HTTP-прокси Windows.
 
 ## Бинарники ядер
 

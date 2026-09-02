@@ -75,7 +75,7 @@ flutter build linux --debug
 | Linux | Proxy | **Verified** — all 4 connect combinations; GNOME system proxy + HTTP 1081 inbound |
 | Android | VPN | Scaffold + fork patches; needs device test |
 | iOS | VPN | Scaffold + docs; needs device test |
-| Windows | Proxy | Plugin stub; cores via CMake install |
+| Windows | Proxy | **Implemented** — desktop plugin mirrors Linux (cores, credentials, system proxy) |
 | macOS | Proxy | XrayProcess pattern in fork |
 
 ## Related docs
