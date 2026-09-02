@@ -15,7 +15,6 @@ import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
-import '../widgets/panel_settings_section.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/split_tunnel_desktop_banner.dart';
 
@@ -353,11 +352,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
-        ),
-        const SizedBox(height: 14),
-        const FadeSlideIn(
-          delay: Duration(milliseconds: 245),
-          child: PanelSettingsSection(),
         ),
         if (status == VpnStatus.started &&
             desktopProxy &&
