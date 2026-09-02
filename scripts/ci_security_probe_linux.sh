@@ -9,7 +9,7 @@ PROBE="${ROOT_DIR}/scripts/security_probe.sh"
 PORT="${SOCKS_PORT:-1080}"
 USER="ci_probe_user_$$"
 PASS="$(openssl rand -hex 12)"
-CONFIG="$(mktemp)"
+CONFIG="$(mktemp --suffix=.json)"
 PID=""
 
 cleanup() {
