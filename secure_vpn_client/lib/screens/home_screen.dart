@@ -22,6 +22,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _busy = false;
   String? _error;
+  String? _connectStatus;
 
   Future<void> _connect() async {
     final profile = ref.read(selectedProfileProvider);
@@ -33,6 +34,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _connectStatus = profile.type == ProfileType.subscription &&
+              profile.autoSelectBestServer
+          ? 'Testing servers…'
+          : null;
     });
 
     try {
@@ -57,7 +62,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       setState(() => _error = error.toString());
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() {
+          _busy = false;
+          _connectStatus = null;
+        });
       }
     }
   }
@@ -111,6 +119,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
         const SizedBox(height: 32),
+        if (_connectStatus != null) ...[
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 80),
+            child: Text(
+              _connectStatus!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         FadeSlideIn(
           delay: const Duration(milliseconds: 120),
           child: Center(

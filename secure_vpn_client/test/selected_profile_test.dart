@@ -87,5 +87,34 @@ void main() {
 
       container.dispose();
     });
+
+    testWidgets('enables automatic server selection for new subscriptions', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer();
+      await pumpAsync(tester);
+
+      await container.read(profilesProvider.notifier).addProfile(
+            name: 'Sub',
+            configLink: 'https://example.com/sub',
+            type: ProfileType.subscription,
+          );
+
+      final profile = container.read(profilesProvider).single;
+      expect(profile.autoSelectBestServer, isTrue);
+
+      await container.read(profilesProvider.notifier).addProfile(
+            name: 'Link',
+            configLink: 'vless://example.com',
+          );
+
+      final linkProfile = container
+          .read(profilesProvider)
+          .firstWhere((p) => p.type == ProfileType.link);
+      expect(linkProfile.autoSelectBestServer, isFalse);
+
+      container.dispose();
+    });
   });
 }

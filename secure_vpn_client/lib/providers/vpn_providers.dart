@@ -279,6 +279,7 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
       name: name,
       configLink: configLink,
       type: type,
+      autoSelectBestServer: type == ProfileType.subscription,
     );
     state = [...state, profile];
     await _persist();
