@@ -104,6 +104,16 @@ class MockV2rayBoxPlatform
   Future<int> urlTest(String link, {int timeout = 5000}) async => 120;
 
   @override
+  Future<int> urlTestJson(
+    String configJson, {
+    required String engine,
+    required int socksPort,
+    int timeout = 5000,
+    String? url,
+  }) async =>
+      120;
+
+  @override
   Future<Map<String, int>> urlTestAll(List<String> links,
       {int timeout = 5000}) async {
     return {for (var l in links) l: 100};

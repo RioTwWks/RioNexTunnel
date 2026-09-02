@@ -169,6 +169,23 @@ class V2rayBox {
     return V2rayBoxPlatform.instance.urlTest(link, timeout: timeout);
   }
 
+  /// Measure latency through a temporary core instance (tunnel-quality probe).
+  Future<int> pingConfig(
+    String configJson, {
+    required String engine,
+    required int socksPort,
+    int timeout = 7000,
+    String? url,
+  }) {
+    return V2rayBoxPlatform.instance.urlTestJson(
+      configJson,
+      engine: engine,
+      socksPort: socksPort,
+      timeout: timeout,
+      url: url,
+    );
+  }
+
   /// Test multiple URLs simultaneously and return latencies
   /// Returns a map of link -> latency in milliseconds
   /// [timeout] is optional, defaults to 7000 ms per config

@@ -156,7 +156,7 @@ class VpnService {
   }
 
   SubscriptionLatencyProbe get _latencyProbe =>
-      SubscriptionLatencyProbe(_v2rayBox);
+      SubscriptionLatencyProbe(_v2rayBox, engine: _engine);
 
   /// Probes latency for all servers in [profile]'s subscription.
   Future<List<ServerLatencyResult>> probeSubscriptionServers(

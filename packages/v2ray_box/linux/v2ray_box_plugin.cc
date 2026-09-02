@@ -10,6 +10,7 @@
 #include <string>
 
 #include "desktop_core.h"
+#include "desktop_ping.h"
 #include "native_messaging.h"
 #include "system_proxy.h"
 #include "v2ray_box_plugin_private.h"
@@ -40,6 +41,12 @@ std::string g_config_options = "{}";
 std::string g_socks_user;
 std::string g_socks_pass;
 int g_socks_port = 1080;
+std::string g_ping_test_url = "https://www.gstatic.com/generate_204";
+
+FlMethodResponse* make_success_int(int64_t value) {
+  g_autoptr(FlValue) result = fl_value_new_int(value);
+  return FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+}
 
 FlMethodResponse* make_success_bool(bool value) {
   g_autoptr(FlValue) result = fl_value_new_bool(value ? TRUE : FALSE);
@@ -222,10 +229,16 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
              strcmp(method, "consume_pending_tile_action") == 0 ||
              strcmp(method, "set_debug_mode") == 0 ||
              strcmp(method, "set_locale") == 0 ||
-             strcmp(method, "set_ping_test_url") == 0 ||
              strcmp(method, "set_per_app_proxy_mode") == 0 ||
              strcmp(method, "set_per_app_proxy_list") == 0) {
     response = make_success_bool(true);
+  } else if (strcmp(method, "set_ping_test_url") == 0) {
+    if (fl_value_get_type(args) == FL_VALUE_TYPE_STRING) {
+      g_ping_test_url = fl_value_get_string(args);
+    }
+    response = make_success_bool(true);
+  } else if (strcmp(method, "get_ping_test_url") == 0) {
+    response = make_success_string(g_ping_test_url);
   } else if (strcmp(method, "get_debug_mode") == 0) {
     response = make_success_bool(false);
   } else if (strcmp(method, "get_per_app_proxy_mode") == 0) {
@@ -360,9 +373,52 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
   } else if (strcmp(method, "reset_total_traffic") == 0 ||
              strcmp(method, "clear_logs") == 0) {
     response = make_success_bool(true);
+  } else if (strcmp(method, "url_test_json") == 0) {
+    if (fl_value_get_type(args) != FL_VALUE_TYPE_MAP) {
+      response = make_error("INVALID_ARGS", "Missing config parameter");
+    } else {
+      FlValue* config = fl_value_lookup_string(args, "config");
+      const char* config_json =
+          fl_value_get_type(config) == FL_VALUE_TYPE_STRING
+              ? fl_value_get_string(config)
+              : nullptr;
+      FlValue* engine_val = fl_value_lookup_string(args, "engine");
+      const char* engine =
+          fl_value_get_type(engine_val) == FL_VALUE_TYPE_STRING
+              ? fl_value_get_string(engine_val)
+              : g_core_engine.c_str();
+      FlValue* socks_port_val = fl_value_lookup_string(args, "socksPort");
+      const int socks_port =
+          fl_value_get_type(socks_port_val) == FL_VALUE_TYPE_INT
+              ? static_cast<int>(fl_value_get_int(socks_port_val))
+              : 0;
+      FlValue* timeout_val = fl_value_lookup_string(args, "timeout");
+      const int timeout_ms =
+          fl_value_get_type(timeout_val) == FL_VALUE_TYPE_INT
+              ? static_cast<int>(fl_value_get_int(timeout_val))
+              : 7000;
+      FlValue* url_val = fl_value_lookup_string(args, "url");
+      const char* test_url =
+          fl_value_get_type(url_val) == FL_VALUE_TYPE_STRING
+              ? fl_value_get_string(url_val)
+              : g_ping_test_url.c_str();
+
+      if (config_json == nullptr || !v2ray_box::IsValidJson(config_json)) {
+        response = make_error("INVALID_CONFIG", "Config validation failed");
+      } else if (socks_port <= 0) {
+        response = make_error("INVALID_ARGS", "Missing socksPort parameter");
+      } else {
+        const int latency = v2ray_box::MeasureOutboundDelay(
+            engine, config_json, socks_port, test_url, timeout_ms);
+        response = make_success_int(latency);
+      }
+    }
   } else if (strcmp(method, "url_test") == 0 ||
-             strcmp(method, "url_test_all") == 0 ||
-             strcmp(method, "start") == 0 ||
+             strcmp(method, "url_test_all") == 0) {
+    response = make_error(
+        "NOT_SUPPORTED",
+        "Use url_test_json with a measure config on Linux desktop");
+  } else if (strcmp(method, "start") == 0 ||
              strcmp(method, "restart") == 0) {
     response = make_error("NOT_SUPPORTED", "Method not supported on Linux desktop");
   } else {

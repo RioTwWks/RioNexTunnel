@@ -28,10 +28,9 @@ class ServerLatencyResult {
   bool get isReachable => latencyMs >= 0;
 }
 
-/// TCP connect latency probe used for auto-selecting the best server.
+/// TCP connect latency probe — fallback when core tunnel ping is unavailable.
 ///
 /// Measures reachability of the VPN node address (not full tunnel quality).
-/// Works on all platforms — Linux desktop has no native `url_test`.
 class ServerLatencyProbe {
   static const defaultTimeout = Duration(seconds: 3);
   static const defaultConcurrency = 8;
