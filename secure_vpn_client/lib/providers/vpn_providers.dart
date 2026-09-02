@@ -332,4 +332,16 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
     state = state.where((profile) => profile.id != id).toList();
     await _persist();
   }
+
+  Future<void> updateProfile(Profile profile) async {
+    final index = state.indexWhere((item) => item.id == profile.id);
+    if (index < 0) {
+      return;
+    }
+    state = [
+      for (var i = 0; i < state.length; i++)
+        if (i == index) profile else state[i],
+    ];
+    await _persist();
+  }
 }
