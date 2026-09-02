@@ -4,7 +4,7 @@
 
 **Priorities:** P0 (critical) → P1 (key differentiators) → P2 (advanced) → P3 (UX polish)
 
-**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / obfuscation UX / proxy-mgr panel → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
+**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / censorship resistance / proxy-mgr panel → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
 
 ---
 
@@ -129,7 +129,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### Traffic obfuscation (DPI bypass UX)
 
-> Protocols supported by cores, but no presets or wizard for censorship bypass.
+> Protocols supported by cores, but no presets or wizard for censorship bypass. See **P1 — censorship resistance** below for RKN/TSPU-specific backlog.
 
 - [ ] Transport presets — WebSocket+TLS, gRPC, HTTPUpgrade, REALITY (xray), uTLS fingerprint
 - [ ] UI wizard — "censorship mode" when importing or editing a profile
@@ -249,6 +249,110 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ---
 
+## P1 — censorship resistance (RKN/TSPU, client-only)
+
+> **Goal:** RioNexTunnel stays effective against modern Russian DPI (ТСПУ/РКН) in 2026 without sacrificing universality. Censorship-bypass features are **presets and fallbacks** on top of standard VLESS/VMess/Trojan — the client must still connect to any third-party server.
+>
+> **Core policy — no abandoned Xray forks:** Do **not** ship or depend on [fwflunky/REALITY-rkn-fix](https://github.com/fwflunky/REALITY-rkn-fix) (unmaintained, untested). Use **official Xray-core** from `scripts/fetch_cores.sh` with correct transport/TLS settings. Treat the fork as an ideas reference only; if upstream adds dynamic REALITY certs, adopt via normal core updates.
+
+### Threat model (why naive VLESS+Reality TCP fails)
+
+- **Signature detection** — static REALITY cert structure (`SerialNumber = 0`, empty Subject, identical body per connection) is fingerprintable; mitigated by server config + transport choice, not a custom client fork
+- **TLS handshake timing** — DPI drops long handshakes or persistent TCP after TLS without HTTP-like behavior → prefer **XHTTP** over raw TCP
+- **Packet size analysis** — ~200-byte ServerHello in one segment is a signal; server-side ServerHello fragmentation is out of scope here; client must not make PPS worse by over-fragmenting locally
+
+### Recommended stacks (client must parse, generate, and connect)
+
+| Priority | Stack | Client role |
+|----------|-------|-------------|
+| **Primary** | `VLESS + Reality + XHTTP` | Parse `type=xhttp` links; ensure outbound JSON includes `"network": "xhttp"` and **`"mode": "stream-one"`** (never rely on `auto` — known bugs) |
+| **Fallback** | `VLESS + TLS (non-443) + mux` (`concurrency: 8`) | Toggle mux in profile/advanced settings; mobile-first; desktop may omit mux UI |
+| **iOS fallback** | `TCP + Reality + Vision` | When subscription offers both XHTTP and TCP+Vision, prefer XHTTP except on iOS where XHTTP+Reality may be unsupported — auto-select TCP+Vision inbound |
+| **Reserve protocol** | **AmneziaWG** | Evaluate sing-box/xray WG obfuscation or separate AmneziaWG core path; standard WireGuard is widely blocked in RU mobile networks |
+
+### 1 — XHTTP transport
+
+- [ ] `LinkConfigBuilder` — parse `vless://` / subscription params: `type=xhttp`, `path`, `host`, `mode`
+- [ ] Default generated XHTTP outbound: `"mode": "stream-one"` when mode omitted
+- [ ] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
+- [ ] Validation warning if `mode: auto` detected in imported config
+- [ ] Tests — round-trip XHTTP link → JSON → required fields present (`stream-one`)
+- [ ] Docs — XHTTP+Reality as 2026 default; link param reference in `docs/`
+
+### 2 — mux (mobile fallback stack)
+
+- [ ] Profile setting: **Enable mux** with `concurrency` (default `8`) for VLESS+TLS profiles
+- [ ] Apply mux only when user enables or profile tag is `mux` / `mobile` (do not force globally)
+- [ ] Desktop proxy mode — document that mux is optional and often unnecessary when XHTTP is available
+- [ ] `ping_config_builder` — respect mux for latency probes or strip consistently (today: strips mux)
+- [ ] Tests — mux injected only when setting on; sing-box vs xray field names
+
+### 3 — uTLS / TLS fingerprint (ClientHello obfuscation)
+
+- [ ] UI: **TLS fingerprint** picker — `firefox`, `edge`, `chrome`, `safari`, `random` (advanced)
+- [ ] Sensible default: **`firefox`** or **`edge`** (2026 RU blocks reportedly flag `chrome`/`safari` more often)
+- [ ] `LinkConfigBuilder` — stop defaulting `fp` to `chrome` when absent; use profile default or `firefox`
+- [ ] Ensure xray `fingerprint` + sing-box `utls.fingerprint` stay in sync when editing profile
+- [ ] Subscription import — honor `fp` from link; allow override in profile without rewriting server URL
+- [ ] Tests — fingerprint flows into outbound JSON for both engines
+
+### 4 — Smart routing (RU split tunnel preset)
+
+> Overlaps with **Split Tunneling** above; this preset is censorship-specific.
+
+- [ ] Preset: **RU direct** — `geosite:ru`, `geoip:ru`, and common RU domains (Yandex, Gosuslugi, major banks) → `direct` / bypass tunnel
+- [ ] All other traffic → proxy outbound (existing subscription routing merged, not replaced)
+- [ ] Desktop proxy mode — document limits (browser/OS may ignore app routing rules)
+- [ ] Requires geo assets (`geoip.dat`, `geosite.dat`); fail closed with clear error if rules reference geo but assets missing
+- [ ] Security — direct path must not expose unauthenticated localhost SOCKS; no bypass via `127.0.0.1` scanning
+- [ ] UI toggle: **Censorship preset: RU sites direct** in Advanced → Routing
+- [ ] Tests — generated routing rules contain expected `geosite:ru` / `geoip:ru` tags
+
+### 5 — Protocol & server auto-fallback
+
+- [ ] Extend server picker / `SubscriptionManager`: ordered probe list per subscription entry tags
+- [ ] Default probe order: `VLESS+Reality+XHTTP` → `VLESS+TLS+mux` → `TCP+Reality+Vision` → `AmneziaWG` (if present)
+- [ ] On connect failure or mid-session drop — try next candidate with exponential backoff (reuse P0 reconnect)
+- [ ] Persist last working stack per server (latency + success rate) for faster reconnect
+- [ ] UI: show active transport stack (e.g. "XHTTP · Reality · firefox") without secrets
+- [ ] Tests — mock failure on first outbound, assert fallback to second profile fragment
+
+### 6 — Platform & engine notes
+
+- [ ] iOS — detect platform; deprioritize XHTTP+Reality, prioritize TCP+Reality+Vision from same subscription
+- [ ] Engine version gate — warn if bundled Xray is older than feature requiring XHTTP (compare against `fetch_cores.sh` pin)
+- [ ] **Do not** vendor custom Xray builds for REALITY cert randomization; track [XTLS/Xray-core](https://github.com/XTLS/Xray-core) issues/PRs instead
+- [ ] Optional: document upstream REALITY improvements in `docs/` when official core catches up to fork ideas
+
+### 7 — Testing & docs (client)
+
+- [ ] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [ ] No live DPI test in CI — validate JSON shape and parser resilience only
+- [ ] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
+- [ ] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
+
+### Client roadmap (censorship resistance track)
+
+| Phase | RioNexTunnel tasks |
+|-------|-------------------|
+| **1** | XHTTP parse/generate + `stream-one` default + tests |
+| **2** | Fingerprint UI + non-chrome defaults + mux toggle |
+| **3** | RU direct routing preset + geo asset guard |
+| **4** | Multi-stack auto-fallback + iOS transport selection + docs |
+
+### Expected outcomes
+
+| Threat | Client mitigation |
+|--------|-------------------|
+| TCP Reality fingerprint | Prefer XHTTP; fallback stacks in subscription |
+| ClientHello inspection | uTLS fingerprint picker; firefox/edge defaults |
+| RU site via foreign IP | RU direct routing preset |
+| Mobile operator blocks | mux + AmneziaWG in fallback chain |
+| iOS XHTTP gap | Auto-select TCP+Reality+Vision |
+| Fork maintenance risk | Official Xray-core only |
+
+---
+
 ## P2 — Advanced security & routing
 
 ### Multihop (Double VPN / chains)
@@ -342,6 +446,12 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Kill Switch | ❌ Missing | **P1** |
 | Split Tunneling | ❌ Missing | **P1** |
 | Obfuscation / DPI (UX) | ⚠️ Via protocols, no UI | **P1** |
+| XHTTP + stream-one | ❌ Missing | **P1** |
+| TLS fingerprint UI (uTLS) | ⚠️ Link `fp` only; defaults chrome | **P1** |
+| mux toggle (mobile) | ❌ Missing | **P1** |
+| RU direct routing preset | ❌ Missing | **P1** |
+| Protocol auto-fallback chain | ⚠️ Latency pick only | **P1** |
+| AmneziaWG | ❌ Missing | P1/P2 |
 | Double VPN / Multihop | ❌ Missing | P2 |
 | DNS leak protection, DoH/DoT | ⚠️ Basic DNS only | P2 |
 | Custom routing UI | ⚠️ Subscription JSON only | P2 |
@@ -362,4 +472,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — added P1 proxy-mgr client integration backlog (panel API, sync, stats, commands).*
+*Last updated: 2026-09-02 — added P1 censorship resistance backlog (XHTTP, uTLS, mux, RU routing, fallback); official Xray only, no REALITY-rkn-fix fork.*
