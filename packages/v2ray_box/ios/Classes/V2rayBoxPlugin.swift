@@ -112,7 +112,64 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         )
         quickSettingsTileChannel.setStreamHandler(QuickSettingsTileStreamHandler(plugin: instance))
         
+        let credentialsChannel = FlutterMethodChannel(
+            name: "secure_vpn/credentials",
+            binaryMessenger: registrar.messenger()
+        )
+        credentialsChannel.setMethodCallHandler { call, result in
+            switch call.method {
+            case "setSessionCredentials":
+                let args = call.arguments as? [String: Any]
+                let username = args?["username"] as? String
+                let password = args?["password"] as? String
+                let port = args?["port"] as? Int ?? 1080
+                SecureVpnCredentials.setSession(username: username, password: password, port: port)
+                result(true)
+            case "clearSessionCredentials":
+                SecureVpnCredentials.clearSession()
+                V2rayBoxPlugin.wipeSensitiveConfigFiles()
+                result(true)
+            case "getLocalSocksPort":
+                result(SecureVpnCredentials.socksPort)
+            default:
+                result(FlutterMethodNotImplemented)
+            }
+        }
+        
         instance.setupVPNObserver()
+    }
+    
+    private static func wipeSensitiveConfigFiles() {
+        let configPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("v2ray_box/working/profiles/active_config.json")
+        if let configPath {
+            try? FileManager.default.removeItem(at: configPath)
+        }
+        if let shared = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.\(Bundle.main.bundleIdentifier ?? "")") {
+            let sharedConfig = shared.appendingPathComponent("working/profiles/active_config.json")
+            try? FileManager.default.removeItem(at: sharedConfig)
+        }
+    }
+
+    private func applySessionCredentials(from args: [String: Any]) {
+        let username = args["socksUsername"] as? String
+        let password = args["socksPassword"] as? String
+        let port = args["socksPort"] as? Int
+        if username != nil || password != nil || port != nil {
+            SecureVpnCredentials.setSession(
+                username: username ?? SecureVpnCredentials.username,
+                password: password ?? SecureVpnCredentials.password,
+                port: port ?? SecureVpnCredentials.socksPort
+            )
+        }
+    }
+
+    private func isSingboxAvailable() -> Bool {
+        !LibboxVersion().isEmpty
+    }
+
+    private func isXrayAvailableOnDevice() -> Bool {
+        false
     }
     
     private func setupVPNObserver() {
@@ -286,6 +343,14 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         case "set_core_engine":
             if let engine = call.arguments as? String,
                engine == "xray" || engine == "singbox" {
+                if engine == "xray" && !isXrayAvailableOnDevice() {
+                    result(FlutterError(
+                        code: "INVALID_ARGS",
+                        message: "xray is not available on iOS. Use singbox.",
+                        details: nil
+                    ))
+                    return
+                }
                 coreEngine = engine
                 result(true)
             } else {
@@ -296,14 +361,34 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             result(coreEngine)
             
         case "get_core_info":
+            let xrayAvailable = isXrayAvailableOnDevice()
+            let singboxAvailable = isSingboxAvailable()
             if coreEngine == "xray" {
-                result(["engine": "xray", "core": "xray-core", "version": ""] as [String: Any])
+                result([
+                    "engine": "xray",
+                    "core": "xray-core",
+                    "version": "",
+                    "xray_available": xrayAvailable,
+                    "singbox_available": singboxAvailable,
+                ] as [String: Any])
             } else {
-                var info: [String: Any] = ["engine": "singbox", "core": "sing-box"]
+                var info: [String: Any] = [
+                    "engine": "singbox",
+                    "core": "sing-box",
+                    "xray_available": xrayAvailable,
+                    "singbox_available": singboxAvailable,
+                ]
                 let version = LibboxVersion()
                 if !version.isEmpty { info["version"] = version }
                 result(info)
             }
+
+        case "get_browser_helper_status":
+            result([
+                "native_host_installed": false,
+                "chrome_manifest_installed": false,
+                "firefox_manifest_installed": false,
+            ] as [String: Any])
             
         case "check_config_json":
             guard let configJson = call.arguments as? String else {
@@ -325,7 +410,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 return
             }
             let name = args["name"] as? String ?? ""
-            startWithJson(configJson: configJson, name: name, result: result)
+            startWithJson(configJson: configJson, name: name, args: args, result: result)
             
         case "get_logs":
             result([String]())
@@ -623,13 +708,9 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     // MARK: - Stop VPN
     
     private func stop(result: @escaping FlutterResult) {
-        guard let manager = tunnelManager,
-              manager.connection.status == .connected else {
-            result(true)
-            return
-        }
-        
-        manager.connection.stopVPNTunnel()
+        tunnelManager?.connection.stopVPNTunnel()
+        SecureVpnCredentials.clearSession()
+        V2rayBoxPlugin.wipeSensitiveConfigFiles()
         result(true)
     }
     
@@ -791,7 +872,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     
     // MARK: - Start With JSON
     
-    private func startWithJson(configJson: String, name: String, result: @escaping FlutterResult) {
+    private func startWithJson(configJson: String, name: String, args: [String: Any]?, result: @escaping FlutterResult) {
         Task {
             do {
                 #if targetEnvironment(simulator)
@@ -817,6 +898,14 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 }
                 
                 activeProfileName = name
+                if let args {
+                    applySessionCredentials(from: args)
+                }
+                
+                let configPath = getWorkingDirectory().appendingPathComponent("profiles/active_config.json")
+                try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try configJson.write(to: configPath, atomically: true, encoding: .utf8)
+                activeConfigPath = configPath.path
                 
                 if tunnelManager?.connection.status == .connected {
                     await MainActor.run { result(true) }

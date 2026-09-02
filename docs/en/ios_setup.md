@@ -6,11 +6,14 @@
 
 
 1. Open `secure_vpn_client/ios/Runner.xcworkspace` in Xcode.
-2. Add the **Network Extensions** capability and enable **Packet Tunnel**.
-3. Add entitlement `com.apple.developer.networking.vpn.api` to the Runner target and tunnel extension.
-4. Configure a valid development team and provisioning profile.
-5. Copy core binaries to the paths expected by `v2ray_box` (see plugin README) or use bundled xcframeworks.
-6. Run `flutter run -d ios` from `secure_vpn_client/` on macOS.
+2. Run `python3 scripts/setup_ios_packet_tunnel.py` from the repo root if the **PacketTunnel** target is missing (merges extension from `v2ray_box` example).
+3. Copy `Libbox.xcframework` into `secure_vpn_client/ios/Frameworks/` (not in git).
+4. Add the **Network Extensions** capability and enable **Packet Tunnel** on Runner and PacketTunnel targets.
+5. Align App Group `group.com.example.secureVpnClient` in entitlements with your bundle ID for production.
+6. Configure a valid development team and provisioning profile.
+7. Run `flutter run -d ios` from `secure_vpn_client/` on macOS.
+
+See [platform_parity_checklist.md](platform_parity_checklist.md) for a full device smoke-test list.
 
 iOS requires a paid Apple Developer account for on-device VPN testing.
 
