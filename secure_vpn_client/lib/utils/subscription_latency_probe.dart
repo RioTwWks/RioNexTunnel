@@ -6,23 +6,38 @@ import 'package:flutter/services.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/subscription_server.dart';
+import '../models/vpn_engine.dart';
+import 'config_parser.dart';
+import 'ping_config_builder.dart';
 import 'server_latency.dart';
 
 /// Probes subscription servers for latency using the best method per platform.
 ///
-/// On Android the core measures HTTP delay through a temporary outbound (like
-/// Hiddify URL test). Elsewhere falls back to TCP connect RTT.
+/// Android: core HTTP delay through a temporary outbound (Hiddify-style URL test).
+/// Linux desktop: temporary core + HTTP through local inbound (tunnel-quality).
+/// Other platforms: TCP connect RTT to host:port (reachability only).
 class SubscriptionLatencyProbe {
-  SubscriptionLatencyProbe(this._box);
+  SubscriptionLatencyProbe(this._box, {required this.engine});
 
   final V2rayBox _box;
+  final VpnEngine engine;
 
-  static bool get supportsCorePing {
+  static bool get supportsAndroidCorePing {
     if (kIsWeb) {
       return false;
     }
     return Platform.isAndroid;
   }
+
+  static bool get supportsDesktopTunnelPing {
+    if (kIsWeb) {
+      return false;
+    }
+    return Platform.isLinux;
+  }
+
+  static bool get supportsCorePing =>
+      supportsAndroidCorePing || supportsDesktopTunnelPing;
 
   /// Default probe timeout; core ping uses ms, TCP probe uses [Duration].
   static const defaultTimeoutMs = 5000;
@@ -53,18 +68,21 @@ class SubscriptionLatencyProbe {
       return const [];
     }
 
-    if (supportsCorePing && servers.length > 1) {
-      return _probeAllWithCore(
+    if (supportsAndroidCorePing && servers.length > 1) {
+      return _probeAllWithAndroidCore(
         servers,
         timeoutMs: timeoutMs,
         onResult: onResult,
       );
     }
 
-    if (supportsCorePing && servers.length == 1) {
-      final result = await probeServer(servers.first, timeoutMs: timeoutMs);
-      onResult?.call(result);
-      return [result];
+    if (supportsCorePing) {
+      return _probeAllParallel(
+        servers,
+        timeoutMs: timeoutMs,
+        concurrency: concurrency,
+        onResult: onResult,
+      );
     }
 
     return ServerLatencyProbe.probeAll(
@@ -83,8 +101,18 @@ class SubscriptionLatencyProbe {
     SubscriptionServer server, {
     required int timeoutMs,
   }) async {
+    if (supportsDesktopTunnelPing) {
+      return _probeDesktopTunnel(server.content, timeoutMs: timeoutMs);
+    }
+    return _probeAndroidCore(server.content, timeoutMs: timeoutMs);
+  }
+
+  Future<int> _probeAndroidCore(
+    String link, {
+    required int timeoutMs,
+  }) async {
     try {
-      return await _box.ping(server.content, timeout: timeoutMs);
+      return await _box.ping(link, timeout: timeoutMs);
     } on PlatformException catch (error) {
       if (error.code == 'NOT_SUPPORTED') {
         return -1;
@@ -95,7 +123,31 @@ class SubscriptionLatencyProbe {
     }
   }
 
-  Future<List<ServerLatencyResult>> _probeAllWithCore(
+  Future<int> _probeDesktopTunnel(
+    String content, {
+    required int timeoutMs,
+  }) async {
+    try {
+      final measure = await PingConfigBuilder.build(content, engine);
+      return await _box.pingConfig(
+        measure.configJson,
+        engine: measure.engine.coreName,
+        socksPort: measure.socksPort,
+        timeout: timeoutMs,
+      );
+    } on ConfigParserException {
+      return -1;
+    } on PlatformException catch (error) {
+      if (error.code == 'NOT_SUPPORTED') {
+        return -1;
+      }
+      return -1;
+    } on Object {
+      return -1;
+    }
+  }
+
+  Future<List<ServerLatencyResult>> _probeAllWithAndroidCore(
     List<SubscriptionServer> servers, {
     required int timeoutMs,
     void Function(ServerLatencyResult result)? onResult,
@@ -146,6 +198,33 @@ class SubscriptionLatencyProbe {
           ),
         )
         .toList();
+  }
+
+  Future<List<ServerLatencyResult>> _probeAllParallel(
+    List<SubscriptionServer> servers, {
+    required int timeoutMs,
+    required int concurrency,
+    void Function(ServerLatencyResult result)? onResult,
+  }) async {
+    final results = List<ServerLatencyResult?>.filled(servers.length, null);
+    var nextIndex = 0;
+    final workers = concurrency.clamp(1, servers.length);
+
+    Future<void> worker() async {
+      while (true) {
+        final index = nextIndex;
+        nextIndex++;
+        if (index >= servers.length) {
+          return;
+        }
+        final result = await probeServer(servers[index], timeoutMs: timeoutMs);
+        results[index] = result;
+        onResult?.call(result);
+      }
+    }
+
+    await Future.wait(List.generate(workers, (_) => worker()));
+    return results.map((r) => r!).toList();
   }
 }
 
