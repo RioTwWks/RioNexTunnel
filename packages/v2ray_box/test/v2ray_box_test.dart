@@ -263,6 +263,27 @@ class MockV2rayBoxPlatform
 
   @override
   Future<Map<String, bool>> getBrowserHelperStatus() async => {};
+
+  @override
+  Future<bool> setKillSwitchMode(String mode) async => true;
+
+  @override
+  Future<bool> armKillSwitch({int? socksPort}) async => true;
+
+  @override
+  Future<bool> engageKillSwitch() async => true;
+
+  @override
+  Future<bool> disengageKillSwitch() async => true;
+
+  @override
+  Future<bool> releaseKillSwitch() async => true;
+
+  @override
+  Future<Map<String, dynamic>> getKillSwitchStatus() async => {};
+
+  @override
+  Future<bool> isCoreRunning() async => true;
 }
 
 void main() {
