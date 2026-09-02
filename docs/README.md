@@ -34,5 +34,8 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
 | Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
+| Release notes (v0.5.0) | [en/release_notes/v0.5.0.md](en/release_notes/v0.5.0.md) | [ru/release_notes/v0.5.0.md](ru/release_notes/v0.5.0.md) |
+
+Repository changelog: [CHANGELOG.md](../CHANGELOG.md)
 
 For AI agents and contributors, see also [.cursor/AGENTS.md](../.cursor/AGENTS.md) (English).
