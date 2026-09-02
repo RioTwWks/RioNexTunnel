@@ -928,10 +928,11 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         val engine = Settings.coreEngine
                         val ctx = applicationContext
                         val singboxPath = ctx?.let { SingboxProcess.getBinaryPath(it) }
+                        val xrayAvailable = isXrayAvailable(ctx)
                         val info = mutableMapOf<String, Any>(
                             "core" to engine,
                             "active_runtime_engine" to Settings.effectiveCoreEngine(),
-                            "xray_available" to true,
+                            "xray_available" to xrayAvailable,
                             "singbox_available" to (singboxPath != null),
                         )
                         if (engine == CoreEngine.SINGBOX) {
@@ -1032,6 +1033,16 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         val args = call.arguments as Map<*, *>
                         val configJson = args["config"] as String
                         val name = args["name"] as String? ?: ""
+                        val socksUsername = args["socksUsername"] as? String
+                        val socksPassword = args["socksPassword"] as? String
+                        val socksPort = (args["socksPort"] as? Number)?.toInt()
+                        if (socksUsername != null || socksPassword != null || socksPort != null) {
+                            SecureVpnCredentials.setSession(
+                                socksUsername,
+                                socksPassword,
+                                socksPort ?: SecureVpnCredentials.getSocksPort(),
+                            )
+                        }
 
                         try {
                             gson.fromJson(configJson, Map::class.java)
@@ -1240,6 +1251,16 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.success(true)
             }
 
+            "get_browser_helper_status" -> {
+                result.success(
+                    mapOf(
+                        "native_host_installed" to false,
+                        "chrome_manifest_installed" to false,
+                        "firefox_manifest_installed" to false,
+                    ),
+                )
+            }
+
             "get_ping_test_url" -> {
                 result.success(Settings.pingTestUrl)
             }
@@ -1343,6 +1364,19 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private fun isServiceActive(): Boolean {
         val current = serviceStatus.value
         return current == Status.Started || current == Status.Starting || current == Status.Stopping
+    }
+
+    private fun isXrayAvailable(context: Context?): Boolean {
+        if (context == null) {
+            return false
+        }
+        return try {
+            val workDir = (context.getExternalFilesDir(null) ?: context.filesDir).absolutePath
+            XrayBridge.initCoreEnv(context, workDir)
+            XrayBridge.checkVersion().trim().isNotEmpty()
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun nextServiceActionToken(): Long = serviceActionToken.incrementAndGet()

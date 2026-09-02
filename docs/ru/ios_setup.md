@@ -6,15 +6,18 @@
 
 
 1. Откройте `secure_vpn_client/ios/Runner.xcworkspace` в Xcode.
-2. Добавьте capability **Network Extensions** и включите **Packet Tunnel**.
-3. Добавьте entitlement `com.apple.developer.networking.vpn.api` для Runner и tunnel extension.
-4. Настройте development team и provisioning profile.
-5. Скопируйте бинарники ядер в пути, ожидаемые `v2ray_box` (см. README плагина), или используйте xcframeworks.
-6. Запуск на macOS из `secure_vpn_client/`:
+2. Выполните `python3 scripts/setup_ios_packet_tunnel.py` из корня репозитория, если target **PacketTunnel** отсутствует.
+3. Скопируйте `Libbox.xcframework` в `secure_vpn_client/ios/Frameworks/` (не в git).
+4. Добавьте capability **Network Extensions** и **Packet Tunnel** для Runner и PacketTunnel.
+5. Согласуйте App Group `group.com.example.secureVpnClient` с bundle ID для production.
+6. Настройте development team и provisioning profile.
+7. Запуск на macOS из `secure_vpn_client/`:
 
 ```bash
 flutter run -d ios
 ```
+
+Чеклист smoke-тестов: [platform_parity_checklist.md](platform_parity_checklist.md).
 
 Для тестирования VPN на устройстве нужен Apple Developer account.
 

@@ -59,6 +59,7 @@ The project is built from scratch on Flutter for five platforms: **Android, iOS,
 | [macOS setup](macos_setup.md) | Desktop proxy mode, Xcode, core binaries |
 | [Android setup](android_setup.md) | VPN mode, manifest, jniLibs |
 | [iOS setup](ios_setup.md) | Network Extensions, entitlements |
+| [Platform parity checklist](platform_parity_checklist.md) | Per-platform smoke tests |
 | [Architecture](architecture.md) | Components and data flow |
 | [Security](security.md) | SOCKS auth model and verification |
 | [Browser extension](browser_extension.md) | Proxy auth helper for Chromium/Firefox |

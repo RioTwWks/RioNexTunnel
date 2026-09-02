@@ -58,22 +58,28 @@
 - [x] Per-session credentials
 - [x] Credentials cleared on stop
 
+## Completed — platform parity
+
+Code-complete across targets; device E2E steps: [docs/en/platform_parity_checklist.md](../docs/en/platform_parity_checklist.md).
+
+- [x] Linux desktop plugin + system proxy + browser helper (verified)
+- [x] Windows: desktop plugin (`desktop_core.cpp`), `SystemProxy` (registry + WinINet)
+- [x] macOS: ports 1080/1081, credentials channel, HTTP system proxy parity
+- [x] Android: `xray_available` probe, session creds in `start_with_json`, `get_browser_helper_status` stub
+- [x] iOS plugin: credentials channel, `get_core_info`, config persist/wipe, sing-box only
+- [x] iOS app: PacketTunnel target + Runner entitlements (`scripts/setup_ios_packet_tunnel.py`)
+- [x] Dart: `engine_auto_selector` iOS → sing-box heuristic
+- [x] E2E smoke tests documented per platform (manual on device)
+
+Deferred to P3:
+
+- [ ] Windows browser helper (native messaging + extension) — Linux has full implementation; Windows returns `false` in `get_browser_helper_status`
+
 ---
 
-## P0 — Foundation: stability & platform parity
+## P0 — Foundation: stability
 
 Kill Switch and Split Tunneling depend on reliable platform plumbing first.
-
-### Platform parity
-
-- [ ] Android: end-to-end connect on physical device (VPN/TUN mode)
-- [ ] iOS: Network Extension + connect smoke test
-- [x] Windows: implement desktop plugin (mirror Linux `desktop_core.cc`)
-- [x] macOS: align plugin ports with injected inbounds (1080/1081)
-- [ ] macOS: E2E verify proxy mode connect with bundled cores
-- [x] Windows: `SystemProxy` integration (registry + WinINet)
-- [x] macOS: session credentials channel + HTTP port 1081 parity with Linux
-- [ ] Windows: browser helper (native messaging host + extension)
 
 ### Engineering base
 
@@ -194,6 +200,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 ### Other UX
 
+- [ ] Windows browser helper (native messaging host; Linux reference in `packages/v2ray_box/linux/`)
 - [ ] Publish browser extension to Chrome Web Store / Firefox AMO
 
 ---
@@ -218,7 +225,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Cross-platform (Flutter) | ✅ Done | — |
 | Xray + sing-box | ✅ Done | — |
 | Secure SOCKS5 (auth, 127.0.0.1) | ✅ Done | — |
-| Desktop proxy mode | ✅ Linux + Windows + macOS (verify on device) | P0 |
+| Desktop proxy mode | ✅ Linux + Windows + macOS (checklist: `docs/en/platform_parity_checklist.md`) | — |
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |

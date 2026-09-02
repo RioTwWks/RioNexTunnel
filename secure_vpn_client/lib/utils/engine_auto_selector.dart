@@ -49,11 +49,14 @@ class EngineAutoSelector {
   }
 
   static Future<Set<VpnEngine>> _heuristicAvailableEngines() async {
+    if (Platform.isIOS) {
+      return {VpnEngine.singbox};
+    }
     if (Platform.isAndroid) {
       // Xray ships as AAR; sing-box needs libsingbox.so (often missing).
       return {VpnEngine.xray};
     }
-    if (Platform.isIOS || Platform.isMacOS || Platform.isWindows) {
+    if (Platform.isMacOS || Platform.isWindows) {
       return {VpnEngine.xray, VpnEngine.singbox};
     }
     if (Platform.isLinux) {
