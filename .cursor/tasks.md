@@ -4,7 +4,7 @@
 
 **Priorities:** P0 (critical) → P1 (key differentiators) → P2 (advanced) → P3 (UX polish)
 
-**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / obfuscation UX → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
+**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / obfuscation UX / proxy-mgr panel → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
 
 ---
 
@@ -139,6 +139,116 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ---
 
+## P1 — proxy-mgr panel integration (optional, client-only)
+
+> **Goal:** RioNexTunnel stays a universal VPN client (manual links, any VLESS/VMess/Trojan server) while optionally pairing with [proxy-mgr](https://github.com/RioTwWks/proxy-mgr) for subscriptions, stats, and remote commands. Panel features must be **opt-in** — if the user never configures a panel, behavior is unchanged.
+>
+> **Two-level model (client view):**
+> 1. **Base layer** — standard protocols and subscription URLs; full compatibility with any third-party server/client.
+> 2. **Extended layer** — optional REST/WebSocket API to proxy-mgr using a separate **device token** (does not affect transport protocol auth). If the panel is unreachable, the client keeps working from the last cached config.
+
+### Known pain points to fix (Hiddify-class bugs)
+
+- Subscription updates but client does not apply changes or crashes on invalid JSON
+- Traffic stats lost on disconnect; panel shows wrong remaining quota
+- Dynamic SOCKS5 creds on client vs subscription auth expectations on panel
+- No fallback when panel is down — client hangs or wipes configs
+- Ambiguous link formats — client expects one shape, panel emits another (extra params, wrong fields)
+
+### 2.1 — `PanelManager` module
+
+- [ ] New service: `lib/services/panel_manager.dart` (or `lib/services/panel/`)
+- [ ] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials)
+- [ ] REST client with timeouts, exponential backoff (max 3–5 retries), `X-API-Version: v1` header
+- [ ] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
+- [ ] Riverpod provider wiring; Settings screen for panel URL + login/register
+
+**Expected server API (implemented in proxy-mgr, consumed here):**
+
+| Method | Path | Client use |
+|--------|------|------------|
+| `POST` | `/api/client/register` | First pairing → `device_token`, `subscription_url` |
+| `GET` | `/api/client/config` | Fetch JSON config; `Authorization: Bearer <device_token>` or dedicated header |
+| `POST` | `/api/client/stats` | Upload `{bytes_in, bytes_out, sessions, status, session_id}` |
+| `GET` | `/api/client/commands` | Long poll / SSE for remote commands |
+| `GET` | `/api/subscription/{token}` | Standard base64 subscription (fallback for any client) |
+
+### 2.2 — Registration & config sync
+
+- [ ] On first setup with `panel_url` + credentials → `POST /api/client/register`; store `device_token`
+- [ ] Periodic sync + manual **Refresh** → `GET /api/client/config`
+- [ ] Compare `config_hash` from server with local hash; skip rewrite if unchanged
+- [ ] Apply config: server list, DNS, inbound hints → existing `Profile` / `ConfigParser` pipeline
+- [ ] Cache last good config on disk (SharedPreferences / app support dir); use when offline
+- [ ] Invalid JSON from panel → log error, keep previous config, show non-blocking warning (no crash)
+
+### 2.3 — Stats upload
+
+- [ ] Collect bytes in/out from core or platform counters during active session
+- [ ] Background flush every ~60s and on disconnect → `POST /api/client/stats`
+- [ ] Local queue when panel unreachable; batch replay when back online
+- [ ] `session_id` per connect session for server-side deduplication
+- [ ] Never include SOCKS passwords or transport secrets in stats payload
+
+### 2.4 — Remote commands (push)
+
+- [ ] Prefer WebSocket: `wss://<panel>/api/client/commands` with `device_token`
+- [ ] Handle commands: `refresh_config`, `disconnect`, `switch_server` (as server defines)
+- [ ] Fallback: long polling `GET /api/client/commands?last_seq=...` every ~5 min if WS unavailable
+- [ ] Commands trigger existing `VpnService` / profile refresh — no duplicate connect logic
+
+### 2.5 — SOCKS5 auth & panel configs
+
+- [ ] **Default:** keep per-session random SOCKS creds (`CredentialService` + `injectSecureSocksInbound`)
+- [ ] Setting: **Random per session** vs **Static from panel** (when panel JSON includes inbound auth)
+- [ ] When panel supplies SOCKS params, align port/method with injected inbounds before connect
+- [ ] Manual link import: option to disable dynamic SOCKS injection for broken third-party configs (advanced)
+- [ ] Golden rule unchanged: `127.0.0.1` only, auth always required — static password from panel is still auth
+
+### 2.6 — Errors & fallback
+
+- [ ] All panel HTTP calls wrapped; failures never block connect if cached config exists
+- [ ] User-visible state: `PanelSyncStatus` — synced / stale / offline / error (no secrets in message)
+- [ ] First launch without panel or cache → existing manual link / subscription URL flow
+- [ ] Subscription URL from panel works through standard `ConfigParser.parseFromUrl()` as universal path
+
+### 2.7 — Third-party server compatibility
+
+- [ ] No changes to `vless://` / `vmess://` / `trojan://` import parsers
+- [ ] Panel-managed profiles and manual profiles coexist in same profile list
+- [ ] Engine auto-select and server picker unchanged for non-panel subscriptions
+- [ ] Document: panel integration is additive; uninstalling panel config does not remove manual profiles
+
+### 3 — Client testing & observability (with proxy-mgr)
+
+- [ ] Integration tests (Dart): register → config fetch → mock connect → stats queue → disconnect
+- [ ] Test: panel pushes new `config_hash` → client refreshes without full app restart
+- [ ] Test: network offline → cached config used → queued stats sent after restore
+- [ ] Test: malformed config JSON → no throw; previous profile remains active
+- [ ] Debug logging for sync lifecycle (device id hash only, never `device_token` in release logs)
+- [ ] Optional: `integration_test/` scenario against local proxy-mgr docker/instance (document in `docs/`)
+
+### Client roadmap (proxy-mgr track)
+
+| Phase | RioNexTunnel tasks |
+|-------|-------------------|
+| **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` |
+| **2** | Stats collector + offline queue + `session_id` |
+| **3** | WebSocket / long-poll commands; reconnect on `refresh_config` |
+| **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing |
+
+### Expected outcomes
+
+| Pain point | Client fix |
+|------------|------------|
+| Unreliable sync | Cached config + hash diff + retries |
+| Lost stats | Queue + batch upload + `session_id` |
+| Auth confusion | Device token for panel only; transport auth separate |
+| Panel down | Stale cache + warning; VPN keeps running |
+| Format mismatch | Strict JSON schema validation; fallback to subscription URL import |
+
+---
+
 ## P2 — Advanced security & routing
 
 ### Multihop (Double VPN / chains)
@@ -238,6 +348,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Auto-reconnect | ❌ Missing | P0 |
 | Minimalist UI | ⚠️ Partial | P3 |
 | Connection stats | ❌ Missing | P0 |
+| proxy-mgr panel API (optional) | ❌ Missing | **P1** |
 
 ---
 
@@ -251,4 +362,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — merged external feedback roadmap into agent backlog.*
+*Last updated: 2026-09-02 — added P1 proxy-mgr client integration backlog (panel API, sync, stats, commands).*
