@@ -4,7 +4,7 @@
 
 **Priorities:** P0 (critical) → P1 (key differentiators) → P2 (advanced) → P3 (UX polish)
 
-**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / censorship resistance / proxy-mgr panel → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
+**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / censorship resistance / RioNexGate panel → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
 
 ---
 
@@ -139,13 +139,13 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ---
 
-## P1 — proxy-mgr panel integration (optional, client-only)
+## P1 — RioNexGate panel integration (optional, client-only)
 
-> **Goal:** RioNexTunnel stays a universal VPN client (manual links, any VLESS/VMess/Trojan server) while optionally pairing with [proxy-mgr](https://github.com/RioTwWks/proxy-mgr) for subscriptions, stats, and remote commands. Panel features must be **opt-in** — if the user never configures a panel, behavior is unchanged.
+> **Goal:** RioNexTunnel stays a universal VPN client (manual links, any VLESS/VMess/Trojan server) while optionally pairing with [RioNexGate](https://github.com/RioTwWks/RioNexGate) for subscriptions, stats, and remote commands. Panel features must be **opt-in** — if the user never configures a panel, behavior is unchanged.
 >
 > **Two-level model (client view):**
 > 1. **Base layer** — standard protocols and subscription URLs; full compatibility with any third-party server/client.
-> 2. **Extended layer** — optional REST/WebSocket API to proxy-mgr using a separate **device token** (does not affect transport protocol auth). If the panel is unreachable, the client keeps working from the last cached config.
+> 2. **Extended layer** — optional REST/WebSocket API to RioNexGate using a separate **device token** (does not affect transport protocol auth). If the panel is unreachable, the client keeps working from the last cached config.
 
 ### Known pain points to fix (Hiddify-class bugs)
 
@@ -163,7 +163,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [ ] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
 - [ ] Riverpod provider wiring; Settings screen for panel URL + login/register
 
-**Expected server API (implemented in proxy-mgr, consumed here):**
+**Expected server API (implemented in RioNexGate, consumed here):**
 
 | Method | Path | Client use |
 |--------|------|------------|
@@ -219,16 +219,16 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [ ] Engine auto-select and server picker unchanged for non-panel subscriptions
 - [ ] Document: panel integration is additive; uninstalling panel config does not remove manual profiles
 
-### 3 — Client testing & observability (with proxy-mgr)
+### 3 — Client testing & observability (with RioNexGate)
 
 - [ ] Integration tests (Dart): register → config fetch → mock connect → stats queue → disconnect
 - [ ] Test: panel pushes new `config_hash` → client refreshes without full app restart
 - [ ] Test: network offline → cached config used → queued stats sent after restore
 - [ ] Test: malformed config JSON → no throw; previous profile remains active
 - [ ] Debug logging for sync lifecycle (device id hash only, never `device_token` in release logs)
-- [ ] Optional: `integration_test/` scenario against local proxy-mgr docker/instance (document in `docs/`)
+- [ ] Optional: `integration_test/` scenario against local RioNexGate docker/instance (document in `docs/`)
 
-### Client roadmap (proxy-mgr track)
+### Client roadmap (RioNexGate track)
 
 | Phase | RioNexTunnel tasks |
 |-------|-------------------|
@@ -458,7 +458,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Auto-reconnect | ❌ Missing | P0 |
 | Minimalist UI | ⚠️ Partial | P3 |
 | Connection stats | ❌ Missing | P0 |
-| proxy-mgr panel API (optional) | ❌ Missing | **P1** |
+| RioNexGate panel API (optional) | ❌ Missing | **P1** |
 
 ---
 
