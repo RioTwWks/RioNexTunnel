@@ -58,7 +58,11 @@ class PerAppProxyNotifier extends StateNotifier<PerAppProxySettings> {
           PerAppProxyMode.exclude,
         )).toSet();
       }
-      state = PerAppProxySettings(mode: mode, excludedPackages: excluded);
+      state = PerAppProxySettings(
+        mode: mode,
+        excludedPackages: excluded,
+        loading: false,
+      );
     } catch (_) {
       state = state.copyWith(loading: false);
     }
