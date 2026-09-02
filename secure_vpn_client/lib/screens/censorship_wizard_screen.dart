@@ -175,13 +175,21 @@ class _CensorshipWizardScreenState
                     fontWeight: FontWeight.w700,
                   ),
             ),
-            ...TransportPresets.wizardOrder.map(
-              (preset) => RadioListTile<TransportPresetId>(
-                value: preset,
-                groupValue: _preset,
-                onChanged: (v) => setState(() => _preset = v!),
-                title: Text(preset.label),
-                subtitle: Text(preset.description),
+            RadioGroup<TransportPresetId>(
+              groupValue: _preset,
+              onChanged: (v) {
+                if (v != null) setState(() => _preset = v);
+              },
+              child: Column(
+                children: TransportPresets.wizardOrder
+                    .map(
+                      (preset) => RadioListTile<TransportPresetId>(
+                        value: preset,
+                        title: Text(preset.label),
+                        subtitle: Text(preset.description),
+                      ),
+                    )
+                    .toList(),
               ),
             ),
             const Divider(height: 24),
