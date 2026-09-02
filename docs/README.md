@@ -26,8 +26,10 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | iOS setup | [en/ios_setup.md](en/ios_setup.md) | [ru/ios_setup.md](ru/ios_setup.md) |
 | Architecture | [en/architecture.md](en/architecture.md) | [ru/architecture.md](ru/architecture.md) |
 | Security | [en/security.md](en/security.md) | [ru/security.md](ru/security.md) |
+| Censorship resistance | [en/censorship_resistance.md](en/censorship_resistance.md) | [ru/censorship_resistance.md](ru/censorship_resistance.md) |
 | Browser extension | [en/browser_extension.md](en/browser_extension.md) | [ru/browser_extension.md](ru/browser_extension.md) |
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
+| Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
 
 For AI agents and contributors, see also [.cursor/AGENTS.md](../.cursor/AGENTS.md) (English).

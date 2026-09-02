@@ -10,6 +10,7 @@ import '../models/credentials.dart';
 import '../models/connection_detail.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
+import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
 import '../services/vpn_service.dart';
 
@@ -293,6 +294,12 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
     required String name,
     required String configLink,
     ProfileType type = ProfileType.link,
+    bool censorshipModeEnabled = false,
+    TransportPresetId? transportPreset,
+    TlsFingerprint tlsFingerprint = TlsFingerprint.firefox,
+    bool muxEnabled = false,
+    int muxConcurrency = 8,
+    bool ruDirectRouting = false,
   }) async {
     final profile = Profile(
       id: const Uuid().v4(),
@@ -300,8 +307,26 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
       configLink: configLink,
       type: type,
       autoSelectBestServer: type == ProfileType.subscription,
+      censorshipModeEnabled: censorshipModeEnabled,
+      transportPreset: transportPreset,
+      tlsFingerprint: tlsFingerprint,
+      muxEnabled: muxEnabled,
+      muxConcurrency: muxConcurrency,
+      ruDirectRouting: ruDirectRouting,
     );
     state = [...state, profile];
+    await _persist();
+  }
+
+  Future<void> updateProfile(Profile profile) async {
+    final index = state.indexWhere((p) => p.id == profile.id);
+    if (index < 0) {
+      return;
+    }
+    state = [
+      for (var i = 0; i < state.length; i++)
+        if (i == index) profile else state[i],
+    ];
     await _persist();
   }
 
