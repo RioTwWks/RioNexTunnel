@@ -7,6 +7,7 @@ import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
+import 'config_parser.dart';
 import 'ping_config_builder.dart';
 import 'server_latency.dart';
 

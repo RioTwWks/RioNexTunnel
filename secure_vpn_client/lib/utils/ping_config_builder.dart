@@ -216,9 +216,9 @@ class PingConfigBuilder {
 
   static int _allocateSocksPort() {
     try {
-      final server = ServerSocket.bindSync(InternetAddress.loopbackIPv4, 0);
-      final port = server.port;
-      server.close();
+      final socket = RawSocket.bindSync(InternetAddress.loopbackIPv4, 0);
+      final port = socket.port;
+      socket.close();
       return port;
     } catch (_) {
       return 10808;
