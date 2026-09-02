@@ -33,5 +33,14 @@ void main() {
         'com.example.banking',
       });
     });
+
+    test('loaded state must clear loading flag', () {
+      // Regression: default loading=true caused infinite spinner after _load().
+      const loaded = PerAppProxySettings(
+        mode: PerAppProxyMode.off,
+        loading: false,
+      );
+      expect(loaded.loading, isFalse);
+    });
   });
 }
