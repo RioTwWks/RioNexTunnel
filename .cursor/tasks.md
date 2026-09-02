@@ -4,7 +4,7 @@
 
 **Priorities:** P0 (critical) → P1 (key differentiators) → P2 (advanced) → P3 (UX polish)
 
-**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / obfuscation UX → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
+**Recommended order:** P0 platforms + CI + reconnect → P1 kill switch / split tunnel / censorship resistance / RioNexGate panel → P2 DNS / routing UI / multihop → P3 UI polish / localization / extension store
 
 ---
 
@@ -129,13 +129,227 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### Traffic obfuscation (DPI bypass UX)
 
-> Protocols supported by cores, but no presets or wizard for censorship bypass.
+> Protocols supported by cores, but no presets or wizard for censorship bypass. See **P1 — censorship resistance** below for RKN/TSPU-specific backlog.
 
 - [ ] Transport presets — WebSocket+TLS, gRPC, HTTPUpgrade, REALITY (xray), uTLS fingerprint
 - [ ] UI wizard — "censorship mode" when importing or editing a profile
 - [ ] Auto-detect — suggest transport from subscription metadata when available
 - [ ] Docs — when to use Trojan/VLESS+REALITY vs plain TLS
 - [ ] Tests — validate generated xray/sing-box JSON (no real DPI test needed)
+
+---
+
+## P1 — RioNexGate panel integration (optional, client-only)
+
+> **Goal:** RioNexTunnel stays a universal VPN client (manual links, any VLESS/VMess/Trojan server) while optionally pairing with [RioNexGate](https://github.com/RioTwWks/RioNexGate) for subscriptions, stats, and remote commands. Panel features must be **opt-in** — if the user never configures a panel, behavior is unchanged.
+>
+> **Two-level model (client view):**
+> 1. **Base layer** — standard protocols and subscription URLs; full compatibility with any third-party server/client.
+> 2. **Extended layer** — optional REST/WebSocket API to RioNexGate using a separate **device token** (does not affect transport protocol auth). If the panel is unreachable, the client keeps working from the last cached config.
+
+### Known pain points to fix (Hiddify-class bugs)
+
+- Subscription updates but client does not apply changes or crashes on invalid JSON
+- Traffic stats lost on disconnect; panel shows wrong remaining quota
+- Dynamic SOCKS5 creds on client vs subscription auth expectations on panel
+- No fallback when panel is down — client hangs or wipes configs
+- Ambiguous link formats — client expects one shape, panel emits another (extra params, wrong fields)
+
+### 2.1 — `PanelManager` module
+
+- [ ] New service: `lib/services/panel_manager.dart` (or `lib/services/panel/`)
+- [ ] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials)
+- [ ] REST client with timeouts, exponential backoff (max 3–5 retries), `X-API-Version: v1` header
+- [ ] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
+- [ ] Riverpod provider wiring; Settings screen for panel URL + login/register
+
+**Expected server API (implemented in RioNexGate, consumed here):**
+
+| Method | Path | Client use |
+|--------|------|------------|
+| `POST` | `/api/client/register` | First pairing → `device_token`, `subscription_url` |
+| `GET` | `/api/client/config` | Fetch JSON config; `Authorization: Bearer <device_token>` or dedicated header |
+| `POST` | `/api/client/stats` | Upload `{bytes_in, bytes_out, sessions, status, session_id}` |
+| `GET` | `/api/client/commands` | Long poll / SSE for remote commands |
+| `GET` | `/api/subscription/{token}` | Standard base64 subscription (fallback for any client) |
+
+### 2.2 — Registration & config sync
+
+- [ ] On first setup with `panel_url` + credentials → `POST /api/client/register`; store `device_token`
+- [ ] Periodic sync + manual **Refresh** → `GET /api/client/config`
+- [ ] Compare `config_hash` from server with local hash; skip rewrite if unchanged
+- [ ] Apply config: server list, DNS, inbound hints → existing `Profile` / `ConfigParser` pipeline
+- [ ] Cache last good config on disk (SharedPreferences / app support dir); use when offline
+- [ ] Invalid JSON from panel → log error, keep previous config, show non-blocking warning (no crash)
+
+### 2.3 — Stats upload
+
+- [ ] Collect bytes in/out from core or platform counters during active session
+- [ ] Background flush every ~60s and on disconnect → `POST /api/client/stats`
+- [ ] Local queue when panel unreachable; batch replay when back online
+- [ ] `session_id` per connect session for server-side deduplication
+- [ ] Never include SOCKS passwords or transport secrets in stats payload
+
+### 2.4 — Remote commands (push)
+
+- [ ] Prefer WebSocket: `wss://<panel>/api/client/commands` with `device_token`
+- [ ] Handle commands: `refresh_config`, `disconnect`, `switch_server` (as server defines)
+- [ ] Fallback: long polling `GET /api/client/commands?last_seq=...` every ~5 min if WS unavailable
+- [ ] Commands trigger existing `VpnService` / profile refresh — no duplicate connect logic
+
+### 2.5 — SOCKS5 auth & panel configs
+
+- [ ] **Default:** keep per-session random SOCKS creds (`CredentialService` + `injectSecureSocksInbound`)
+- [ ] Setting: **Random per session** vs **Static from panel** (when panel JSON includes inbound auth)
+- [ ] When panel supplies SOCKS params, align port/method with injected inbounds before connect
+- [ ] Manual link import: option to disable dynamic SOCKS injection for broken third-party configs (advanced)
+- [ ] Golden rule unchanged: `127.0.0.1` only, auth always required — static password from panel is still auth
+
+### 2.6 — Errors & fallback
+
+- [ ] All panel HTTP calls wrapped; failures never block connect if cached config exists
+- [ ] User-visible state: `PanelSyncStatus` — synced / stale / offline / error (no secrets in message)
+- [ ] First launch without panel or cache → existing manual link / subscription URL flow
+- [ ] Subscription URL from panel works through standard `ConfigParser.parseFromUrl()` as universal path
+
+### 2.7 — Third-party server compatibility
+
+- [ ] No changes to `vless://` / `vmess://` / `trojan://` import parsers
+- [ ] Panel-managed profiles and manual profiles coexist in same profile list
+- [ ] Engine auto-select and server picker unchanged for non-panel subscriptions
+- [ ] Document: panel integration is additive; uninstalling panel config does not remove manual profiles
+
+### 3 — Client testing & observability (with RioNexGate)
+
+- [ ] Integration tests (Dart): register → config fetch → mock connect → stats queue → disconnect
+- [ ] Test: panel pushes new `config_hash` → client refreshes without full app restart
+- [ ] Test: network offline → cached config used → queued stats sent after restore
+- [ ] Test: malformed config JSON → no throw; previous profile remains active
+- [ ] Debug logging for sync lifecycle (device id hash only, never `device_token` in release logs)
+- [ ] Optional: `integration_test/` scenario against local RioNexGate docker/instance (document in `docs/`)
+
+### Client roadmap (RioNexGate track)
+
+| Phase | RioNexTunnel tasks |
+|-------|-------------------|
+| **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` |
+| **2** | Stats collector + offline queue + `session_id` |
+| **3** | WebSocket / long-poll commands; reconnect on `refresh_config` |
+| **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing |
+
+### Expected outcomes
+
+| Pain point | Client fix |
+|------------|------------|
+| Unreliable sync | Cached config + hash diff + retries |
+| Lost stats | Queue + batch upload + `session_id` |
+| Auth confusion | Device token for panel only; transport auth separate |
+| Panel down | Stale cache + warning; VPN keeps running |
+| Format mismatch | Strict JSON schema validation; fallback to subscription URL import |
+
+---
+
+## P1 — censorship resistance (RKN/TSPU, client-only)
+
+> **Goal:** RioNexTunnel stays effective against modern Russian DPI (ТСПУ/РКН) in 2026 without sacrificing universality. Censorship-bypass features are **presets and fallbacks** on top of standard VLESS/VMess/Trojan — the client must still connect to any third-party server.
+>
+> **Core policy — no abandoned Xray forks:** Do **not** ship or depend on [fwflunky/REALITY-rkn-fix](https://github.com/fwflunky/REALITY-rkn-fix) (unmaintained, untested). Use **official Xray-core** from `scripts/fetch_cores.sh` with correct transport/TLS settings. Treat the fork as an ideas reference only; if upstream adds dynamic REALITY certs, adopt via normal core updates.
+
+### Threat model (why naive VLESS+Reality TCP fails)
+
+- **Signature detection** — static REALITY cert structure (`SerialNumber = 0`, empty Subject, identical body per connection) is fingerprintable; mitigated by server config + transport choice, not a custom client fork
+- **TLS handshake timing** — DPI drops long handshakes or persistent TCP after TLS without HTTP-like behavior → prefer **XHTTP** over raw TCP
+- **Packet size analysis** — ~200-byte ServerHello in one segment is a signal; server-side ServerHello fragmentation is out of scope here; client must not make PPS worse by over-fragmenting locally
+
+### Recommended stacks (client must parse, generate, and connect)
+
+| Priority | Stack | Client role |
+|----------|-------|-------------|
+| **Primary** | `VLESS + Reality + XHTTP` | Parse `type=xhttp` links; ensure outbound JSON includes `"network": "xhttp"` and **`"mode": "stream-one"`** (never rely on `auto` — known bugs) |
+| **Fallback** | `VLESS + TLS (non-443) + mux` (`concurrency: 8`) | Toggle mux in profile/advanced settings; mobile-first; desktop may omit mux UI |
+| **iOS fallback** | `TCP + Reality + Vision` | When subscription offers both XHTTP and TCP+Vision, prefer XHTTP except on iOS where XHTTP+Reality may be unsupported — auto-select TCP+Vision inbound |
+| **Reserve protocol** | **AmneziaWG** | Evaluate sing-box/xray WG obfuscation or separate AmneziaWG core path; standard WireGuard is widely blocked in RU mobile networks |
+
+### 1 — XHTTP transport
+
+- [ ] `LinkConfigBuilder` — parse `vless://` / subscription params: `type=xhttp`, `path`, `host`, `mode`
+- [ ] Default generated XHTTP outbound: `"mode": "stream-one"` when mode omitted
+- [ ] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
+- [ ] Validation warning if `mode: auto` detected in imported config
+- [ ] Tests — round-trip XHTTP link → JSON → required fields present (`stream-one`)
+- [ ] Docs — XHTTP+Reality as 2026 default; link param reference in `docs/`
+
+### 2 — mux (mobile fallback stack)
+
+- [ ] Profile setting: **Enable mux** with `concurrency` (default `8`) for VLESS+TLS profiles
+- [ ] Apply mux only when user enables or profile tag is `mux` / `mobile` (do not force globally)
+- [ ] Desktop proxy mode — document that mux is optional and often unnecessary when XHTTP is available
+- [ ] `ping_config_builder` — respect mux for latency probes or strip consistently (today: strips mux)
+- [ ] Tests — mux injected only when setting on; sing-box vs xray field names
+
+### 3 — uTLS / TLS fingerprint (ClientHello obfuscation)
+
+- [ ] UI: **TLS fingerprint** picker — `firefox`, `edge`, `chrome`, `safari`, `random` (advanced)
+- [ ] Sensible default: **`firefox`** or **`edge`** (2026 RU blocks reportedly flag `chrome`/`safari` more often)
+- [ ] `LinkConfigBuilder` — stop defaulting `fp` to `chrome` when absent; use profile default or `firefox`
+- [ ] Ensure xray `fingerprint` + sing-box `utls.fingerprint` stay in sync when editing profile
+- [ ] Subscription import — honor `fp` from link; allow override in profile without rewriting server URL
+- [ ] Tests — fingerprint flows into outbound JSON for both engines
+
+### 4 — Smart routing (RU split tunnel preset)
+
+> Overlaps with **Split Tunneling** above; this preset is censorship-specific.
+
+- [ ] Preset: **RU direct** — `geosite:ru`, `geoip:ru`, and common RU domains (Yandex, Gosuslugi, major banks) → `direct` / bypass tunnel
+- [ ] All other traffic → proxy outbound (existing subscription routing merged, not replaced)
+- [ ] Desktop proxy mode — document limits (browser/OS may ignore app routing rules)
+- [ ] Requires geo assets (`geoip.dat`, `geosite.dat`); fail closed with clear error if rules reference geo but assets missing
+- [ ] Security — direct path must not expose unauthenticated localhost SOCKS; no bypass via `127.0.0.1` scanning
+- [ ] UI toggle: **Censorship preset: RU sites direct** in Advanced → Routing
+- [ ] Tests — generated routing rules contain expected `geosite:ru` / `geoip:ru` tags
+
+### 5 — Protocol & server auto-fallback
+
+- [ ] Extend server picker / `SubscriptionManager`: ordered probe list per subscription entry tags
+- [ ] Default probe order: `VLESS+Reality+XHTTP` → `VLESS+TLS+mux` → `TCP+Reality+Vision` → `AmneziaWG` (if present)
+- [ ] On connect failure or mid-session drop — try next candidate with exponential backoff (reuse P0 reconnect)
+- [ ] Persist last working stack per server (latency + success rate) for faster reconnect
+- [ ] UI: show active transport stack (e.g. "XHTTP · Reality · firefox") without secrets
+- [ ] Tests — mock failure on first outbound, assert fallback to second profile fragment
+
+### 6 — Platform & engine notes
+
+- [ ] iOS — detect platform; deprioritize XHTTP+Reality, prioritize TCP+Reality+Vision from same subscription
+- [ ] Engine version gate — warn if bundled Xray is older than feature requiring XHTTP (compare against `fetch_cores.sh` pin)
+- [ ] **Do not** vendor custom Xray builds for REALITY cert randomization; track [XTLS/Xray-core](https://github.com/XTLS/Xray-core) issues/PRs instead
+- [ ] Optional: document upstream REALITY improvements in `docs/` when official core catches up to fork ideas
+
+### 7 — Testing & docs (client)
+
+- [ ] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [ ] No live DPI test in CI — validate JSON shape and parser resilience only
+- [ ] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
+- [ ] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
+
+### Client roadmap (censorship resistance track)
+
+| Phase | RioNexTunnel tasks |
+|-------|-------------------|
+| **1** | XHTTP parse/generate + `stream-one` default + tests |
+| **2** | Fingerprint UI + non-chrome defaults + mux toggle |
+| **3** | RU direct routing preset + geo asset guard |
+| **4** | Multi-stack auto-fallback + iOS transport selection + docs |
+
+### Expected outcomes
+
+| Threat | Client mitigation |
+|--------|-------------------|
+| TCP Reality fingerprint | Prefer XHTTP; fallback stacks in subscription |
+| ClientHello inspection | uTLS fingerprint picker; firefox/edge defaults |
+| RU site via foreign IP | RU direct routing preset |
+| Mobile operator blocks | mux + AmneziaWG in fallback chain |
+| iOS XHTTP gap | Auto-select TCP+Reality+Vision |
+| Fork maintenance risk | Official Xray-core only |
 
 ---
 
@@ -232,12 +446,19 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Kill Switch | ❌ Missing | **P1** |
 | Split Tunneling | ❌ Missing | **P1** |
 | Obfuscation / DPI (UX) | ⚠️ Via protocols, no UI | **P1** |
+| XHTTP + stream-one | ❌ Missing | **P1** |
+| TLS fingerprint UI (uTLS) | ⚠️ Link `fp` only; defaults chrome | **P1** |
+| mux toggle (mobile) | ❌ Missing | **P1** |
+| RU direct routing preset | ❌ Missing | **P1** |
+| Protocol auto-fallback chain | ⚠️ Latency pick only | **P1** |
+| AmneziaWG | ❌ Missing | P1/P2 |
 | Double VPN / Multihop | ❌ Missing | P2 |
 | DNS leak protection, DoH/DoT | ⚠️ Basic DNS only | P2 |
 | Custom routing UI | ⚠️ Subscription JSON only | P2 |
 | Auto-reconnect | ✅ Done | — |
 | Minimalist UI | ⚠️ Partial | P3 |
 | Connection stats | ✅ Done | — |
+| RioNexGate panel API (optional) | ❌ Missing | **P1** |
 
 ---
 
@@ -251,4 +472,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — P0 Foundation stability completed (reconnect, states, CI probe, geo fail-closed, fork docs).*
+*Last updated: 2026-09-02 — P0 Foundation stability completed (reconnect, states, CI probe, geo fail-closed, fork docs); P1 censorship resistance backlog (XHTTP, uTLS, mux, RU routing, fallback; official Xray only, no REALITY-rkn-fix fork).*

@@ -8,30 +8,47 @@ import 'src/models/vpn_stats.dart';
 import 'src/models/app_info.dart';
 import 'v2ray_box_platform_interface.dart';
 
+/// Windows C++ embedding ships [StandardMethodCodec] for plugins, not JSON.
+MethodCodec _eventChannelCodec() {
+  if (defaultTargetPlatform == TargetPlatform.windows) {
+    return const StandardMethodCodec();
+  }
+  return JSONMethodCodec();
+}
+
 /// An implementation of [V2rayBoxPlatform] that uses method channels.
 class MethodChannelV2rayBox extends V2rayBoxPlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('v2ray_box');
 
-  final statusChannel = const EventChannel(
+  EventChannel get _statusChannel => EventChannel(
     'v2ray_box/status',
-    JSONMethodCodec(),
+    _eventChannelCodec(),
   );
 
-  final alertsChannel = const EventChannel(
+  EventChannel get _alertsChannel => EventChannel(
     'v2ray_box/alerts',
-    JSONMethodCodec(),
+    _eventChannelCodec(),
   );
 
-  final statsChannel = const EventChannel('v2ray_box/stats', JSONMethodCodec());
+  EventChannel get _statsChannel => EventChannel(
+    'v2ray_box/stats',
+    _eventChannelCodec(),
+  );
 
-  final pingChannel = const EventChannel('v2ray_box/ping', JSONMethodCodec());
+  EventChannel get _pingChannel => EventChannel(
+    'v2ray_box/ping',
+    _eventChannelCodec(),
+  );
 
-  final logsChannel = const EventChannel('v2ray_box/logs', JSONMethodCodec());
+  EventChannel get _logsChannel => EventChannel(
+    'v2ray_box/logs',
+    _eventChannelCodec(),
+  );
 
-  final quickSettingsTileChannel = const EventChannel(
+  EventChannel get _quickSettingsTileChannel => EventChannel(
     'v2ray_box/quick_settings_tile',
-    JSONMethodCodec(),
+    _eventChannelCodec(),
   );
 
   /// Shared broadcast streams — EventChannel allows only one native listener.
@@ -186,7 +203,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<String> watchQuickSettingsTileRequests() {
-    return quickSettingsTileChannel.receiveBroadcastStream().map((event) {
+    return _quickSettingsTileChannel.receiveBroadcastStream().map((event) {
       if (event is Map && event['action'] != null) {
         return event['action'].toString();
       }
@@ -310,7 +327,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<VpnStatus> watchStatus() {
-    return _statusStream ??= statusChannel
+    return _statusStream ??= _statusChannel
         .receiveBroadcastStream()
         .map((event) {
           if (event is Map) {
@@ -323,7 +340,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<VpnStats> watchStats() {
-    return _statsStream ??= statsChannel
+    return _statsStream ??= _statsChannel
         .receiveBroadcastStream()
         .map((event) {
           if (event is Map) {
@@ -337,7 +354,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<Map<String, dynamic>> watchAlerts() {
-    return alertsChannel.receiveBroadcastStream().map((event) {
+    return _alertsChannel.receiveBroadcastStream().map((event) {
       if (event is Map) {
         return Map<String, dynamic>.from(event);
       }
@@ -347,7 +364,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<Map<String, dynamic>> watchPingResults() {
-    return pingChannel.receiveBroadcastStream().map((event) {
+    return _pingChannel.receiveBroadcastStream().map((event) {
       if (event is Map) {
         return Map<String, dynamic>.from(event);
       }
@@ -441,7 +458,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Stream<Map<String, dynamic>> watchLogs() {
-    return logsChannel.receiveBroadcastStream().map((event) {
+    return _logsChannel.receiveBroadcastStream().map((event) {
       if (event is Map) {
         return Map<String, dynamic>.from(event);
       }
