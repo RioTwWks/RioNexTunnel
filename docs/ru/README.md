@@ -59,6 +59,7 @@
 | [Настройка macOS](macos_setup.md) | Proxy mode, Xcode, бинарники ядер |
 | [Настройка Android](android_setup.md) | VPN mode, manifest, jniLibs |
 | [Настройка iOS](ios_setup.md) | Network Extensions, entitlements |
+| [Чеклист platform parity](platform_parity_checklist.md) | Smoke-тесты по платформам |
 | [Архитектура](architecture.md) | Компоненты и поток данных |
 | [Безопасность](security.md) | Модель SOCKS-аутентификации |
 | [Расширение браузера](browser_extension.md) | Авто-авторизация прокси |
