@@ -83,18 +83,18 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### Engineering base
 
-- [ ] CI: `flutter analyze`, `flutter test` on push
-- [ ] Auto-run `security_probe.sh` in CI when Linux integration test connects
-- [ ] Fail closed if geo assets missing and config contains geosite/geoip rules
-- [ ] Audit sing-box `mixed` / deprecated DNS paths on mobile VPN mode
-- [ ] Reduce `packages/v2ray_box/example/` from fork if not needed (size)
-- [ ] Publish fork separately or document patch set vs upstream
+- [x] CI: `flutter analyze`, `flutter test` on push (`.github/workflows/ci.yml`)
+- [x] Auto-run `security_probe.sh` in CI when Linux integration test connects (`linux-security-probe` job + `scripts/ci_security_probe_linux.sh`)
+- [x] Fail closed if geo assets missing and config contains geosite/geoip rules (`VpnService` + `ConfigParser.configRequiresXrayGeoRules`)
+- [x] Audit sing-box `mixed` / deprecated DNS paths on mobile VPN mode (`docs/en/mobile_vpn_config.md`)
+- [x] Reduce `packages/v2ray_box/example/` from fork if not needed — **kept**; documented in `docs/en/v2ray_box_fork.md` (iOS PacketTunnel merge, integration tests)
+- [x] Publish fork separately or document patch set vs upstream (`docs/en/v2ray_box_fork.md`, `docs/ru/v2ray_box_fork.md`)
 
 ### Connection stability
 
-- [ ] Auto-reconnect with exponential backoff on core/VPN drop
-- [ ] Detailed connection states — Connecting / Reconnecting / Error with reason (not just Connected/Disconnected)
-- [ ] Connection stats in UI — upload/download, uptime
+- [x] Auto-reconnect with exponential backoff on core/VPN drop (`VpnService._scheduleReconnect`)
+- [x] Detailed connection states — Connecting / Reconnecting / Error with reason (`ConnectionDetail`, `StatusIndicator`)
+- [x] Connection stats in UI — upload/download, uptime (`vpnStatsProvider`, `connectionUptimeProvider`, Home screen)
 
 ---
 
@@ -455,9 +455,9 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Double VPN / Multihop | ❌ Missing | P2 |
 | DNS leak protection, DoH/DoT | ⚠️ Basic DNS only | P2 |
 | Custom routing UI | ⚠️ Subscription JSON only | P2 |
-| Auto-reconnect | ❌ Missing | P0 |
+| Auto-reconnect | ✅ Done | — |
 | Minimalist UI | ⚠️ Partial | P3 |
-| Connection stats | ❌ Missing | P0 |
+| Connection stats | ✅ Done | — |
 | RioNexGate panel API (optional) | ❌ Missing | **P1** |
 
 ---
@@ -472,4 +472,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — added P1 censorship resistance backlog (XHTTP, uTLS, mux, RU routing, fallback); official Xray only, no REALITY-rkn-fix fork.*
+*Last updated: 2026-09-02 — P0 Foundation stability completed (reconnect, states, CI probe, geo fail-closed, fork docs); P1 censorship resistance backlog (XHTTP, uTLS, mux, RU routing, fallback; official Xray only, no REALITY-rkn-fix fork).*

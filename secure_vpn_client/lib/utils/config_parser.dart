@@ -872,6 +872,12 @@ class ConfigParser {
     return false;
   }
 
+  /// True when config JSON references Xray-style `geosite:` / `geoip:` rules.
+  static bool configRequiresXrayGeoRules(String jsonConfig) {
+    final lower = jsonConfig.toLowerCase();
+    return lower.contains('geosite:') || lower.contains('geoip:');
+  }
+
   static void validateSecure(String jsonConfig, {VpnEngine? engine}) {
     final decoded = jsonDecode(jsonConfig);
     if (decoded is! Map<String, dynamic>) {

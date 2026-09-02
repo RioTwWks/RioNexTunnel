@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
@@ -41,21 +42,50 @@ class VpnService {
   final int socksPort;
 
   static const _connectReadyTimeout = Duration(seconds: 25);
+  static const _maxReconnectAttempts = 5;
+  static const _initialReconnectBackoff = Duration(seconds: 2);
+  static const _maxReconnectBackoff = Duration(seconds: 60);
 
   bool _initialized = false;
   SessionCredentials? _sessionCredentials;
   VpnEngine _engine = VpnEngine.xray;
   EnginePreference _enginePreference = EnginePreference.auto;
   VpnStatus _currentStatus = VpnStatus.stopped;
+  ConnectionDetail _connectionDetail = ConnectionDetail.disconnected();
+  Profile? _activeProfile;
+  bool _userInitiatedDisconnect = false;
+  bool _reconnectEnabled = true;
+  int _reconnectAttempt = 0;
+  Timer? _reconnectTimer;
+  DateTime? _connectedAt;
   StreamSubscription<VpnStatus>? _statusSubscription;
   final StreamController<VpnStatus> _statusController =
       StreamController<VpnStatus>.broadcast();
+  final StreamController<ConnectionDetail> _connectionDetailController =
+      StreamController<ConnectionDetail>.broadcast();
 
   SessionCredentials? get sessionCredentials => _sessionCredentials;
   VpnEngine get engine => _engine;
   EnginePreference get enginePreference => _enginePreference;
   V2rayBox get v2rayBox => _v2rayBox;
   VpnStatus get currentStatus => _currentStatus;
+  ConnectionDetail get connectionDetail => _connectionDetail;
+  bool get reconnectEnabled => _reconnectEnabled;
+  DateTime? get connectedAt => _connectedAt;
+
+  Duration? get connectionUptime {
+    if (_connectedAt == null || _currentStatus != VpnStatus.started) {
+      return null;
+    }
+    return DateTime.now().difference(_connectedAt!);
+  }
+
+  void setReconnectEnabled(bool enabled) {
+    _reconnectEnabled = enabled;
+    if (!enabled) {
+      _cancelReconnect();
+    }
+  }
 
   /// Latest status first, then live updates. Prefer this over calling
   /// [V2rayBox.watchStatus] directly so UI and connect() share one source.
@@ -64,13 +94,167 @@ class VpnService {
     yield* _statusController.stream;
   }
 
+  /// Rich connection phase for UI (connecting, reconnecting, error reason).
+  Stream<ConnectionDetail> watchConnectionDetail() async* {
+    yield _connectionDetail;
+    yield* _connectionDetailController.stream;
+  }
+
+  void _publishConnectionDetail(ConnectionDetail detail) {
+    if (_connectionDetail.phase == detail.phase &&
+        _connectionDetail.reason == detail.reason &&
+        _connectionDetail.reconnectAttempt == detail.reconnectAttempt &&
+        _connectionDetail.vpnStatus == detail.vpnStatus) {
+      return;
+    }
+    _connectionDetail = detail;
+    if (!_connectionDetailController.isClosed) {
+      _connectionDetailController.add(detail);
+    }
+  }
+
   void _publishStatus(VpnStatus status) {
+    final previous = _currentStatus;
     if (_currentStatus == status) {
       return;
     }
     _currentStatus = status;
     if (!_statusController.isClosed) {
       _statusController.add(status);
+    }
+    _syncConnectionDetailFromStatus(previous, status);
+  }
+
+  void _syncConnectionDetailFromStatus(VpnStatus previous, VpnStatus status) {
+    switch (status) {
+      case VpnStatus.starting:
+        if (_connectionDetail.phase != ConnectionPhase.reconnecting) {
+          _publishConnectionDetail(
+            ConnectionDetail.fromVpnStatus(
+              status,
+              overridePhase: ConnectionPhase.connecting,
+            ),
+          );
+        }
+      case VpnStatus.started:
+        _connectedAt = DateTime.now();
+        _reconnectAttempt = 0;
+        _cancelReconnect();
+        _publishConnectionDetail(
+          ConnectionDetail.fromVpnStatus(
+            status,
+            overridePhase: ConnectionPhase.connected,
+          ),
+        );
+      case VpnStatus.stopping:
+        _publishConnectionDetail(
+          ConnectionDetail.fromVpnStatus(
+            status,
+            overridePhase: ConnectionPhase.disconnecting,
+          ),
+        );
+      case VpnStatus.stopped:
+        _connectedAt = null;
+        if (_userInitiatedDisconnect) {
+          _publishConnectionDetail(ConnectionDetail.disconnected());
+          return;
+        }
+        if (previous == VpnStatus.started &&
+            _reconnectEnabled &&
+            _activeProfile != null) {
+          _scheduleReconnect(
+            'Connection dropped unexpectedly',
+          );
+          return;
+        }
+        if (_connectionDetail.phase == ConnectionPhase.reconnecting) {
+          return;
+        }
+        _publishConnectionDetail(ConnectionDetail.disconnected());
+    }
+  }
+
+  void _cancelReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+  }
+
+  void _scheduleReconnect(String reason) {
+    if (!_reconnectEnabled || _activeProfile == null) {
+      _publishConnectionDetail(
+        ConnectionDetail(
+          phase: ConnectionPhase.error,
+          reason: reason,
+          vpnStatus: VpnStatus.stopped,
+        ),
+      );
+      return;
+    }
+    if (_reconnectAttempt >= _maxReconnectAttempts) {
+      _publishConnectionDetail(
+        ConnectionDetail(
+          phase: ConnectionPhase.error,
+          reason:
+              'Reconnect failed after $_maxReconnectAttempts attempts. $reason',
+          reconnectAttempt: _reconnectAttempt,
+          maxReconnectAttempts: _maxReconnectAttempts,
+          vpnStatus: VpnStatus.stopped,
+        ),
+      );
+      _activeProfile = null;
+      return;
+    }
+
+    _reconnectAttempt++;
+    final delay = _reconnectBackoffDelay(_reconnectAttempt);
+    _publishConnectionDetail(
+      ConnectionDetail(
+        phase: ConnectionPhase.reconnecting,
+        reason: '$reason — retry in ${delay.inSeconds}s',
+        reconnectAttempt: _reconnectAttempt,
+        maxReconnectAttempts: _maxReconnectAttempts,
+        vpnStatus: VpnStatus.stopped,
+      ),
+    );
+    AppLog.info(
+      'Scheduling reconnect attempt $_reconnectAttempt/$_maxReconnectAttempts '
+      'in ${delay.inSeconds}s',
+    );
+    _cancelReconnect();
+    _reconnectTimer = Timer(delay, () {
+      unawaited(_attemptReconnect());
+    });
+  }
+
+  Duration _reconnectBackoffDelay(int attempt) {
+    final seconds = _initialReconnectBackoff.inSeconds * (1 << (attempt - 1));
+    final capped = seconds.clamp(
+      _initialReconnectBackoff.inSeconds,
+      _maxReconnectBackoff.inSeconds,
+    );
+    return Duration(seconds: capped);
+  }
+
+  Future<void> _attemptReconnect() async {
+    final profile = _activeProfile;
+    if (profile == null || !_reconnectEnabled) {
+      return;
+    }
+    try {
+      _publishConnectionDetail(
+        ConnectionDetail(
+          phase: ConnectionPhase.reconnecting,
+          reason: 'Reconnecting…',
+          reconnectAttempt: _reconnectAttempt,
+          maxReconnectAttempts: _maxReconnectAttempts,
+          vpnStatus: VpnStatus.starting,
+        ),
+      );
+      await _connectWithCurrentEngine(profile, isReconnect: true);
+    } catch (error) {
+      AppLog.error('Reconnect attempt $_reconnectAttempt failed: $error');
+      _publishStatus(VpnStatus.stopped);
+      _scheduleReconnect(error.toString());
     }
   }
 
@@ -105,7 +289,7 @@ class VpnService {
     }
 
     if (disconnectIfNeeded && _initialized) {
-      await disconnect();
+      await disconnect(userInitiated: false);
     }
 
     _engine = engine;
@@ -198,13 +382,23 @@ class VpnService {
 
   Future<ConnectResult> connect(Profile profile) async {
     await initialize();
+    _userInitiatedDisconnect = false;
+    _reconnectAttempt = 0;
+    _cancelReconnect();
+    _activeProfile = profile;
+    _publishConnectionDetail(
+      ConnectionDetail.fromVpnStatus(
+        VpnStatus.starting,
+        overridePhase: ConnectionPhase.connecting,
+      ),
+    );
     AppLog.info(
       'Connect requested profile=${profile.name} '
       'preference=${_enginePreference.storageName}',
     );
 
     if (_sessionCredentials != null) {
-      await disconnect();
+      await disconnect(userInitiated: false);
     }
 
     await _ensureVpnPermission();
@@ -221,12 +415,15 @@ class VpnService {
       final engine = resolution.attemptOrder[i];
       try {
         await setEngine(engine, disconnectIfNeeded: true);
-        final connectedProfile = await _connectWithCurrentEngine(profile);
+        final connectedProfile = await _connectWithCurrentEngine(
+          profile,
+          isReconnect: false,
+        );
         return ConnectResult(profile: connectedProfile, engine: engine);
       } catch (error) {
         lastError = error;
         AppLog.error('Connect with ${engine.coreName} failed: $error');
-        await disconnect();
+        await disconnect(userInitiated: true);
         final hasFallback = i < resolution.attemptOrder.length - 1;
         if (!hasFallback) {
           break;
@@ -237,13 +434,25 @@ class VpnService {
       }
     }
 
-    throw lastError ??
-        StateError('Failed to connect with any available core engine');
+    final message = lastError?.toString() ??
+        'Failed to connect with any available core engine';
+    _publishConnectionDetail(
+      ConnectionDetail(
+        phase: ConnectionPhase.error,
+        reason: message,
+        vpnStatus: VpnStatus.stopped,
+      ),
+    );
+    throw lastError ?? StateError(message);
   }
 
-  Future<Profile> _connectWithCurrentEngine(Profile profile) async {
+  Future<Profile> _connectWithCurrentEngine(
+    Profile profile, {
+    required bool isReconnect,
+  }) async {
     AppLog.info(
-      'Connecting profile=${profile.name} engine=${_engine.coreName}',
+      'Connecting profile=${profile.name} engine=${_engine.coreName} '
+      'reconnect=$isReconnect',
     );
 
     var effectiveProfile = profile;
@@ -259,6 +468,17 @@ class VpnService {
 
     final rawConfig = await resolveProfileConfig(effectiveProfile);
     AppLog.info('Resolved profile config (${rawConfig.length} bytes)');
+
+    if (_engine == VpnEngine.xray &&
+        ConfigParser.configRequiresXrayGeoRules(rawConfig) &&
+        !await EngineAutoSelector.xrayGeoAssetsPresent()) {
+      throw StateError(
+        'Config uses geosite:/geoip: routing rules but geo assets '
+        '(geoip.dat, geosite.dat) are missing. '
+        'Run scripts/fetch_cores.sh from the repo root, or switch to sing-box.',
+      );
+    }
+
     final credentials = _credentialService.generate();
     final desktopProxy =
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
@@ -300,7 +520,7 @@ class VpnService {
       await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
     } catch (error) {
       AppLog.error('Did not reach Connected: $error');
-      await disconnect();
+      await disconnect(userInitiated: false);
       _credentialService.clear(credentials);
       throw StateError(
         'VPN did not reach Connected state. '
@@ -309,6 +529,7 @@ class VpnService {
     }
 
     _sessionCredentials = credentials;
+    _activeProfile = effectiveProfile;
     // Ensure UI flips to Disconnect even if a status event was raced/missed.
     _publishStatus(VpnStatus.started);
     AppLog.info('VPN connected with ${_engine.coreName}');
@@ -338,8 +559,14 @@ class VpnService {
     }
   }
 
-  Future<void> disconnect() async {
-    AppLog.info('Disconnect requested');
+  Future<void> disconnect({bool userInitiated = true}) async {
+    AppLog.info('Disconnect requested userInitiated=$userInitiated');
+    if (userInitiated) {
+      _userInitiatedDisconnect = true;
+      _activeProfile = null;
+      _reconnectAttempt = 0;
+    }
+    _cancelReconnect();
     if (_initialized) {
       await _v2rayBox.disconnect();
     }
@@ -348,7 +575,11 @@ class VpnService {
       _sessionCredentials = null;
     }
     await _clearSessionCredentials();
+    _connectedAt = null;
     _publishStatus(VpnStatus.stopped);
+    if (userInitiated) {
+      _publishConnectionDetail(ConnectionDetail.disconnected());
+    }
     AppLog.info('VPN disconnected');
   }
 

@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/credentials.dart';
+import '../models/connection_detail.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
@@ -30,6 +31,11 @@ final vpnStatusProvider = StreamProvider<VpnStatus>((ref) {
   return service.watchStatus();
 });
 
+final connectionDetailProvider = StreamProvider<ConnectionDetail>((ref) {
+  final service = ref.watch(vpnServiceProvider);
+  return service.watchConnectionDetail();
+});
+
 final sessionCredentialsProvider = Provider<SessionCredentials?>((ref) {
   ref.watch(vpnStatusProvider);
   return ref.watch(vpnServiceProvider).sessionCredentials;
@@ -38,6 +44,20 @@ final sessionCredentialsProvider = Provider<SessionCredentials?>((ref) {
 final vpnStatsProvider = StreamProvider<VpnStats>((ref) {
   final service = ref.watch(vpnServiceProvider);
   return service.v2rayBox.watchStats();
+});
+
+/// Live session uptime while connected (ticks every second).
+final connectionUptimeProvider = StreamProvider<Duration?>((ref) async* {
+  final detail = ref.watch(connectionDetailProvider);
+  if (detail.value?.phase != ConnectionPhase.connected) {
+    yield null;
+    return;
+  }
+  final service = ref.watch(vpnServiceProvider);
+  while (true) {
+    yield service.connectionUptime;
+    await Future<void>.delayed(const Duration(seconds: 1));
+  }
 });
 
 const _themeModeKey = 'theme_mode';
