@@ -228,6 +228,32 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
   }
 
   @override
+  Future<int> urlTestJson(
+    String configJson, {
+    required String engine,
+    required int socksPort,
+    int timeout = 7000,
+    String? url,
+  }) async {
+    final args = <String, dynamic>{
+      'config': configJson,
+      'engine': engine,
+      'socksPort': socksPort,
+      'timeout': timeout,
+    };
+    if (url != null) {
+      args['url'] = url;
+    }
+    final result = await methodChannel.invokeMethod<dynamic>(
+      'url_test_json',
+      args,
+    );
+    if (result is int) return result;
+    if (result is double) return result.toInt();
+    return -1;
+  }
+
+  @override
   Future<Map<String, int>> urlTestAll(
     List<String> links, {
     int timeout = 7000,

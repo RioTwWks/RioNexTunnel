@@ -141,6 +141,17 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
     throw UnimplementedError('urlTest() has not been implemented.');
   }
 
+  /// Measure latency through a temporary core config (tunnel-quality probe).
+  Future<int> urlTestJson(
+    String configJson, {
+    required String engine,
+    required int socksPort,
+    int timeout = 7000,
+    String? url,
+  }) {
+    throw UnimplementedError('urlTestJson() has not been implemented.');
+  }
+
   /// Test multiple URLs and return latencies
   Future<Map<String, int>> urlTestAll(
     List<String> links, {

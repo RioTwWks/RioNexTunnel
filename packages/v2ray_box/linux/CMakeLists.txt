@@ -14,6 +14,7 @@ set(PLUGIN_NAME "v2ray_box_plugin")
 # Any new source files that you add to the plugin should be added here.
 list(APPEND PLUGIN_SOURCES
   "desktop_core.cc"
+  "desktop_ping.cc"
   "native_messaging.cc"
   "system_proxy.cc"
   "v2ray_box_plugin.cc"

@@ -30,7 +30,7 @@ UI persists `Profile.selectedServerIndex` / `selectedServerName`.
 
 ## Auto best server
 
-`ServerLatencyProbe` measures TCP connect RTT to each node host:port (portable; Linux has no native `url_test`).
+`SubscriptionLatencyProbe` uses core HTTP delay through a temporary outbound on Android and Linux desktop (tunnel-quality). Other desktop platforms fall back to TCP connect RTT to host:port.
 `Profile.autoSelectBestServer` → `VpnService.connect` re-probes and picks the lowest latency before start.
 
 ## Auto engine (xray vs sing-box)
