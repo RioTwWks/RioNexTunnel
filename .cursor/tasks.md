@@ -251,4 +251,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — merged external feedback roadmap into agent backlog.*
+*Last updated: 2026-09-02 — P0 Foundation stability completed (reconnect, states, CI probe, geo fail-closed, fork docs).*
