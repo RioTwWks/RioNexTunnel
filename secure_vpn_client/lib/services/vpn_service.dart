@@ -4,6 +4,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/connection_detail.dart';
@@ -64,6 +65,7 @@ class VpnService {
   int _reconnectAttempt = 0;
   Timer? _reconnectTimer;
   DateTime? _connectedAt;
+  String _panelSessionId = const Uuid().v4();
   StreamSubscription<VpnStatus>? _statusSubscription;
   final StreamController<VpnStatus> _statusController =
       StreamController<VpnStatus>.broadcast();
@@ -78,6 +80,7 @@ class VpnService {
   ConnectionDetail get connectionDetail => _connectionDetail;
   bool get reconnectEnabled => _reconnectEnabled;
   DateTime? get connectedAt => _connectedAt;
+  String get panelSessionId => _panelSessionId;
 
   Duration? get connectionUptime {
     if (_connectedAt == null || _currentStatus != VpnStatus.started) {
@@ -558,6 +561,7 @@ class VpnService {
 
     _sessionCredentials = credentials;
     _activeProfile = effectiveProfile;
+    _panelSessionId = const Uuid().v4();
     await _killSwitchService?.onTunnelRestored();
     // Ensure UI flips to Disconnect even if a status event was raced/missed.
     _publishStatus(VpnStatus.started);
