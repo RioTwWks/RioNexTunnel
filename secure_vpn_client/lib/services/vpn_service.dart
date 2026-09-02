@@ -15,6 +15,7 @@ import '../utils/config_parser.dart';
 import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
 import '../utils/server_latency.dart';
+import '../utils/subscription_latency_probe.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
 
@@ -154,16 +155,19 @@ class VpnService {
     return ConfigParser.listServersFromUrl(profile.configLink, engine: _engine);
   }
 
-  /// Probes TCP latency for all servers in [profile]'s subscription.
+  SubscriptionLatencyProbe get _latencyProbe =>
+      SubscriptionLatencyProbe(_v2rayBox);
+
+  /// Probes latency for all servers in [profile]'s subscription.
   Future<List<ServerLatencyResult>> probeSubscriptionServers(
     Profile profile, {
     void Function(ServerLatencyResult result)? onResult,
     Duration timeout = ServerLatencyProbe.defaultTimeout,
   }) async {
     final servers = await listSubscriptionServers(profile);
-    return ServerLatencyProbe.probeAll(
+    return _latencyProbe.probeAll(
       servers,
-      timeout: timeout,
+      timeoutMs: timeout.inMilliseconds,
       onResult: onResult,
     );
   }
@@ -179,7 +183,7 @@ class VpnService {
       onResult: onResult,
       timeout: timeout,
     );
-    final best = ServerLatencyProbe.selectBest(results);
+    final best = SubscriptionLatencyProbe.selectBest(results);
     if (best == null) {
       throw ServerLatencyException(
         'No reachable servers in subscription. Check network and try again.',

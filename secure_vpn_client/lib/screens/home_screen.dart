@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/engine_preference.dart';
 import '../models/profile.dart';
+import '../models/vpn_engine.dart';
 import '../providers/vpn_providers.dart';
+import '../widgets/animated_entrance.dart';
 import '../widgets/connection_button.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/server_picker_tile.dart';
@@ -19,6 +22,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _busy = false;
   String? _error;
+  String? _connectStatus;
 
   Future<void> _connect() async {
     final profile = ref.read(selectedProfileProvider);
@@ -30,6 +34,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _connectStatus = profile.type == ProfileType.subscription &&
+              profile.autoSelectBestServer
+          ? 'Testing servers…'
+          : null;
     });
 
     try {
@@ -54,7 +62,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       setState(() => _error = error.toString());
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        setState(() {
+          _busy = false;
+          _connectStatus = null;
+        });
       }
     }
   }
@@ -89,122 +100,202 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ProxyCredentialsCard.isDesktopProxy &&
         sessionCredentials != null;
     final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final connected = status == VpnStatus.started;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    StatusIndicator(status: status),
-                    const Spacer(),
-                    _MetaChip(
-                      icon: enginePreference.isAuto
-                          ? Icons.hdr_auto_outlined
-                          : Icons.memory_outlined,
-                      label: enginePreference.isAuto
-                          ? 'auto · ${engine.coreName}'
-                          : engine.coreName,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  selectedProfile == null
-                      ? 'No profile selected'
-                      : selectedProfile.name,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  selectedProfile == null
-                      ? 'Add a config link or subscription in Profiles'
-                      : selectedProfile.type == ProfileType.subscription
-                      ? 'Subscription profile'
-                      : 'Direct config link',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-                if (selectedProfile != null &&
-                    selectedProfile.type == ProfileType.subscription) ...[
-                  const SizedBox(height: 14),
-                  ServerPickerTile(profile: selectedProfile),
-                ],
-                if (stats != null && status == VpnStatus.started) ...[
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatTile(
-                          label: 'Upload',
-                          value: stats.formattedUplinkTotal,
-                          icon: Icons.arrow_upward_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _StatTile(
-                          label: 'Download',
-                          value: stats.formattedDownlinkTotal,
-                          icon: Icons.arrow_downward_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
+        FadeSlideIn(
+          child: _StatusCard(
+            status: status,
+            connected: connected,
+            isDark: isDark,
+            scheme: scheme,
+            enginePreference: enginePreference,
+            engine: engine,
+            selectedProfile: selectedProfile,
+            stats: stats,
           ),
         ),
-        const SizedBox(height: 36),
-        Center(
-          child: ConnectionButton(
-            status: status,
-            busy: _busy,
-            onConnect: _connect,
-            onDisconnect: _disconnect,
+        const SizedBox(height: 32),
+        if (_connectStatus != null) ...[
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 80),
+            child: Text(
+              _connectStatus!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 120),
+          child: Center(
+            child: ConnectionButton(
+              status: status,
+              busy: _busy,
+              onConnect: _connect,
+              onDisconnect: _disconnect,
+            ),
           ),
         ),
         if (showProxyCard) ...[
           const SizedBox(height: 28),
-          ProxyCredentialsCard(
-            credentials: sessionCredentials,
-            showExtensionHint: true,
-            compact: true,
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 200),
+            child: ProxyCredentialsCard(
+              credentials: sessionCredentials,
+              showExtensionHint: true,
+              compact: true,
+            ),
           ),
         ],
         if (_error != null) ...[
           const SizedBox(height: 20),
-          Card(
-            color: scheme.errorContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.error_outline, color: scheme.onErrorContainer),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _error!,
-                      style: TextStyle(color: scheme.onErrorContainer),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 80),
+            child: Card(
+              color: scheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.error_outline, color: scheme.onErrorContainer),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(color: scheme.onErrorContainer),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ],
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.status,
+    required this.connected,
+    required this.isDark,
+    required this.scheme,
+    required this.enginePreference,
+    required this.engine,
+    required this.selectedProfile,
+    required this.stats,
+  });
+
+  final VpnStatus status;
+  final bool connected;
+  final bool isDark;
+  final ColorScheme scheme;
+  final EnginePreference enginePreference;
+  final VpnEngine engine;
+  final Profile? selectedProfile;
+  final VpnStats? stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: connected
+                ? [
+                    scheme.primaryContainer.withValues(alpha: isDark ? 0.35 : 0.5),
+                    scheme.surfaceContainer,
+                  ]
+                : [
+                    scheme.surfaceContainer,
+                    scheme.surfaceContainerLow,
+                  ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  StatusIndicator(status: status),
+                  const Spacer(),
+                  _MetaChip(
+                    icon: enginePreference.isAuto
+                        ? Icons.hdr_auto_outlined
+                        : Icons.memory_outlined,
+                    label: enginePreference.isAuto
+                        ? 'auto · ${engine.coreName}'
+                        : engine.coreName,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                selectedProfile == null
+                    ? 'No profile selected'
+                    : selectedProfile!.name,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                selectedProfile == null
+                    ? 'Add a config link or subscription in Profiles'
+                    : selectedProfile!.type == ProfileType.subscription
+                        ? 'Subscription profile'
+                        : 'Direct config link',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+              ),
+              if (selectedProfile != null &&
+                  selectedProfile!.type == ProfileType.subscription) ...[
+                const SizedBox(height: 14),
+                ServerPickerTile(profile: selectedProfile!),
+              ],
+              if (stats != null && connected) ...[
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatTile(
+                        label: 'Upload',
+                        value: stats!.formattedUplinkTotal,
+                        icon: Icons.arrow_upward_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _StatTile(
+                        label: 'Download',
+                        value: stats!.formattedDownlinkTotal,
+                        icon: Icons.arrow_downward_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -219,21 +310,25 @@ class _MetaChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
+        color: scheme.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: scheme.primary.withValues(alpha: 0.2),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: scheme.onSurfaceVariant),
+          Icon(icon, size: 14, color: scheme.primary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: scheme.primary,
+                ),
           ),
         ],
       ),
@@ -256,10 +351,13 @@ class _StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
+        color: scheme.surface.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: scheme.outlineVariant.withValues(alpha: 0.4),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,17 +369,18 @@ class _StatTile extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+                      color: scheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             value,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
           ),
         ],
       ),

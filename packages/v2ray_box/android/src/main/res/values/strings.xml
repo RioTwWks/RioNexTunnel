@@ -6,5 +6,10 @@
     <string name="status_started">Connected</string>
     <string name="status_stopping">Stopping...</string>
     <string name="status_stopped">Disconnected</string>
+    <string name="quick_settings_tile_label">VPN</string>
+    <string name="quick_settings_tile_no_profile">No profile</string>
+    <string name="quick_settings_tile_connect">Tap to connect</string>
+    <string name="quick_settings_tile_connected">Connected</string>
+    <string name="quick_settings_tile_connecting">Connecting…</string>
 </resources>
 

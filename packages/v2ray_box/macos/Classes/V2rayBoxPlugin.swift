@@ -170,7 +170,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             result("proxy")
             
         case "set_notification_stop_button_text", "set_notification_title", "set_notification_icon",
-             "set_quick_connect_button_text", "update_quick_connect", "consume_pending_quick_connect":
+             "set_quick_connect_button_text", "update_quick_connect", "sync_quick_settings_tile",
+             "consume_pending_quick_connect", "consume_pending_tile_action":
             result(true)
             
         case "get_installed_packages":

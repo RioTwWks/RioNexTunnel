@@ -10,8 +10,9 @@ import '../models/engine_preference.dart';
 import '../models/vpn_engine.dart';
 import '../providers/per_app_proxy_provider.dart';
 import '../providers/vpn_providers.dart';
-import '../services/app_log.dart';
 import '../screens/per_app_proxy_screen.dart';
+import '../services/app_log.dart';
+import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
 import '../widgets/proxy_credentials_card.dart';
 
@@ -92,7 +93,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        _SectionCard(
+        FadeSlideIn(
+          child: _SectionCard(
           title: 'Appearance',
           subtitle: 'Theme applies on all platforms',
           child: SegmentedButton<ThemeMode>(
@@ -122,8 +124,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
         ),
+        ),
         const SizedBox(height: 14),
-        _SectionCard(
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 70),
+          child: _SectionCard(
           title: 'Core engine',
           subtitle: engineSubtitle,
           child: Column(
@@ -173,74 +178,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
+        ),
         if (desktopProxy) ...[
           const SizedBox(height: 14),
-          const BrowserHelperCard(),
+          const FadeSlideIn(
+            delay: Duration(milliseconds: 140),
+            child: BrowserHelperCard(),
+          ),
         ],
         if (androidVpn) ...[
           const SizedBox(height: 14),
-          _SectionCard(
-            title: 'Split tunneling',
-            subtitle: 'Selected apps connect directly, without VPN',
-            child: perAppProxy.loading
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SwitchListTile(
-                        key: const ValueKey('per_app_proxy_toggle'),
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Exclude selected apps'),
-                        subtitle: const Text(
-                          'Traffic from excluded apps bypasses the VPN tunnel',
-                        ),
-                        value: perAppProxy.excludeEnabled,
-                        onChanged: (enabled) => ref
-                            .read(perAppProxyProvider.notifier)
-                            .setExcludeEnabled(enabled),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 175),
+            child: _SectionCard(
+              title: 'Split tunneling',
+              subtitle: 'Selected apps connect directly, without VPN',
+              child: perAppProxy.loading
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: CircularProgressIndicator(),
                       ),
-                      if (perAppProxy.excludeEnabled) ...[
-                        const SizedBox(height: 4),
-                        ListTile(
-                          key: const ValueKey('manage_excluded_apps'),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SwitchListTile(
+                          key: const ValueKey('per_app_proxy_toggle'),
                           contentPadding: EdgeInsets.zero,
-                          leading: Icon(
-                            Icons.apps_outlined,
-                            color: scheme.primary,
+                          title: const Text('Exclude selected apps'),
+                          subtitle: const Text(
+                            'Traffic from excluded apps bypasses the VPN tunnel',
                           ),
-                          title: const Text('Manage excluded apps'),
-                          subtitle: Text(
-                            perAppProxy.excludedPackages.isEmpty
-                                ? 'No apps selected'
-                                : '${perAppProxy.excludedPackages.length} app(s) excluded',
-                          ),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const PerAppProxyScreen(),
-                              ),
-                            );
-                          },
+                          value: perAppProxy.excludeEnabled,
+                          onChanged: (enabled) => ref
+                              .read(perAppProxyProvider.notifier)
+                              .setExcludeEnabled(enabled),
                         ),
-                        if (status == VpnStatus.started)
-                          Text(
-                            'Reconnect VPN after changing excluded apps.',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+                        if (perAppProxy.excludeEnabled) ...[
+                          const SizedBox(height: 4),
+                          ListTile(
+                            key: const ValueKey('manage_excluded_apps'),
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.apps_outlined,
+                              color: scheme.primary,
+                            ),
+                            title: const Text('Manage excluded apps'),
+                            subtitle: Text(
+                              perAppProxy.excludedPackages.isEmpty
+                                  ? 'No apps selected'
+                                  : '${perAppProxy.excludedPackages.length} app(s) excluded',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const PerAppProxyScreen(),
+                                ),
+                              );
+                            },
                           ),
+                          if (status == VpnStatus.started)
+                            Text(
+                              'Reconnect VPN after changing excluded apps.',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                            ),
+                        ],
                       ],
-                    ],
-                  ),
+                    ),
+            ),
           ),
         ],
         const SizedBox(height: 14),
-        _SectionCard(
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 140),
+          child: _SectionCard(
           title: 'Security',
           child: Column(
             children: [
@@ -259,8 +273,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
+        ),
         const SizedBox(height: 14),
-        _SectionCard(
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 210),
+          child: _SectionCard(
           title: 'Diagnostics',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -290,11 +307,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+        ),
         if (status == VpnStatus.started &&
             desktopProxy &&
             sessionCredentials != null) ...[
           const SizedBox(height: 14),
-          ProxyCredentialsCard(credentials: sessionCredentials),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 280),
+            child: ProxyCredentialsCard(credentials: sessionCredentials),
+          ),
         ],
       ],
     );

@@ -6,9 +6,7 @@ import android.app.Application
 import android.content.ComponentCallbacks2
 import android.app.NotificationManager
 import android.content.Context
-import android.content.BroadcastReceiver
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -27,10 +25,9 @@ import androidx.core.content.getSystemService
 import androidx.lifecycle.MutableLiveData
 import com.example.v2ray_box.bg.BoxService
 import com.example.v2ray_box.bg.PlatformInterfaceWrapper
-import com.example.v2ray_box.bg.QuickConnectNotification
+import com.example.v2ray_box.bg.QuickSettingsTileHelper
 import com.example.v2ray_box.bg.ServiceConnection
 import com.example.v2ray_box.constant.Alert
-import com.example.v2ray_box.constant.Action
 import com.example.v2ray_box.constant.CoreEngine
 import com.example.v2ray_box.constant.ServiceMode
 import com.example.v2ray_box.constant.Status
@@ -104,17 +101,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private var statsEventSink: EventChannel.EventSink? = null
     private var pingEventSink: EventChannel.EventSink? = null
     private var logsEventSink: EventChannel.EventSink? = null
-    private var quickConnectEventSink: EventChannel.EventSink? = null
-
-    private var quickConnectReceiverRegistered = false
-    private val quickConnectReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action != Action.SERVICE_CONNECT) {
-                return
-            }
-            dispatchQuickConnectRequest()
-        }
-    }
+    private var quickSettingsTileEventSink: EventChannel.EventSink? = null
 
     private var statsCommandClient: CommandClient? = null
     private var logsCommandClient: CommandClient? = null
@@ -161,7 +148,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         private const val STATS_CHANNEL = "v2ray_box/stats"
         private const val PING_CHANNEL = "v2ray_box/ping"
         private const val LOGS_CHANNEL = "v2ray_box/logs"
-        private const val QUICK_CONNECT_CHANNEL = "v2ray_box/quick_connect"
+        private const val QUICK_SETTINGS_TILE_CHANNEL = "v2ray_box/quick_settings_tile"
         private const val DEFAULT_PING_TIMEOUT_MS = 7000
         private const val MIN_PING_TIMEOUT_MS = 1000
         private const val MAX_PING_TIMEOUT_MS = 30000
@@ -173,13 +160,50 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         const val VPN_PERMISSION_REQUEST_CODE = 1001
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1010
-        const val EXTRA_QUICK_CONNECT = "com.example.v2ray_box.EXTRA_QUICK_CONNECT"
+        const val EXTRA_QUICK_TILE_ACTION = "com.example.v2ray_box.EXTRA_QUICK_TILE_ACTION"
 
         @Volatile
-        private var pendingQuickConnect = false
+        private var pluginInstance: V2rayBoxPlugin? = null
 
-        fun markPendingQuickConnect() {
-            pendingQuickConnect = true
+        @Volatile
+        private var pendingTileAction: String? = null
+
+        fun markPendingTileAction(action: String) {
+            pendingTileAction = action
+        }
+
+        fun currentServiceStatus(): Status =
+            pluginInstance?.serviceStatus?.value ?: Status.Stopped
+
+        fun dispatchQuickSettingsTileAction(action: String) {
+            pluginInstance?.dispatchTileAction(action)
+                ?: run {
+                    if (action == "connect") {
+                        applicationContext?.let { openAppForQuickAction(it) }
+                    }
+                }
+        }
+
+        fun openAppForQuickAction(context: Context) {
+            val launchIntent = context.packageManager
+                .getLaunchIntentForPackage(context.packageName)
+                ?.apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                    )
+                    putExtra(EXTRA_QUICK_TILE_ACTION, "connect")
+                }
+            if (launchIntent == null) {
+                Log.w(TAG, "Quick Settings tile: no launch intent for ${context.packageName}")
+                return
+            }
+            runCatching {
+                context.startActivity(launchIntent)
+            }.onFailure { error ->
+                Log.e(TAG, "Quick Settings tile: failed to open app: ${error.message}")
+            }
         }
 
         var applicationContext: Context? = null
@@ -198,6 +222,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+        pluginInstance = this
         applicationContext = flutterPluginBinding.applicationContext
         connectivity = applicationContext?.getSystemService()
         packageManager = applicationContext?.packageManager
@@ -310,20 +335,20 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         quickConnectChannel = EventChannel(
             flutterPluginBinding.binaryMessenger,
-            QUICK_CONNECT_CHANNEL,
+            QUICK_SETTINGS_TILE_CHANNEL,
             JSONMethodCodec.INSTANCE,
         )
         quickConnectChannel?.setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                quickConnectEventSink = events
-                registerQuickConnectReceiver()
-                if (pendingQuickConnect) {
-                    dispatchQuickConnectRequest()
+                quickSettingsTileEventSink = events
+                pendingTileAction?.let { action ->
+                    dispatchTileAction(action)
+                    pendingTileAction = null
                 }
             }
 
             override fun onCancel(arguments: Any?) {
-                quickConnectEventSink = null
+                quickSettingsTileEventSink = null
             }
         })
 
@@ -347,9 +372,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     logsCommandClient?.connect()
                 }
             }
-            if (status == Status.Started || status == Status.Starting) {
-                applicationContext?.let { QuickConnectNotification.dismiss(it) }
-            }
+            QuickSettingsTileHelper.requestTileRefresh()
         }
 
         serviceAlerts.observeForever { event ->
@@ -378,7 +401,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         pingChannel.setStreamHandler(null)
         logsChannel.setStreamHandler(null)
         quickConnectChannel?.setStreamHandler(null)
-        unregisterQuickConnectReceiver()
+        pluginInstance = null
         statsCommandClient?.disconnect()
         logsCommandClient?.disconnect()
         if (componentCallbacksRegistered) {
@@ -739,41 +762,32 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.success(true)
             }
 
-            "set_quick_connect_button_text" -> {
-                val text = call.arguments as String
-                Settings.quickConnectButtonText = text
-                result.success(true)
-            }
-
-            "update_quick_connect" -> {
+            "sync_quick_settings_tile" -> {
                 scope.launch(Dispatchers.Main) {
                     result.runCatching {
-                        val context = applicationContext ?: run {
-                            error("no_context", "Application context not available", null)
-                            return@runCatching
-                        }
                         @Suppress("UNCHECKED_CAST")
                         val args = call.arguments as Map<String, Any?>
-                        val visible = args["visible"] as? Boolean ?: false
+                        val hasProfile = args["hasProfile"] as? Boolean ?: false
                         val profileName = args["profileName"] as? String ?: ""
-                        val statusText = args["statusText"] as? String ?: ""
-                        if (visible) {
-                            if (!checkNotificationPermission()) {
-                                grantNotificationPermission()
-                            }
-                            QuickConnectNotification.show(context, profileName, statusText)
-                        } else {
-                            QuickConnectNotification.dismiss(context)
-                        }
+                        QuickSettingsTileHelper.updateProfileState(hasProfile, profileName)
                         success(true)
                     }
                 }
             }
 
-            "consume_pending_quick_connect" -> {
-                val pending = pendingQuickConnect
-                pendingQuickConnect = false
+            "consume_pending_tile_action" -> {
+                val pending = pendingTileAction
+                pendingTileAction = null
                 result.success(pending)
+            }
+
+            // Legacy no-ops (removed disconnected notification quick-connect).
+            "set_quick_connect_button_text", "update_quick_connect" -> result.success(true)
+
+            "consume_pending_quick_connect" -> {
+                val pending = pendingTileAction
+                pendingTileAction = null
+                result.success(pending == "connect")
             }
 
             "get_installed_packages" -> {
@@ -1762,54 +1776,41 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
     }
 
-    private fun registerQuickConnectReceiver() {
-        if (quickConnectReceiverRegistered) {
+    private fun dispatchTileAction(action: String) {
+        if (action == "disconnect") {
+            scope.launch {
+                val context = applicationContext ?: return@launch
+                runCatching {
+                    context.stopService(Intent(context, Settings.serviceClass()))
+                    BoxService.stop(context)
+                    SecureVpnCredentials.clearSession()
+                    BoxService.wipeSensitiveConfigFiles(context)
+                }
+                QuickSettingsTileHelper.requestTileRefresh()
+            }
+            notifyQuickSettingsTileSink(action)
             return
         }
-        val context = applicationContext ?: return
-        val filter = IntentFilter(Action.SERVICE_CONNECT)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.registerReceiver(
-                context,
-                quickConnectReceiver,
-                filter,
-                ContextCompat.RECEIVER_NOT_EXPORTED,
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            context.registerReceiver(quickConnectReceiver, filter)
+
+        // Connect needs Dart (secure credentials). Use in-app handler only when foreground.
+        if (canDeliverTileActionToDart()) {
+            notifyQuickSettingsTileSink(action)
+            return
         }
-        quickConnectReceiverRegistered = true
+
+        pendingTileAction = action
+        applicationContext?.let { openAppForQuickAction(it) }
     }
 
-    private fun unregisterQuickConnectReceiver() {
-        if (!quickConnectReceiverRegistered) {
-            return
-        }
-        runCatching {
-            applicationContext?.unregisterReceiver(quickConnectReceiver)
-        }
-        quickConnectReceiverRegistered = false
+    private fun canDeliverTileActionToDart(): Boolean {
+        return quickSettingsTileEventSink != null && startedActivityCount > 0
     }
 
-    private fun dispatchQuickConnectRequest() {
-        pendingQuickConnect = true
-        val sink = quickConnectEventSink
-        if (sink != null) {
-            activity?.runOnUiThread {
-                sink.success(mapOf("action" to "connect"))
-            }
-            pendingQuickConnect = false
-            return
+    private fun notifyQuickSettingsTileSink(action: String) {
+        val sink = quickSettingsTileEventSink ?: return
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            sink.success(mapOf("action" to action))
         }
-        val context = applicationContext ?: return
-        val launchIntent = context.packageManager
-            .getLaunchIntentForPackage(context.packageName)
-            ?.apply {
-                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                putExtra(EXTRA_QUICK_CONNECT, true)
-            }
-        launchIntent?.let { context.startActivity(it) }
     }
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile.dart';
 import '../models/subscription_server.dart';
 import '../providers/vpn_providers.dart';
+import '../utils/subscription_latency_probe.dart';
 
 /// Tap target showing the selected subscription server; opens a picker sheet.
 class ServerPickerTile extends ConsumerWidget {
@@ -16,8 +17,8 @@ class ServerPickerTile extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final label = profile.autoSelectBestServer
         ? (profile.selectedServerName != null
-              ? 'Auto · ${profile.selectedServerName}'
-              : 'Auto (best latency)')
+              ? 'Automatic · ${profile.selectedServerName}'
+              : 'Automatic (best latency)')
         : (profile.selectedServerName ??
               'Server ${profile.selectedServerIndex + 1}');
 
@@ -125,7 +126,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
     }
   }
 
-  Future<void> _select(SubscriptionServer server) async {
+  Future<void> _selectManual(SubscriptionServer server) async {
     await _persistSelection(
       serverIndex: server.index,
       serverName: server.name,
@@ -136,7 +137,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
     }
   }
 
-  Future<void> _autoSelectBest() async {
+  Future<void> _selectAutomatic({bool closeSheet = true}) async {
     if (_probing) {
       return;
     }
@@ -165,7 +166,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
         serverName: best.server.name,
         autoSelectBestServer: true,
       );
-      if (mounted) {
+      if (mounted && closeSheet) {
         Navigator.of(context).pop();
       }
     } catch (error) {
@@ -223,6 +224,18 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
     return '${ms}ms';
   }
 
+  Color _latencyColor(BuildContext context, int? ms) {
+    final scheme = Theme.of(context).colorScheme;
+    return switch (LatencyQuality.fromMs(ms)) {
+      LatencyQuality.excellent => const Color(0xFF2ED573),
+      LatencyQuality.good => const Color(0xFF7BED9F),
+      LatencyQuality.fair => const Color(0xFFFFA502),
+      LatencyQuality.poor => scheme.error,
+      LatencyQuality.timeout => scheme.outline,
+      LatencyQuality.unknown => scheme.onSurfaceVariant,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -256,15 +269,9 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                  TextButton.icon(
-                    key: const ValueKey('server_picker_auto'),
-                    onPressed: _probing ? null : _autoSelectBest,
-                    icon: const Icon(Icons.speed_rounded, size: 18),
-                    label: const Text('Auto'),
-                  ),
                   IconButton(
                     key: const ValueKey('server_picker_probe'),
-                    tooltip: 'Test latency',
+                    tooltip: 'Test latency (URL test)',
                     onPressed: _probing ? null : _probeOnly,
                     icon: const Icon(Icons.network_ping_outlined),
                   ),
@@ -285,16 +292,6 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                 ],
               ),
             ),
-            if (autoSelected)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text(
-                  'Auto mode: best server is re-tested on each Connect',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
             if (_probeError != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -338,15 +335,26 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
 
                   return ListView.separated(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                    itemCount: sorted.length,
+                    itemCount: sorted.length + 1,
                     separatorBuilder: (_, _) => const SizedBox(height: 4),
                     itemBuilder: (context, index) {
-                      final server = sorted[index];
+                      if (index == 0) {
+                        return _AutomaticServerTile(
+                          selected: autoSelected,
+                          probing: _probing,
+                          lastServerName: widget.profile.selectedServerName,
+                          onTap: () => _selectAutomatic(),
+                        );
+                      }
+
+                      final server = sorted[index - 1];
                       final selected =
                           !autoSelected &&
                           server.index == widget.profile.selectedServerIndex;
                       final latency = _latencies[server.index];
                       final latencyText = _latencyLabel(latency);
+                      final latencyColor = _latencyColor(context, latency);
+
                       return ListTile(
                         key: ValueKey('server_option_${server.index}'),
                         selected: selected,
@@ -371,22 +379,81 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                                 latencyText,
                                 style: Theme.of(context).textTheme.labelLarge
                                     ?.copyWith(
-                                      color: latency != null && latency >= 0
-                                          ? scheme.primary
-                                          : scheme.error,
+                                      color: latencyColor,
                                       fontWeight: FontWeight.w700,
                                     ),
                               ),
-                        onTap: _probing ? null : () => _select(server),
+                        onTap: _probing ? null : () => _selectManual(server),
                       );
                     },
                   );
                 },
               ),
             ),
+            if (autoSelected)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                  'Automatic: best server is re-tested on each Connect',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _AutomaticServerTile extends StatelessWidget {
+  const _AutomaticServerTile({
+    required this.selected,
+    required this.probing,
+    required this.onTap,
+    this.lastServerName,
+  });
+
+  final bool selected;
+  final bool probing;
+  final VoidCallback onTap;
+  final String? lastServerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final subtitle = lastServerName != null
+        ? 'Last: $lastServerName · re-tested on Connect'
+        : 'Pick the lowest-latency server on Connect';
+
+    return ListTile(
+      key: const ValueKey('server_picker_auto'),
+      selected: selected,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.35)
+              : Colors.transparent,
+        ),
+      ),
+      tileColor: selected ? scheme.primaryContainer.withValues(alpha: 0.25) : null,
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.speed_rounded,
+        color: selected ? scheme.primary : scheme.secondary,
+      ),
+      title: const Text('Automatic'),
+      subtitle: Text(subtitle),
+      trailing: probing
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+      onTap: probing ? null : onTap,
     );
   }
 }
