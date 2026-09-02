@@ -35,6 +35,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     private var configOptions: String = "{}"
     private var activeConfigPath: String = ""
     private var activeProfileName: String = ""
+    private var killSwitchMode: String = "off"
+    private var killSwitchEngaged: Bool = false
     private var isRunning: Bool = false
     
     private var lastSingboxUpload: Int64 = 0
@@ -336,6 +338,40 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 "chrome_manifest_installed": false,
                 "firefox_manifest_installed": false,
             ] as [String: Any])
+
+        case "set_kill_switch_mode":
+            if let mode = call.arguments as? String {
+                killSwitchMode = mode
+            }
+            result(true)
+
+        case "arm_kill_switch":
+            result(killSwitchMode == "strict")
+
+        case "engage_kill_switch":
+            killSwitchEngaged = true
+            result(true)
+
+        case "disengage_kill_switch":
+            killSwitchEngaged = false
+            result(true)
+
+        case "release_kill_switch":
+            killSwitchEngaged = false
+            result(true)
+
+        case "get_kill_switch_status":
+            result([
+                "mode": killSwitchMode,
+                "armed": killSwitchMode == "strict",
+                "engaged": killSwitchEngaged,
+                "available": true,
+                "backend": "ne_packet_tunnel",
+            ] as [String: Any])
+
+        case "is_core_running":
+            let connected = tunnelManager?.connection.status == .connected
+            result(connected == true && !killSwitchEngaged)
 
         case "get_logs":
             result([String]())

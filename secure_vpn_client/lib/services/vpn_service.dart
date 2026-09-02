@@ -22,6 +22,7 @@ import '../utils/server_latency.dart';
 import '../utils/subscription_latency_probe.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
+import 'kill_switch_service.dart';
 
 class ConnectResult {
   const ConnectResult({required this.profile, required this.engine});
@@ -34,13 +35,16 @@ class VpnService {
   VpnService({
     V2rayBox? v2rayBox,
     CredentialService? credentialService,
+    KillSwitchService? killSwitchService,
     this.applicationId = 'com.example.secure_vpn_client',
     this.socksPort = ConfigParser.defaultSocksPort,
   }) : _v2rayBox = v2rayBox ?? V2rayBox(),
-       _credentialService = credentialService ?? CredentialService();
+       _credentialService = credentialService ?? CredentialService(),
+       _killSwitchService = killSwitchService;
 
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
+  final KillSwitchService? _killSwitchService;
   final String applicationId;
   final int socksPort;
 
@@ -210,6 +214,7 @@ class VpnService {
       return;
     }
 
+    unawaited(_killSwitchService?.onTunnelDown());
     _reconnectAttempt++;
     final delay = _reconnectBackoffDelay(_reconnectAttempt);
     _publishConnectionDetail(
@@ -427,6 +432,7 @@ class VpnService {
     }
 
     await _ensureVpnPermission();
+    await _killSwitchService?.onSessionStart(socksPort: socksPort);
 
     final resolution = await EngineAutoSelector.resolve(
       profile: profile,
@@ -556,6 +562,7 @@ class VpnService {
     _sessionCredentials = credentials;
     _activeProfile = effectiveProfile;
     _panelSessionId = const Uuid().v4();
+    await _killSwitchService?.onTunnelRestored();
     // Ensure UI flips to Disconnect even if a status event was raced/missed.
     _publishStatus(VpnStatus.started);
     AppLog.info('VPN connected with ${_engine.coreName}');
@@ -593,6 +600,7 @@ class VpnService {
       _reconnectAttempt = 0;
     }
     _cancelReconnect();
+    await _killSwitchService?.onSessionEnd(userInitiated: userInitiated);
     if (_initialized) {
       await _v2rayBox.disconnect();
     }

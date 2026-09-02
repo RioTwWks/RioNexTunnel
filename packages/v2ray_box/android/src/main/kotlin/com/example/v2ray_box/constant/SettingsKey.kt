@@ -34,4 +34,7 @@ object SettingsKey {
     // Core engine selection
     const val CORE_ENGINE = "${KEY_PREFIX}core_engine"
     const val ACTIVE_RUNTIME_ENGINE = "${KEY_PREFIX}active_runtime_engine"
+
+    const val KILL_SWITCH_MODE = "${KEY_PREFIX}kill_switch_mode"
+    const val KILL_SWITCH_ENGAGED = "${KEY_PREFIX}kill_switch_engaged"
 }

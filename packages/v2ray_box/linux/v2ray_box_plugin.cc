@@ -11,6 +11,7 @@
 
 #include "desktop_core.h"
 #include "desktop_ping.h"
+#include "kill_switch.h"
 #include "native_messaging.h"
 #include "system_proxy.h"
 #include "v2ray_box_plugin_private.h"
@@ -334,11 +335,61 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
     v2ray_box::NativeMessaging::ClearCredentials();
     v2ray_box::SystemProxy::Disable();
     v2ray_box::DesktopCore::Instance().Stop();
+    v2ray_box::KillSwitch::Instance().Release();
     self->is_running = FALSE;
     clear_session_credentials();
     wipe_sensitive_files();
     emit_status(self, "Stopped");
     response = make_success_bool(true);
+  } else if (strcmp(method, "set_kill_switch_mode") == 0) {
+    if (fl_value_get_type(args) == FL_VALUE_TYPE_STRING) {
+      v2ray_box::KillSwitch::Instance().SetMode(fl_value_get_string(args));
+    }
+    response = make_success_bool(true);
+  } else if (strcmp(method, "arm_kill_switch") == 0) {
+    int socks_port = g_socks_port;
+    if (fl_value_get_type(args) == FL_VALUE_TYPE_MAP) {
+      FlValue* port_val = fl_value_lookup_string(args, "socksPort");
+      if (fl_value_get_type(port_val) == FL_VALUE_TYPE_INT) {
+        socks_port = static_cast<int>(fl_value_get_int(port_val));
+      }
+    }
+    const bool ok = v2ray_box::KillSwitch::Instance().Arm(socks_port);
+    response = make_success_bool(ok);
+  } else if (strcmp(method, "engage_kill_switch") == 0) {
+    v2ray_box::SystemProxy::Disable();
+    v2ray_box::NativeMessaging::ClearCredentials();
+    v2ray_box::DesktopCore::Instance().Stop();
+    self->is_running = FALSE;
+    const bool ok = v2ray_box::KillSwitch::Instance().Engage();
+    emit_status(self, "Stopped");
+    response = make_success_bool(ok);
+  } else if (strcmp(method, "disengage_kill_switch") == 0) {
+    const bool ok = v2ray_box::KillSwitch::Instance().Disengage();
+    response = make_success_bool(ok);
+  } else if (strcmp(method, "release_kill_switch") == 0) {
+    const bool ok = v2ray_box::KillSwitch::Instance().Release();
+    response = make_success_bool(ok);
+  } else if (strcmp(method, "get_kill_switch_status") == 0) {
+    const auto& ks = v2ray_box::KillSwitch::Instance();
+    g_autoptr(FlValue) map = fl_value_new_map();
+    fl_value_set_string_take(map, "mode",
+                             fl_value_new_string(ks.GetMode().c_str()));
+    fl_value_set_string_take(map, "armed", fl_value_new_bool(ks.IsArmed()));
+    fl_value_set_string_take(map, "engaged", fl_value_new_bool(ks.IsEngaged()));
+    fl_value_set_string_take(map, "available",
+                             fl_value_new_bool(ks.IsAvailable()));
+    fl_value_set_string_take(
+        map, "backend",
+        fl_value_new_string(ks.IsAvailable() ? "firewall" : "none"));
+    const std::string err = ks.LastError();
+    if (!err.empty()) {
+      fl_value_set_string_take(map, "error", fl_value_new_string(err.c_str()));
+    }
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
+  } else if (strcmp(method, "is_core_running") == 0) {
+    const bool running = v2ray_box::DesktopCore::Instance().IsRunning();
+    response = make_success_bool(running);
   } else if (strcmp(method, "get_core_info") == 0) {
     g_autoptr(FlValue) map = fl_value_new_map();
     fl_value_set_string_take(map, "engine", fl_value_new_string(g_core_engine.c_str()));
@@ -452,6 +503,7 @@ static void v2ray_box_plugin_dispose(GObject* object) {
   v2ray_box::NativeMessaging::ClearCredentials();
   v2ray_box::SystemProxy::Disable();
   v2ray_box::DesktopCore::Instance().Stop();
+  v2ray_box::KillSwitch::Instance().Release();
   G_OBJECT_CLASS(v2ray_box_plugin_parent_class)->dispose(object);
 }
 

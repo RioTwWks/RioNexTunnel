@@ -402,4 +402,32 @@ class V2rayBox {
   Future<Map<String, bool>> getBrowserHelperStatus() {
     return V2rayBoxPlatform.instance.getBrowserHelperStatus();
   }
+
+  Future<bool> setKillSwitchMode(String mode) {
+    return V2rayBoxPlatform.instance.setKillSwitchMode(mode);
+  }
+
+  Future<bool> armKillSwitch({int? socksPort}) {
+    return V2rayBoxPlatform.instance.armKillSwitch(socksPort: socksPort);
+  }
+
+  Future<bool> engageKillSwitch() {
+    return V2rayBoxPlatform.instance.engageKillSwitch();
+  }
+
+  Future<bool> disengageKillSwitch() {
+    return V2rayBoxPlatform.instance.disengageKillSwitch();
+  }
+
+  Future<bool> releaseKillSwitch() {
+    return V2rayBoxPlatform.instance.releaseKillSwitch();
+  }
+
+  Future<Map<String, dynamic>> getKillSwitchStatus() {
+    return V2rayBoxPlatform.instance.getKillSwitchStatus();
+  }
+
+  Future<bool> isCoreRunning() {
+    return V2rayBoxPlatform.instance.isCoreRunning();
+  }
 }

@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../models/split_tunnel_settings.dart';
 import '../providers/per_app_proxy_provider.dart';
 import '../providers/vpn_providers.dart';
 
 class PerAppProxyScreen extends ConsumerStatefulWidget {
-  const PerAppProxyScreen({super.key});
+  const PerAppProxyScreen({super.key, required this.mode});
+
+  final SplitTunnelMode mode;
 
   @override
   ConsumerState<PerAppProxyScreen> createState() => _PerAppProxyScreenState();
@@ -68,16 +71,38 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
     });
   }
 
+  String get _title {
+    switch (widget.mode) {
+      case SplitTunnelMode.include:
+        return 'Apps using VPN';
+      case SplitTunnelMode.exclude:
+        return 'Apps bypassing VPN';
+      case SplitTunnelMode.off:
+        return 'Split tunnel apps';
+    }
+  }
+
+  String get _selectionLabel {
+    switch (widget.mode) {
+      case SplitTunnelMode.include:
+        return 'selected for VPN';
+      case SplitTunnelMode.exclude:
+        return 'bypassing VPN';
+      case SplitTunnelMode.off:
+        return 'selected';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final excluded = ref.watch(perAppProxyProvider).excludedPackages;
+    final selected = ref.watch(perAppProxyProvider).selectedPackages;
     final vpnConnected =
         ref.watch(vpnStatusProvider).value == VpnStatus.started;
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Excluded apps'),
+        title: Text(_title),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -85,7 +110,7 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
           if (vpnConnected)
             MaterialBanner(
               content: const Text(
-                'Reconnect VPN to apply changes to excluded apps.',
+                'Reconnect VPN to apply split tunnel changes.',
               ),
               leading: Icon(Icons.info_outline, color: scheme.primary),
               backgroundColor: scheme.primaryContainer.withValues(alpha: 0.35),
@@ -116,7 +141,7 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              '${excluded.length} excluded · ${_filteredApps.length} shown',
+              '${selected.length} $_selectionLabel · ${_filteredApps.length} shown',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -142,7 +167,7 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
                     itemCount: _filteredApps.length,
                     itemBuilder: (context, index) {
                       final app = _filteredApps[index];
-                      final selected = excluded.contains(app.packageName);
+                      final isSelected = selected.contains(app.packageName);
                       return Card(
                         margin: const EdgeInsets.only(bottom: 6),
                         child: CheckboxListTile(
@@ -167,17 +192,16 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
                                 ? scheme.outline
                                 : scheme.primary,
                           ),
-                          value: selected,
+                          value: isSelected,
                           onChanged: (value) {
                             if (value == null) {
                               return;
                             }
-                            ref
-                                .read(perAppProxyProvider.notifier)
-                                .toggleExcludedApp(
-                                  app.packageName,
-                                  excluded: value,
-                                );
+                            ref.read(perAppProxyProvider.notifier).toggleApp(
+                              app.packageName,
+                              selected: value,
+                              mode: widget.mode,
+                            );
                           },
                           controlAffinity: ListTileControlAffinity.leading,
                           dense: true,

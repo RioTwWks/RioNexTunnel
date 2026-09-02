@@ -1265,6 +1265,52 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.success(Settings.pingTestUrl)
             }
 
+            "set_kill_switch_mode" -> {
+                val mode = call.arguments as? String ?: "off"
+                Settings.killSwitchMode = mode
+                if (mode == "off") {
+                    Settings.killSwitchEngaged = false
+                }
+                result.success(true)
+            }
+
+            "arm_kill_switch" -> {
+                result.success(Settings.killSwitchMode == "strict")
+            }
+
+            "engage_kill_switch" -> {
+                Settings.killSwitchEngaged = true
+                result.success(true)
+            }
+
+            "disengage_kill_switch" -> {
+                Settings.killSwitchEngaged = false
+                result.success(true)
+            }
+
+            "release_kill_switch" -> {
+                Settings.killSwitchEngaged = false
+                result.success(true)
+            }
+
+            "get_kill_switch_status" -> {
+                result.success(
+                    mapOf(
+                        "mode" to Settings.killSwitchMode,
+                        "armed" to (Settings.killSwitchMode == "strict"),
+                        "engaged" to Settings.killSwitchEngaged,
+                        "available" to true,
+                        "backend" to "vpn_service",
+                    ),
+                )
+            }
+
+            "is_core_running" -> {
+                val running = connection?.status == Status.Started &&
+                    !Settings.killSwitchEngaged
+                result.success(running)
+            }
+
             else -> {
                 result.notImplemented()
             }

@@ -597,4 +597,58 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
       (key, value) => MapEntry(key.toString(), value == true),
     );
   }
+
+  @override
+  Future<bool> setKillSwitchMode(String mode) async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'set_kill_switch_mode',
+      mode,
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> armKillSwitch({int? socksPort}) async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'arm_kill_switch',
+      {'socksPort': socksPort},
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> engageKillSwitch() async {
+    final result = await methodChannel.invokeMethod<bool>('engage_kill_switch');
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> disengageKillSwitch() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'disengage_kill_switch',
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<bool> releaseKillSwitch() async {
+    final result = await methodChannel.invokeMethod<bool>(
+      'release_kill_switch',
+    );
+    return result ?? false;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getKillSwitchStatus() async {
+    final result = await methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+      'get_kill_switch_status',
+    );
+    return Map<String, dynamic>.from(result ?? {});
+  }
+
+  @override
+  Future<bool> isCoreRunning() async {
+    final result = await methodChannel.invokeMethod<bool>('is_core_running');
+    return result ?? false;
+  }
 }

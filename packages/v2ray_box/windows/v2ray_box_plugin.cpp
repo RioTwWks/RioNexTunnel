@@ -30,6 +30,8 @@ std::string g_config_options = "{}";
 std::string g_socks_user;
 std::string g_socks_pass;
 int g_socks_port = 1080;
+std::string g_kill_switch_mode = "off";
+bool g_kill_switch_engaged = false;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
 
@@ -477,6 +479,66 @@ void V2rayBoxPlugin::HandleMethodCall(
     map[flutter::EncodableValue("firefox_manifest_installed")] =
         flutter::EncodableValue(false);
     result->Success(flutter::EncodableValue(map));
+    return;
+  }
+
+  if (method == "set_kill_switch_mode") {
+    if (const auto* mode = std::get_if<std::string>(method_call.arguments())) {
+      g_kill_switch_mode = *mode;
+      if (g_kill_switch_mode == "off") {
+        g_kill_switch_engaged = false;
+      }
+    }
+    SuccessBoolResult(std::move(result), true);
+    return;
+  }
+
+  if (method == "arm_kill_switch") {
+    SuccessBoolResult(std::move(result), g_kill_switch_mode == "strict");
+    return;
+  }
+
+  if (method == "engage_kill_switch") {
+    SystemProxy::Disable();
+    DesktopCore::Instance().Stop();
+    is_running_ = false;
+    g_kill_switch_engaged = true;
+    EmitStatus("Stopped");
+    SuccessBoolResult(std::move(result), true);
+    return;
+  }
+
+  if (method == "disengage_kill_switch") {
+    g_kill_switch_engaged = false;
+    SuccessBoolResult(std::move(result), true);
+    return;
+  }
+
+  if (method == "release_kill_switch") {
+    g_kill_switch_engaged = false;
+    SuccessBoolResult(std::move(result), true);
+    return;
+  }
+
+  if (method == "get_kill_switch_status") {
+    flutter::EncodableMap map;
+    map[flutter::EncodableValue("mode")] =
+        flutter::EncodableValue(g_kill_switch_mode);
+    map[flutter::EncodableValue("armed")] =
+        flutter::EncodableValue(g_kill_switch_mode == "strict");
+    map[flutter::EncodableValue("engaged")] =
+        flutter::EncodableValue(g_kill_switch_engaged);
+    map[flutter::EncodableValue("available")] = flutter::EncodableValue(false);
+    map[flutter::EncodableValue("backend")] =
+        flutter::EncodableValue("proxy_fallback");
+    result->Success(flutter::EncodableValue(map));
+    return;
+  }
+
+  if (method == "is_core_running") {
+    SuccessBoolResult(std::move(result),
+                      DesktopCore::Instance().IsRunning() &&
+                          !g_kill_switch_engaged);
     return;
   }
 

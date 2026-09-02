@@ -44,6 +44,12 @@ These are **local proxy credentials** — not your VPN server account.
 
 ## Verification
 
+### Split tunneling
+
+Per-app split tunneling changes **which apps use the VPN tunnel** on Android. It does **not** change local inbound security. Run the probe with VPN connected and split tunnel enabled — unauthenticated SOCKS must still fail.
+
+See [split_tunneling.md](split_tunneling.md).
+
 ### 1. Security probe script
 
 With VPN connected:

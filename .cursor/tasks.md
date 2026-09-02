@@ -118,14 +118,14 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 > Route selected apps through VPN; others direct. Requires strict isolation (see `.cursorrules`).
 
-- [ ] Model design — whitelist (only these via VPN) vs blacklist (all except these)
-- [ ] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
-- [ ] iOS — document NE limitations; per-app split tunneling is limited on iOS
-- [ ] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
+- [x] Model design — whitelist (only these via VPN) vs blacklist (all except these)
+- [x] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
+- [x] iOS — document NE limitations; per-app split tunneling is limited on iOS
+- [x] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
 - [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan
-- [ ] UI — installed app list with toggles (mobile) or desktop warning
-- [ ] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
-- [ ] Tests — unit + platform smoke for whitelist/blacklist
+- [x] UI — installed app list with toggles (mobile) or desktop warning
+- [x] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
+- [x] Tests — unit + platform smoke for whitelist/blacklist
 
 ### Traffic obfuscation (DPI bypass UX)
 
@@ -445,7 +445,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
 | Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
-| Split Tunneling | ❌ Missing | **P1** |
+| Split Tunneling | ✅ Android + docs | **P1** |
 | Obfuscation / DPI (UX) | ✅ Wizard + presets | **P1** |
 | XHTTP + stream-one | ✅ Link builder | **P1** |
 | TLS fingerprint UI (uTLS) | ✅ Picker + firefox default | **P1** |
@@ -473,4 +473,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — P0 Foundation stability completed (reconnect, states, CI probe, geo fail-closed, fork docs); P1 censorship resistance backlog (XHTTP, uTLS, mux, RU routing, fallback; official Xray only, no REALITY-rkn-fix fork).*
+*Last updated: 2026-09-02 — P0 Foundation stability; P1 split tunneling (Android + docs), kill switch strict mode, censorship resistance (XHTTP, uTLS, mux, RU routing), RioNexGate panel MVP; official Xray only, no REALITY-rkn-fix fork.*
