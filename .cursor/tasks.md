@@ -100,7 +100,11 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ## P1 — Key differentiators (external feedback focus)
 
+> Agent split: [p1-agent-distribution.md](p1-agent-distribution.md) — Kill Switch → **Agent A** · Split Tunneling → **Agent B** · Obfuscation → **Agent C** · RioNexGate → **Agent D** (optional)
+
 ### Kill Switch
+
+> **Agent A** — [distribution plan](p1-agent-distribution.md#agent-a--kill-switch)
 
 > Block traffic when VPN/core drops unexpectedly — critical security feature.
 
@@ -116,6 +120,8 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### Split Tunneling
 
+> **Agent B** — [distribution plan](p1-agent-distribution.md#agent-b--split-tunneling)
+
 > Route selected apps through VPN; others direct. Requires strict isolation (see `.cursorrules`).
 
 - [ ] Model design — whitelist (only these via VPN) vs blacklist (all except these)
@@ -129,6 +135,8 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### Traffic obfuscation (DPI bypass UX)
 
+> **Agent C** — [distribution plan](p1-agent-distribution.md#agent-c--censorship-resistance--obfuscation-ux) (includes censorship resistance below)
+
 > Protocols supported by cores, but no presets or wizard for censorship bypass. See **P1 — censorship resistance** below for RKN/TSPU-specific backlog.
 
 - [ ] Transport presets — WebSocket+TLS, gRPC, HTTPUpgrade, REALITY (xray), uTLS fingerprint
@@ -140,6 +148,8 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ---
 
 ## P1 — RioNexGate panel integration (optional, client-only)
+
+> **Agent D** — [distribution plan](p1-agent-distribution.md#agent-d--rionexgate-panel-integration-optional)
 
 > **Goal:** RioNexTunnel stays a universal VPN client (manual links, any VLESS/VMess/Trojan server) while optionally pairing with [RioNexGate](https://github.com/RioTwWks/RioNexGate) for subscriptions, stats, and remote commands. Panel features must be **opt-in** — if the user never configures a panel, behavior is unchanged.
 >
@@ -250,6 +260,8 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ---
 
 ## P1 — censorship resistance (RKN/TSPU, client-only)
+
+> **Agent C** — [distribution plan](p1-agent-distribution.md#agent-c--censorship-resistance--obfuscation-ux)
 
 > **Goal:** RioNexTunnel stays effective against modern Russian DPI (ТСПУ/РКН) in 2026 without sacrificing universality. Censorship-bypass features are **presets and fallbacks** on top of standard VLESS/VMess/Trojan — the client must still connect to any third-party server.
 >
