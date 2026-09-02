@@ -334,4 +334,32 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
       'getBrowserHelperStatus() has not been implemented.',
     );
   }
+
+  Future<bool> setKillSwitchMode(String mode) {
+    throw UnimplementedError('setKillSwitchMode() has not been implemented.');
+  }
+
+  Future<bool> armKillSwitch({int? socksPort}) {
+    throw UnimplementedError('armKillSwitch() has not been implemented.');
+  }
+
+  Future<bool> engageKillSwitch() {
+    throw UnimplementedError('engageKillSwitch() has not been implemented.');
+  }
+
+  Future<bool> disengageKillSwitch() {
+    throw UnimplementedError('disengageKillSwitch() has not been implemented.');
+  }
+
+  Future<bool> releaseKillSwitch() {
+    throw UnimplementedError('releaseKillSwitch() has not been implemented.');
+  }
+
+  Future<Map<String, dynamic>> getKillSwitchStatus() {
+    throw UnimplementedError('getKillSwitchStatus() has not been implemented.');
+  }
+
+  Future<bool> isCoreRunning() {
+    throw UnimplementedError('isCoreRunning() has not been implemented.');
+  }
 }

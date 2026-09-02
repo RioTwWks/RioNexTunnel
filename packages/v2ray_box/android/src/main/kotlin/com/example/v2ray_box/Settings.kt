@@ -162,6 +162,14 @@ object Settings {
         get() = preferences.getString(SettingsKey.ACTIVE_RUNTIME_ENGINE, "")!!
         set(value) = preferences.edit().putString(SettingsKey.ACTIVE_RUNTIME_ENGINE, value).apply()
 
+    var killSwitchMode: String
+        get() = preferences.getString(SettingsKey.KILL_SWITCH_MODE, "off")!!
+        set(value) = preferences.edit().putString(SettingsKey.KILL_SWITCH_MODE, value).apply()
+
+    var killSwitchEngaged: Boolean
+        get() = preferences.getBoolean(SettingsKey.KILL_SWITCH_ENGAGED, false)
+        set(value) = preferences.edit().putBoolean(SettingsKey.KILL_SWITCH_ENGAGED, value).apply()
+
     fun effectiveCoreEngine(): String {
         val runtime = activeRuntimeEngine.trim().lowercase()
         return if (runtime == CoreEngine.XRAY || runtime == CoreEngine.SINGBOX) {

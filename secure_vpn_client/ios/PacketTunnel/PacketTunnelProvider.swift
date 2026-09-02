@@ -305,7 +305,9 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
     }
 
     func underNetworkExtension() -> Bool { true }
-    func includeAllNetworks() -> Bool { false }
+    func includeAllNetworks() -> Bool {
+        UserDefaults.standard.string(forKey: "flutter.kill_switch_mode") == "strict"
+    }
 
     func clearDNSCache() {
         guard let settings = networkSettings, let tunnel = tunnel else { return }
