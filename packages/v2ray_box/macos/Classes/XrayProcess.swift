@@ -126,7 +126,7 @@ class XrayProcess {
         }
     }
     
-    func start(configPath: String) -> Bool {
+    func start(configPath: String, workingDir: String? = nil) -> Bool {
         lock.lock()
         defer { lock.unlock() }
         
@@ -145,7 +145,19 @@ class XrayProcess {
             proc.executableURL = URL(fileURLWithPath: binaryPath)
             proc.arguments = ["run", "-c", configPath]
             var environment = ProcessInfo.processInfo.environment
-            environment["XRAY_LOCATION_ASSET"] = getAssetDirectory(binaryPath: binaryPath, configPath: configPath)
+            if let workingDir {
+                let assetDir = "\(workingDir)/assets"
+                let geoip = "\(assetDir)/geoip.dat"
+                let geosite = "\(assetDir)/geosite.dat"
+                if FileManager.default.fileExists(atPath: geoip) &&
+                    FileManager.default.fileExists(atPath: geosite) {
+                    environment["XRAY_LOCATION_ASSET"] = assetDir
+                } else {
+                    environment["XRAY_LOCATION_ASSET"] = getAssetDirectory(binaryPath: binaryPath, configPath: configPath)
+                }
+            } else {
+                environment["XRAY_LOCATION_ASSET"] = getAssetDirectory(binaryPath: binaryPath, configPath: configPath)
+            }
             proc.environment = environment
             
             let outputPipe = Pipe()

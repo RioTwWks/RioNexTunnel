@@ -117,3 +117,18 @@ Vulnerable pattern we avoid:
 ```
 [Any app on LAN/localhost] --> 0.0.0.0:7890 (no auth)  # CVE-class issue, March 2026
 ```
+
+### Windows desktop plugin
+
+| File | Role |
+|------|------|
+| `windows/v2ray_box_plugin.cpp` | Method channel `v2ray_box`, credentials channel `secure_vpn/credentials`; calls `SystemProxy::Enable`/`Disable` on start/stop |
+| `windows/desktop_core.cpp` | FindBinary, Start/Stop subprocess, geo asset copy, stderr capture, orphan process cleanup on ports 1080/1081 |
+| `windows/system_proxy.cpp` | Registry backup/restore; sets HTTP proxy `127.0.0.1:1081` via WinINet |
+
+**Runtime paths:**
+
+- Working dir: `%LOCALAPPDATA%\v2ray_box\`
+- Active config: `%LOCALAPPDATA%\v2ray_box\profiles\active_config.json`
+- Xray geo assets: `%LOCALAPPDATA%\v2ray_box\assets\{geoip,geosite}.dat`
+- Bundled cores: `{exe_dir}/resources/{xray.exe,sing-box.exe}`

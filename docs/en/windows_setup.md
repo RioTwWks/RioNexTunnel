@@ -25,10 +25,10 @@ flutter config --enable-windows-desktop
 |------|--------|
 | Flutter app shell | Builds and runs |
 | Core binaries in bundle | CMake copies `runner/resources/` → `{exe_dir}/resources/` |
-| `v2ray_box` Windows plugin | **Stub** — only `getPlatformVersion` today |
+| `v2ray_box` Windows plugin | **Implemented** — proxy mode, `start_with_json`, credentials channel, system proxy |
 | Connect / proxy mode | **Not yet** — needs `desktop_core` + `SystemProxy` (see backlog in `.cursor/tasks.md`) |
 
-Windows desktop is intended to use **proxy mode** (`VpnMode.proxy`), same as Linux: authenticated local inbounds on `127.0.0.1` only, not a system TUN VPN. Until the native plugin is implemented, you can build and explore the UI, but **Connect will not start xray/sing-box**.
+Windows desktop uses **proxy mode** (`VpnMode.proxy`), same as Linux: authenticated local inbounds on `127.0.0.1` only, not a system TUN VPN. **Connect** starts xray/sing-box and sets the Windows system HTTP proxy when `set-system-proxy` is enabled in config options.
 
 ## Core binaries
 
@@ -75,11 +75,11 @@ build\windows\x64\runner\Debug\
     └── geosite.dat
 ```
 
-Binary discovery (when the plugin is implemented) will follow the same order as Linux: env overrides → `{exe_dir}/resources/` → user data dir.
+Binary discovery follows the same order as Linux: env overrides → `{exe_dir}/resources/` → `%LOCALAPPDATA%\v2ray_box\cores\`.
 
-## Mode (planned)
+## Mode
 
-When the Windows plugin reaches parity with Linux:
+On connect the Windows plugin:
 
 1. Start xray/sing-box with authenticated local inbounds on `127.0.0.1` only.
 2. Set **Windows system proxy** (WinINet / registry) to HTTP `127.0.0.1:1081` with session credentials.
@@ -95,14 +95,15 @@ Session username/password are generated per Connect, shown on **Home** and in **
 
 Chromium on Windows may ignore stored proxy passwords. A browser extension and native messaging host (similar to Linux) are planned; until then, manual credential entry from Home/Settings is the fallback.
 
-## Runtime directories (planned)
+## Runtime directories
 
 | Path | Purpose |
 |------|---------|
 | `%LOCALAPPDATA%\v2ray_box\profiles\active_config.json` | Active core config (wiped on disconnect) |
 | `%LOCALAPPDATA%\v2ray_box\assets\` | Xray geo databases |
+| `%LOCALAPPDATA%\v2ray_box\proxy_backup.env` | Saved system proxy settings (restored on disconnect) |
 
-Linux uses `~/.local/share/v2ray_box/`; Windows will use the equivalent under `%LOCALAPPDATA%`.
+Linux uses `~/.local/share/v2ray_box/`; Windows uses `%LOCALAPPDATA%\v2ray_box\`.
 
 ## Security check
 
@@ -120,7 +121,7 @@ Unauthenticated probe must fail. See [security.md](security.md).
 |---------|--------------|-----|
 | `flutter run -d windows` fails on MSVC | Missing VS 2022 C++ workload | Install **Desktop development with C++** in Visual Studio Installer |
 | No Windows device | Desktop not enabled | `flutter config --enable-windows-desktop` |
-| Connect does nothing / `NotImplemented` | Windows plugin is still a stub | Expected today; track `.cursor/tasks.md` |
+| Connect does nothing / `NotImplemented` | Outdated build or missing cores | Run `fetch_cores.sh`, rebuild after native plugin changes |
 | Cores not found after build | `runner/resources/` empty | Run `fetch_cores.sh` or manual download; rebuild |
 | Geo routing errors | Missing `geoip.dat` / `geosite.dat` | Same as cores — place in `runner/resources/` |
 

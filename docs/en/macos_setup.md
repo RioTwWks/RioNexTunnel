@@ -26,13 +26,12 @@ flutter config --enable-macos-desktop
 | Flutter app shell | Builds and runs |
 | `v2ray_box` macOS plugin | **Implemented** — `XrayProcess` / `SingboxProcess`, `start_with_json`, system proxy via `networksetup` |
 | Secure inbound injection | Done in Dart (`ConfigParser.injectSecureSocksInbound`) before `connectWithJson` |
-| System proxy integration | Uses `networksetup` on active network services (Wi‑Fi, Ethernet, …) |
-| E2E connect verification | **Pending** — see backlog in `.cursor/tasks.md` |
+| System proxy integration | HTTP/HTTPS via `networksetup` on `127.0.0.1:1081` when `set-system-proxy` is enabled |
+| Session credentials | `secure_vpn/credentials` channel; SOCKS `1080`, HTTP system proxy `1081` |
+| E2E connect verification | **Pending** — smoke test on physical Mac |
 | Browser extension / proxy auth helper | **Linux only today** — macOS has no native messaging host yet |
 
-macOS desktop uses **proxy mode** (`VpnMode.proxy`), not a system TUN VPN. **Connected** means the core process is running and system proxy is configured — not that all traffic is automatically tunneled without browser cooperation.
-
-> **Known gap:** the Swift plugin reads proxy port from `ConfigOptions` (`mixed-port` / `socks-port` defaults), while RioNexTunnel injects secure inbounds on ports **1080** (SOCKS) and **1081** (HTTP). Until the plugin is aligned with Linux (`system_proxy.cc`), verify proxy settings in **System Settings → Network → … → Details → Proxies** after Connect.
+macOS desktop uses **proxy mode** (`VpnMode.proxy`), not a system TUN VPN. **Connected** starts xray/sing-box with authenticated inbounds on `127.0.0.1:1080` (SOCKS) and `127.0.0.1:1081` (HTTP), and sets system HTTP proxy to `1081` when enabled in config options.
 
 ## Core binaries
 

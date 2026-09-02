@@ -68,9 +68,12 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [ ] Android: end-to-end connect on physical device (VPN/TUN mode)
 - [ ] iOS: Network Extension + connect smoke test
-- [ ] Windows: implement desktop plugin (mirror Linux `desktop_core.cc`)
-- [ ] macOS: align plugin ports with injected inbounds (1080/1081), verify proxy mode
-- [ ] Windows/macOS: `SystemProxy` integration (Linux-only today)
+- [x] Windows: implement desktop plugin (mirror Linux `desktop_core.cc`)
+- [x] macOS: align plugin ports with injected inbounds (1080/1081)
+- [ ] macOS: E2E verify proxy mode connect with bundled cores
+- [x] Windows: `SystemProxy` integration (registry + WinINet)
+- [x] macOS: session credentials channel + HTTP port 1081 parity with Linux
+- [ ] Windows: browser helper (native messaging host + extension)
 
 ### Engineering base
 
@@ -215,7 +218,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Cross-platform (Flutter) | ✅ Done | — |
 | Xray + sing-box | ✅ Done | — |
 | Secure SOCKS5 (auth, 127.0.0.1) | ✅ Done | — |
-| Desktop proxy mode | ✅ Linux; ⏳ Win/macOS | P0 |
+| Desktop proxy mode | ✅ Linux + Windows + macOS (verify on device) | P0 |
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
