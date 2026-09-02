@@ -93,6 +93,30 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         )
         logsChannel.setStreamHandler(LogsStreamHandler(plugin: instance))
         instance.logsChannel = logsChannel
+
+        let credentialsChannel = FlutterMethodChannel(
+            name: "secure_vpn/credentials",
+            binaryMessenger: registrar.messenger
+        )
+        credentialsChannel.setMethodCallHandler { call, result in
+            switch call.method {
+            case "setSessionCredentials":
+                let args = call.arguments as? [String: Any]
+                let username = args?["username"] as? String
+                let password = args?["password"] as? String
+                let port = args?["port"] as? Int ?? 1080
+                SecureVpnCredentials.setSession(username: username, password: password, port: port)
+                result(true)
+            case "clearSessionCredentials":
+                SecureVpnCredentials.clearSession()
+                V2rayBoxPlugin.wipeSensitiveConfigFiles()
+                result(true)
+            case "getLocalSocksPort":
+                result(SecureVpnCredentials.socksPort)
+            default:
+                result(FlutterMethodNotImplemented)
+            }
+        }
     }
     
     deinit {
@@ -102,6 +126,41 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             stopCore()
             disableSystemProxy()
         }
+        SecureVpnCredentials.clearSession()
+        V2rayBoxPlugin.wipeSensitiveConfigFiles()
+    }
+
+    private static func wipeSensitiveConfigFiles() {
+        let configPath = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("V2rayBox/working/profiles/active_config.json")
+        if let configPath {
+            try? FileManager.default.removeItem(at: configPath)
+        }
+    }
+
+    private func configOptionsSetSystemProxy() -> Bool {
+        configOptions.contains("\"set-system-proxy\":true") ||
+            configOptions.contains("\"set-system-proxy\": true")
+    }
+
+    private func applySessionCredentials(from args: [String: Any]) {
+        let username = args["socksUsername"] as? String
+        let password = args["socksPassword"] as? String
+        let port = args["socksPort"] as? Int
+        if username != nil || password != nil || port != nil {
+            SecureVpnCredentials.setSession(
+                username: username ?? SecureVpnCredentials.username,
+                password: password ?? SecureVpnCredentials.password,
+                port: port ?? SecureVpnCredentials.socksPort
+            )
+        }
+    }
+
+    private func enableSystemProxyIfConfigured() {
+        guard configOptionsSetSystemProxy(), !SecureVpnCredentials.username.isEmpty else {
+            return
+        }
+        enableSystemProxy(port: SecureVpnCredentials.httpProxyPort)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -228,12 +287,26 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             result(coreEngine)
             
         case "get_core_info":
+            let xrayAvailable = XrayProcess.shared.getBinaryPath() != nil
+            let singboxAvailable = SingboxProcess.shared.getBinaryPath() != nil
             if coreEngine == "xray" {
                 let version = XrayProcess.shared.getVersion()
-                result(["engine": "xray", "core": "xray-core", "version": version] as [String: Any])
+                result([
+                    "engine": "xray",
+                    "core": "xray-core",
+                    "version": version,
+                    "xray_available": xrayAvailable,
+                    "singbox_available": singboxAvailable,
+                ] as [String: Any])
             } else {
                 let version = SingboxProcess.shared.getVersion()
-                result(["engine": "singbox", "core": "sing-box", "version": version] as [String: Any])
+                result([
+                    "engine": "singbox",
+                    "core": "sing-box",
+                    "version": version,
+                    "xray_available": xrayAvailable,
+                    "singbox_available": singboxAvailable,
+                ] as [String: Any])
             }
             
         case "check_config_json":
@@ -255,8 +328,15 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 return
             }
             let name = args["name"] as? String ?? ""
-            startWithJson(configJson: configJson, name: name, result: result)
+            startWithJson(configJson: configJson, name: name, args: args, result: result)
             
+        case "get_browser_helper_status":
+            result([
+                "native_host_installed": false,
+                "chrome_manifest_installed": false,
+                "firefox_manifest_installed": false,
+            ] as [String: Any])
+
         case "get_logs":
             result([String]())
             
@@ -338,6 +418,21 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     
     // MARK: - Setup
     
+    private func ensureXrayGeoAssets() {
+        guard let xrayPath = XrayProcess.shared.getBinaryPath() else { return }
+        let assetDir = getWorkingDirectory().appendingPathComponent("assets", isDirectory: true)
+        try? FileManager.default.createDirectory(at: assetDir, withIntermediateDirectories: true)
+        let binaryDir = URL(fileURLWithPath: xrayPath).deletingLastPathComponent()
+        for geoFile in ["geoip.dat", "geosite.dat"] {
+            let dst = assetDir.appendingPathComponent(geoFile)
+            if FileManager.default.fileExists(atPath: dst.path) { continue }
+            let src = binaryDir.appendingPathComponent(geoFile)
+            if FileManager.default.fileExists(atPath: src.path) {
+                try? FileManager.default.copyItem(at: src, to: dst)
+            }
+        }
+    }
+
     private func setup(result: @escaping FlutterResult) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -351,6 +446,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 try fileManager.createDirectory(at: baseDir, withIntermediateDirectories: true)
                 try fileManager.createDirectory(at: workingDir, withIntermediateDirectories: true)
                 try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                self.ensureXrayGeoAssets()
                 
                 DispatchQueue.main.async {
                     result("")
@@ -427,8 +523,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 
                 if success {
                     self.isRunning = true
-                    let port = self.getProxyPort()
-                    self.enableSystemProxy(port: port)
+                    self.enableSystemProxyIfConfigured()
                     self.startCoreMonitor()
                     
                     DispatchQueue.main.async {
@@ -454,10 +549,10 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     }
     
     private func startCore(configPath: String) -> Bool {
+        let workDir = getWorkingDirectory().path
         if coreEngine == "xray" {
-            return XrayProcess.shared.start(configPath: configPath)
+            return XrayProcess.shared.start(configPath: configPath, workingDir: workDir)
         } else {
-            let workDir = getWorkingDirectory().path
             return SingboxProcess.shared.start(configPath: configPath, workingDir: workDir)
         }
     }
@@ -543,6 +638,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             
             self.stopCore()
             self.disableSystemProxy()
+            SecureVpnCredentials.clearSession()
+            V2rayBoxPlugin.wipeSensitiveConfigFiles()
             
             self.isRunning = false
             DispatchQueue.main.async {
@@ -587,8 +684,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 
                 if success {
                     self.isRunning = true
-                    let port = self.getProxyPort()
-                    self.enableSystemProxy(port: port)
+                    self.enableSystemProxyIfConfigured()
                     self.startCoreMonitor()
                     
                     DispatchQueue.main.async {
@@ -612,12 +708,15 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     
     // MARK: - Start With JSON
     
-    private func startWithJson(configJson: String, name: String, result: @escaping FlutterResult) {
+    private func startWithJson(configJson: String, name: String, args: [String: Any]?, result: @escaping FlutterResult) {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             
             do {
                 self.activeProfileName = name
+                if let args {
+                    self.applySessionCredentials(from: args)
+                }
                 
                 let configPath = self.getWorkingDirectory().appendingPathComponent("profiles/active_config.json")
                 try FileManager.default.createDirectory(at: configPath.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -630,8 +729,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 
                 if success {
                     self.isRunning = true
-                    let port = self.getProxyPort()
-                    self.enableSystemProxy(port: port)
+                    self.enableSystemProxyIfConfigured()
                     self.startCoreMonitor()
                     
                     DispatchQueue.main.async {
@@ -798,14 +896,12 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     private func enableSystemProxy(port: Int) {
         let host = "127.0.0.1"
         let services = getActiveNetworkServices()
-        print("V2rayBox: Setting system proxy on services: \(services)")
+        print("V2rayBox: Setting HTTP system proxy on services: \(services) port \(port)")
         for service in services {
             runNetworkSetup(["-setwebproxy", service, host, "\(port)"])
             runNetworkSetup(["-setsecurewebproxy", service, host, "\(port)"])
-            runNetworkSetup(["-setsocksfirewallproxy", service, host, "\(port)"])
             runNetworkSetup(["-setwebproxystate", service, "on"])
             runNetworkSetup(["-setsecurewebproxystate", service, "on"])
-            runNetworkSetup(["-setsocksfirewallproxystate", service, "on"])
         }
     }
     
@@ -814,7 +910,6 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         for service in services {
             runNetworkSetup(["-setwebproxystate", service, "off"])
             runNetworkSetup(["-setsecurewebproxystate", service, "off"])
-            runNetworkSetup(["-setsocksfirewallproxystate", service, "off"])
         }
     }
     
@@ -870,18 +965,6 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         } catch {
             return ["Wi-Fi"]
         }
-    }
-    
-    private func getProxyPort() -> Int {
-        if let data = configOptions.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            if coreEngine == "xray" {
-                return json["socks-port"] as? Int ?? 10808
-            } else {
-                return json["mixed-port"] as? Int ?? 2080
-            }
-        }
-        return coreEngine == "xray" ? 10808 : 2080
     }
     
     // MARK: - Get Active Config

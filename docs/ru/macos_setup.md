@@ -26,13 +26,12 @@ flutter config --enable-macos-desktop
 | Оболочка Flutter-приложения | Собирается и запускается |
 | Плагин `v2ray_box` для macOS | **Реализован** — `XrayProcess` / `SingboxProcess`, `start_with_json`, системный прокси через `networksetup` |
 | Безопасные inbound | Инъекция в Dart (`ConfigParser.injectSecureSocksInbound`) перед `connectWithJson` |
-| Системный прокси | `networksetup` на активных сетевых интерфейсах (Wi‑Fi, Ethernet, …) |
-| E2E-проверка Connect | **В процессе** — см. backlog в `.cursor/tasks.md` |
+| Системный прокси | HTTP/HTTPS через `networksetup` на `127.0.0.1:1081` при включённом `set-system-proxy` |
+| Учётные данные сессии | Канал `secure_vpn/credentials`; SOCKS `1080`, системный HTTP `1081` |
+| E2E-проверка Connect | **В процессе** — smoke test на физическом Mac |
 | Расширение браузера / proxy auth | **Только Linux** — native messaging host для macOS пока нет |
 
-На macOS desktop используется **proxy mode** (`VpnMode.proxy`), не системный TUN VPN. Статус **Connected** означает, что ядро запущено и системный прокси настроен — не что весь трафик автоматически идёт через VPN без участия браузера.
-
-> **Известный разрыв:** Swift-плагин берёт порт прокси из `ConfigOptions` (дефолты `mixed-port` / `socks-port`), а RioNexTunnel инжектирует безопасные inbound на порты **1080** (SOCKS) и **1081** (HTTP). Пока плагин не выровнен с Linux (`system_proxy.cc`), после Connect проверяйте **Системные настройки → Сеть → … → Подробнее → Прокси**.
+На macOS desktop используется **proxy mode** (`VpnMode.proxy`), не системный TUN VPN. **Connected** запускает xray/sing-box с аутентифицированными inbound на `127.0.0.1:1080` (SOCKS) и `127.0.0.1:1081` (HTTP) и выставляет системный HTTP-прокси на `1081`, если это включено в config options.
 
 ## Бинарники ядер
 
