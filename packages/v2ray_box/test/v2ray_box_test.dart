@@ -79,21 +79,17 @@ class MockV2rayBoxPlatform
   }
 
   @override
-  Future<bool> setQuickConnectButtonText(String text) async => true;
-
-  @override
-  Future<bool> updateQuickConnect({
-    required bool visible,
+  Future<bool> syncQuickSettingsTile({
+    required bool hasProfile,
     String profileName = '',
-    String statusText = '',
   }) async =>
       true;
 
   @override
-  Future<bool> consumePendingQuickConnect() async => false;
+  Future<String?> consumePendingTileAction() async => null;
 
   @override
-  Stream<void> watchQuickConnectRequests() => const Stream.empty();
+  Stream<String> watchQuickSettingsTileRequests() => const Stream.empty();
 
   @override
   Future<List<AppInfo>> getInstalledPackages() async => [

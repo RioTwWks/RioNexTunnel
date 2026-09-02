@@ -10,6 +10,7 @@ import '../models/engine_preference.dart';
 import '../models/vpn_engine.dart';
 import '../providers/vpn_providers.dart';
 import '../services/app_log.dart';
+import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
 import '../widgets/proxy_credentials_card.dart';
 
@@ -88,7 +89,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
-        _SectionCard(
+        FadeSlideIn(
+          child: _SectionCard(
           title: 'Appearance',
           subtitle: 'Theme applies on all platforms',
           child: SegmentedButton<ThemeMode>(
@@ -118,8 +120,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
         ),
+        ),
         const SizedBox(height: 14),
-        _SectionCard(
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 70),
+          child: _SectionCard(
           title: 'Core engine',
           subtitle: engineSubtitle,
           child: Column(
@@ -169,12 +174,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
+        ),
         if (desktopProxy) ...[
           const SizedBox(height: 14),
-          const BrowserHelperCard(),
+          const FadeSlideIn(
+            delay: Duration(milliseconds: 140),
+            child: BrowserHelperCard(),
+          ),
         ],
         const SizedBox(height: 14),
-        _SectionCard(
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 140),
+          child: _SectionCard(
           title: 'Security',
           child: Column(
             children: [
@@ -193,8 +204,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
         ),
+        ),
         const SizedBox(height: 14),
-        _SectionCard(
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 210),
+          child: _SectionCard(
           title: 'Diagnostics',
           child: ListTile(
             contentPadding: EdgeInsets.zero,
@@ -224,11 +238,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+        ),
         if (status == VpnStatus.started &&
             desktopProxy &&
             sessionCredentials != null) ...[
           const SizedBox(height: 14),
-          ProxyCredentialsCard(credentials: sessionCredentials),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 280),
+            child: ProxyCredentialsCard(credentials: sessionCredentials),
+          ),
         ],
       ],
     );

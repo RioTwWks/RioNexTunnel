@@ -100,33 +100,27 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
     throw UnimplementedError('setNotificationIcon() has not been implemented.');
   }
 
-  /// Set quick-connect button label in the disconnected notification shade.
-  Future<bool> setQuickConnectButtonText(String text) {
-    throw UnimplementedError(
-      'setQuickConnectButtonText() has not been implemented.',
-    );
-  }
-
-  /// Show or hide the disconnected quick-connect notification (mobile only).
-  Future<bool> updateQuickConnect({
-    required bool visible,
+  /// Sync Quick Settings tile state (Android). No-op on other platforms.
+  Future<bool> syncQuickSettingsTile({
+    required bool hasProfile,
     String profileName = '',
-    String statusText = '',
   }) {
-    throw UnimplementedError('updateQuickConnect() has not been implemented.');
-  }
-
-  /// True when app was opened from a quick-connect notification tap.
-  Future<bool> consumePendingQuickConnect() {
     throw UnimplementedError(
-      'consumePendingQuickConnect() has not been implemented.',
+      'syncQuickSettingsTile() has not been implemented.',
     );
   }
 
-  /// Fires when user taps Connect in the notification shade.
-  Stream<void> watchQuickConnectRequests() {
+  /// Pending connect/disconnect from tile when app was cold-started.
+  Future<String?> consumePendingTileAction() {
     throw UnimplementedError(
-      'watchQuickConnectRequests() has not been implemented.',
+      'consumePendingTileAction() has not been implemented.',
+    );
+  }
+
+  /// User tapped the Quick Settings VPN tile.
+  Stream<String> watchQuickSettingsTileRequests() {
+    throw UnimplementedError(
+      'watchQuickSettingsTileRequests() has not been implemented.',
     );
   }
 

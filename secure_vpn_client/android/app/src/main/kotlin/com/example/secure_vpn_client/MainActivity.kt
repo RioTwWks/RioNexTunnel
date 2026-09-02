@@ -8,19 +8,20 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        handleQuickConnectIntent(intent)
+        handleQuickTileIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleQuickConnectIntent(intent)
+        handleQuickTileIntent(intent)
     }
 
-    private fun handleQuickConnectIntent(intent: Intent?) {
-        if (intent?.getBooleanExtra(V2rayBoxPlugin.EXTRA_QUICK_CONNECT, false) == true) {
-            V2rayBoxPlugin.markPendingQuickConnect()
-            intent.removeExtra(V2rayBoxPlugin.EXTRA_QUICK_CONNECT)
+    private fun handleQuickTileIntent(intent: Intent?) {
+        val action = intent?.getStringExtra(V2rayBoxPlugin.EXTRA_QUICK_TILE_ACTION)
+        if (!action.isNullOrBlank()) {
+            V2rayBoxPlugin.markPendingTileAction(action)
+            intent.removeExtra(V2rayBoxPlugin.EXTRA_QUICK_TILE_ACTION)
         }
     }
 }
