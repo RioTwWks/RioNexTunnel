@@ -128,7 +128,7 @@ class SubscriptionLatencyProbe {
     required int timeoutMs,
   }) async {
     try {
-      final measure = PingConfigBuilder.build(content, engine);
+      final measure = await PingConfigBuilder.build(content, engine);
       return await _box.pingConfig(
         measure.configJson,
         engine: measure.engine.coreName,

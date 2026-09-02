@@ -45,14 +45,17 @@ class PingConfigBuilder {
     return preference;
   }
 
-  static PingMeasureConfig build(String content, VpnEngine preference) {
+  static Future<PingMeasureConfig> build(
+    String content,
+    VpnEngine preference,
+  ) async {
     final trimmed = content.trim();
     if (trimmed.isEmpty) {
       throw ConfigParserException('Empty server content for latency probe');
     }
 
     final engine = resolveEngine(trimmed, preference);
-    final socksPort = _allocateSocksPort();
+    final socksPort = await _allocateSocksPort();
     final outbound = _proxyOutboundFromContent(trimmed, engine);
     final configJson = engine == VpnEngine.singbox
         ? _buildSingboxMeasureConfig(outbound, socksPort)
@@ -214,11 +217,11 @@ class PingConfigBuilder {
     return jsonEncode(config);
   }
 
-  static int _allocateSocksPort() {
+  static Future<int> _allocateSocksPort() async {
     try {
-      final socket = RawSocket.bindSync(InternetAddress.loopbackIPv4, 0);
-      final port = socket.port;
-      socket.close();
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final port = server.port;
+      await server.close();
       return port;
     } catch (_) {
       return 10808;

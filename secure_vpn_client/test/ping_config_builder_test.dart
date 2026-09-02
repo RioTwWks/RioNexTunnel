@@ -20,8 +20,8 @@ void main() {
       );
     });
 
-    test('build creates xray measure config with socks inbound', () {
-      final measure = PingConfigBuilder.build(sampleVless, VpnEngine.xray);
+    test('build creates xray measure config with socks inbound', () async {
+      final measure = await PingConfigBuilder.build(sampleVless, VpnEngine.xray);
       expect(measure.engine, VpnEngine.xray);
       expect(measure.socksPort, greaterThan(0));
 
@@ -38,8 +38,8 @@ void main() {
       expect(outbounds.first['protocol'], 'vless');
     });
 
-    test('build creates sing-box measure config for sing-box-only link', () {
-      final measure = PingConfigBuilder.build(
+    test('build creates sing-box measure config for sing-box-only link', () async {
+      final measure = await PingConfigBuilder.build(
         'hy2://token@node.example.com:443',
         VpnEngine.xray,
       );
