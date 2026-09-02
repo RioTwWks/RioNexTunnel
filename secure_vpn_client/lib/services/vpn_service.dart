@@ -12,12 +12,13 @@ import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
+import '../utils/config_enhancer.dart';
 import '../utils/config_parser.dart';
 import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
+import '../utils/transport_presets.dart';
 import '../utils/server_latency.dart';
 import '../utils/subscription_latency_probe.dart';
-import '../models/kill_switch_mode.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
 import 'kill_switch_service.dart';
@@ -43,7 +44,6 @@ class VpnService {
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
   final KillSwitchService? _killSwitchService;
-  KillSwitchMode _killSwitchMode = KillSwitchMode.off;
   final String applicationId;
   final int socksPort;
 
@@ -91,10 +91,6 @@ class VpnService {
     if (!enabled) {
       _cancelReconnect();
     }
-  }
-
-  void setKillSwitchMode(KillSwitchMode mode) {
-    _killSwitchMode = mode;
   }
 
   /// Latest status first, then live updates. Prefer this over calling
@@ -310,34 +306,54 @@ class VpnService {
   }
 
   Future<String> resolveProfileConfig(Profile profile) async {
+    var linkForBuild = profile.configLink.trim();
+    if (profile.type == ProfileType.link &&
+        profile.censorshipModeEnabled &&
+        profile.transportPreset != null &&
+        LinkConfigBuilder.isConfigLink(linkForBuild)) {
+      linkForBuild = TransportPresets.applyPresetToLink(
+        linkForBuild,
+        preset: profile.transportPreset!,
+        fingerprint: profile.tlsFingerprint,
+      );
+    }
+
     final raw = profile.type == ProfileType.subscription
         ? await ConfigParser.parseFromUrl(
             profile.configLink,
             engine: _engine,
             serverIndex: profile.selectedServerIndex,
           )
-        : profile.configLink.trim();
+        : linkForBuild;
 
+    String jsonConfig;
     if (raw.startsWith('{')) {
-      return raw;
-    }
-    if (raw.startsWith('[')) {
+      jsonConfig = raw;
+    } else if (raw.startsWith('[')) {
       final decoded = jsonDecode(raw) as List<dynamic>;
       if (decoded.isEmpty || decoded.first is! Map) {
         throw StateError('Subscription JSON array is empty');
       }
-      return jsonEncode(decoded.first);
+      jsonConfig = jsonEncode(decoded.first);
+    } else if (LinkConfigBuilder.isConfigLink(raw)) {
+      jsonConfig = LinkConfigBuilder.buildFromLink(
+        raw,
+        _engine,
+        options: LinkBuildOptions.fromProfile(profile),
+      );
+    } else {
+      try {
+        jsonConfig = await _v2rayBox.generateConfig(raw);
+      } on PlatformException {
+        jsonConfig = LinkConfigBuilder.buildFromLink(
+          raw,
+          _engine,
+          options: LinkBuildOptions.fromProfile(profile),
+        );
+      }
     }
 
-    if (LinkConfigBuilder.isConfigLink(raw)) {
-      return LinkConfigBuilder.buildFromLink(raw, _engine);
-    }
-
-    try {
-      return await _v2rayBox.generateConfig(raw);
-    } on PlatformException {
-      return LinkConfigBuilder.buildFromLink(raw, _engine);
-    }
+    return ConfigEnhancer.applyProfileSettings(jsonConfig, profile, _engine);
   }
 
   /// Fetches subscription and returns selectable non-decoy servers.

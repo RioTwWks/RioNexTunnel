@@ -69,5 +69,35 @@ void main() {
         isTrue,
       );
     });
+
+    test('proxyOnly config stays secure regardless of split tunnel state', () {
+      const config = '''
+{
+  "inbounds": [],
+  "outbounds": [{ "protocol": "freedom" }]
+}
+''';
+      final credentials = CredentialService().generate();
+      for (final engine in VpnEngine.values) {
+        final secure = ConfigParser.injectSecureSocksInbound(
+          config,
+          credentials,
+          engine,
+          proxyOnly: true,
+        );
+        final decoded = jsonDecode(secure) as Map<String, dynamic>;
+        for (final inbound in decoded['inbounds'] as List) {
+          final map = inbound as Map;
+          expect(map['listen'], '127.0.0.1');
+        }
+        expect(
+          (decoded['inbounds'] as List).any(
+            (inbound) =>
+                (inbound as Map)['port'] == ConfigParser.vulnerablePort,
+          ),
+          isFalse,
+        );
+      }
+    });
   });
 }

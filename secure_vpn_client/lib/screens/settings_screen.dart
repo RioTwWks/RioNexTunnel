@@ -7,8 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/engine_preference.dart';
+import '../models/split_tunnel_settings.dart';
 import '../models/vpn_engine.dart';
 import '../providers/per_app_proxy_provider.dart';
+import '../providers/profile_advanced_provider.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
@@ -16,12 +18,24 @@ import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
 import '../widgets/kill_switch_card.dart';
 import '../widgets/proxy_credentials_card.dart';
+import '../widgets/split_tunnel_desktop_banner.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+String _splitTunnelModeDescription(SplitTunnelMode mode) {
+  switch (mode) {
+    case SplitTunnelMode.off:
+      return 'All apps use the VPN tunnel.';
+    case SplitTunnelMode.include:
+      return 'Whitelist: only selected apps are routed through VPN.';
+    case SplitTunnelMode.exclude:
+      return 'Blacklist: selected apps connect directly without VPN.';
+  }
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
@@ -83,6 +97,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final perAppProxy = ref.watch(perAppProxyProvider);
+    final ruDirectDefault = ref.watch(ruDirectRoutingDefaultProvider);
     final androidVpn = !kIsWeb && Platform.isAndroid;
     final scheme = Theme.of(context).colorScheme;
     final engineSubtitle = preference.isAuto
@@ -187,13 +202,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: BrowserHelperCard(),
           ),
         ],
+        if (desktopProxy) ...[
+          const SizedBox(height: 14),
+          const FadeSlideIn(
+            delay: Duration(milliseconds: 175),
+            child: SplitTunnelDesktopBanner(),
+          ),
+        ],
         if (androidVpn) ...[
           const SizedBox(height: 14),
           FadeSlideIn(
             delay: const Duration(milliseconds: 175),
             child: _SectionCard(
               title: 'Split tunneling',
-              subtitle: 'Selected apps connect directly, without VPN',
+              subtitle: 'Choose which apps use the VPN tunnel (Android)',
               child: perAppProxy.loading
                   ? const Center(
                       child: Padding(
@@ -204,45 +226,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SwitchListTile(
-                          key: const ValueKey('per_app_proxy_toggle'),
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Exclude selected apps'),
-                          subtitle: const Text(
-                            'Traffic from excluded apps bypasses the VPN tunnel',
-                          ),
-                          value: perAppProxy.excludeEnabled,
-                          onChanged: (enabled) => ref
+                        SegmentedButton<SplitTunnelMode>(
+                          key: const ValueKey('split_tunnel_mode_selector'),
+                          segments: const [
+                            ButtonSegment(
+                              value: SplitTunnelMode.off,
+                              label: Text('Off'),
+                              icon: Icon(Icons.public_outlined, size: 18),
+                            ),
+                            ButtonSegment(
+                              value: SplitTunnelMode.include,
+                              label: Text('VPN only'),
+                              icon: Icon(Icons.verified_user_outlined, size: 18),
+                            ),
+                            ButtonSegment(
+                              value: SplitTunnelMode.exclude,
+                              label: Text('Bypass'),
+                              icon: Icon(Icons.open_in_browser_outlined, size: 18),
+                            ),
+                          ],
+                          selected: {perAppProxy.mode},
+                          onSelectionChanged: (selection) => ref
                               .read(perAppProxyProvider.notifier)
-                              .setExcludeEnabled(enabled),
+                              .setMode(selection.first),
                         ),
-                        if (perAppProxy.excludeEnabled) ...[
-                          const SizedBox(height: 4),
+                        const SizedBox(height: 8),
+                        Text(
+                          _splitTunnelModeDescription(perAppProxy.mode),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (perAppProxy.isEnabled) ...[
+                          const SizedBox(height: 8),
                           ListTile(
-                            key: const ValueKey('manage_excluded_apps'),
+                            key: const ValueKey('manage_split_tunnel_apps'),
                             contentPadding: EdgeInsets.zero,
                             leading: Icon(
                               Icons.apps_outlined,
                               color: scheme.primary,
                             ),
-                            title: const Text('Manage excluded apps'),
+                            title: Text(
+                              perAppProxy.isIncludeMode
+                                  ? 'Apps using VPN'
+                                  : 'Apps bypassing VPN',
+                            ),
                             subtitle: Text(
-                              perAppProxy.excludedPackages.isEmpty
+                              perAppProxy.selectedPackages.isEmpty
                                   ? 'No apps selected'
-                                  : '${perAppProxy.excludedPackages.length} app(s) excluded',
+                                  : '${perAppProxy.selectedPackages.length} app(s) selected',
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (_) => const PerAppProxyScreen(),
+                                  builder: (_) => PerAppProxyScreen(
+                                    mode: perAppProxy.mode,
+                                  ),
                                 ),
                               );
                             },
                           ),
                           if (status == VpnStatus.started)
                             Text(
-                              'Reconnect VPN after changing excluded apps.',
+                              'Reconnect VPN after changing split tunnel apps.',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: scheme.onSurfaceVariant),
                             ),
@@ -254,6 +301,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
         const SizedBox(height: 14),
         const KillSwitchCard(),
+        const SizedBox(height: 14),
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 175),
+          child: _SectionCard(
+            title: 'Censorship resistance',
+            subtitle: 'Transport presets, uTLS fingerprint, RU routing',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SwitchListTile(
+                  key: const ValueKey('ru_direct_default_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('RU sites direct (default for new profiles)'),
+                  subtitle: const Text(
+                    'When censorship wizard is enabled, route Russian sites/IP direct',
+                  ),
+                  value: ruDirectDefault,
+                  onChanged: (enabled) => ref
+                      .read(ruDirectRoutingDefaultProvider.notifier)
+                      .setEnabled(enabled),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.menu_book_outlined, color: scheme.primary),
+                  title: const Text('When to use which stack'),
+                  subtitle: const Text(
+                    'docs/en/censorship_resistance.md — REALITY vs TLS, XHTTP, mux',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 140),

@@ -1,3 +1,5 @@
+import 'transport_preset.dart';
+
 enum ProfileType { link, subscription }
 
 class Profile {
@@ -9,21 +11,27 @@ class Profile {
     this.selectedServerIndex = 0,
     this.selectedServerName,
     this.autoSelectBestServer = false,
+    this.censorshipModeEnabled = false,
+    this.transportPreset,
+    this.tlsFingerprint = TlsFingerprint.firefox,
+    this.muxEnabled = false,
+    this.muxConcurrency = 8,
+    this.ruDirectRouting = false,
   });
 
   final String id;
   final String name;
   final String configLink;
   final ProfileType type;
-
-  /// Index into the subscription's non-decoy server list (subscriptions only).
   final int selectedServerIndex;
-
-  /// Last known display name for [selectedServerIndex] (optional cache).
   final String? selectedServerName;
-
-  /// When true, [VpnService.connect] probes latency and picks the best node.
   final bool autoSelectBestServer;
+  final bool censorshipModeEnabled;
+  final TransportPresetId? transportPreset;
+  final TlsFingerprint tlsFingerprint;
+  final bool muxEnabled;
+  final int muxConcurrency;
+  final bool ruDirectRouting;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -33,9 +41,23 @@ class Profile {
     'selectedServerIndex': selectedServerIndex,
     if (selectedServerName != null) 'selectedServerName': selectedServerName,
     'autoSelectBestServer': autoSelectBestServer,
+    'censorshipModeEnabled': censorshipModeEnabled,
+    if (transportPreset != null) 'transportPreset': transportPreset!.storageName,
+    'tlsFingerprint': tlsFingerprint.wireValue,
+    'muxEnabled': muxEnabled,
+    'muxConcurrency': muxConcurrency,
+    'ruDirectRouting': ruDirectRouting,
   };
 
   factory Profile.fromJson(Map<String, dynamic> json) {
+    final presetRaw = json['transportPreset'] as String?;
+    TransportPresetId? preset;
+    if (presetRaw != null) {
+      preset = TransportPresetId.values.firstWhere(
+        (p) => p.storageName == presetRaw,
+        orElse: () => TransportPresetId.xhttpReality,
+      );
+    }
     return Profile(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -47,6 +69,14 @@ class Profile {
       selectedServerIndex: (json['selectedServerIndex'] as num?)?.toInt() ?? 0,
       selectedServerName: json['selectedServerName'] as String?,
       autoSelectBestServer: json['autoSelectBestServer'] as bool? ?? false,
+      censorshipModeEnabled: json['censorshipModeEnabled'] as bool? ?? false,
+      transportPreset: preset,
+      tlsFingerprint: TlsFingerprintJson.fromWire(
+        json['tlsFingerprint'] as String?,
+      ),
+      muxEnabled: json['muxEnabled'] as bool? ?? false,
+      muxConcurrency: (json['muxConcurrency'] as num?)?.toInt() ?? 8,
+      ruDirectRouting: json['ruDirectRouting'] as bool? ?? false,
     );
   }
 
@@ -59,6 +89,13 @@ class Profile {
     String? selectedServerName,
     bool clearSelectedServerName = false,
     bool? autoSelectBestServer,
+    bool? censorshipModeEnabled,
+    TransportPresetId? transportPreset,
+    bool clearTransportPreset = false,
+    TlsFingerprint? tlsFingerprint,
+    bool? muxEnabled,
+    int? muxConcurrency,
+    bool? ruDirectRouting,
   }) {
     return Profile(
       id: id ?? this.id,
@@ -70,6 +107,15 @@ class Profile {
           ? null
           : (selectedServerName ?? this.selectedServerName),
       autoSelectBestServer: autoSelectBestServer ?? this.autoSelectBestServer,
+      censorshipModeEnabled:
+          censorshipModeEnabled ?? this.censorshipModeEnabled,
+      transportPreset: clearTransportPreset
+          ? null
+          : (transportPreset ?? this.transportPreset),
+      tlsFingerprint: tlsFingerprint ?? this.tlsFingerprint,
+      muxEnabled: muxEnabled ?? this.muxEnabled,
+      muxConcurrency: muxConcurrency ?? this.muxConcurrency,
+      ruDirectRouting: ruDirectRouting ?? this.ruDirectRouting,
     );
   }
 }

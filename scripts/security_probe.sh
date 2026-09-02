@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Security probe — verifies SOCKS requires authentication.
+# Safe to run with split tunneling enabled; per-app routing must not
+# expose unauthenticated localhost listeners.
+
 HOST="${SOCKS_HOST:-127.0.0.1}"
 PORT="${SOCKS_PORT:-1080}"
 USER="${SOCKS_USER:-}"
