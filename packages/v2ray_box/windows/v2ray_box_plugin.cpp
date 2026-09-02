@@ -6,7 +6,6 @@
 #include <flutter/event_channel.h>
 #include <flutter/event_sink.h>
 #include <flutter/event_stream_handler_functions.h>
-#include <flutter/json_method_codec.h>
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
@@ -201,7 +200,7 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
   auto status_channel =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
           registrar->messenger(), "v2ray_box/status",
-          &flutter::JsonMethodCodec::GetInstance());
+          &flutter::StandardMethodCodec::GetInstance());
   status_channel->SetStreamHandler(
       std::make_unique<flutter::StreamHandlerFunctions<flutter::EncodableValue>>(
           [](const flutter::EncodableValue* arguments,
@@ -225,25 +224,25 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
   auto stats_channel =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
           registrar->messenger(), "v2ray_box/stats",
-          &flutter::JsonMethodCodec::GetInstance());
+          &flutter::StandardMethodCodec::GetInstance());
   stats_channel->SetStreamHandler(MakeNoopStreamHandler());
 
   auto alerts_channel =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
           registrar->messenger(), "v2ray_box/alerts",
-          &flutter::JsonMethodCodec::GetInstance());
+          &flutter::StandardMethodCodec::GetInstance());
   alerts_channel->SetStreamHandler(MakeNoopStreamHandler());
 
   auto ping_channel =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
           registrar->messenger(), "v2ray_box/ping",
-          &flutter::JsonMethodCodec::GetInstance());
+          &flutter::StandardMethodCodec::GetInstance());
   ping_channel->SetStreamHandler(MakeNoopStreamHandler());
 
   auto logs_channel =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
           registrar->messenger(), "v2ray_box/logs",
-          &flutter::JsonMethodCodec::GetInstance());
+          &flutter::StandardMethodCodec::GetInstance());
   logs_channel->SetStreamHandler(MakeNoopStreamHandler());
 
   registrar->AddPlugin(std::move(plugin));

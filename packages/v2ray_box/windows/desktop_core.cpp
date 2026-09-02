@@ -20,6 +20,17 @@ namespace {
 constexpr const char* kXrayName = "xray.exe";
 constexpr const char* kSingboxName = "sing-box.exe";
 
+std::string GetEnvVar(const char* name) {
+  char* buffer = nullptr;
+  size_t length = 0;
+  if (_dupenv_s(&buffer, &length, name) != 0 || buffer == nullptr) {
+    return "";
+  }
+  std::string value(buffer);
+  free(buffer);
+  return value;
+}
+
 std::wstring Utf8ToWide(const std::string& value) {
   if (value.empty()) {
     return L"";
@@ -333,8 +344,8 @@ void EnsureXrayGeoAssets(const std::string& work_dir,
     AppendUnique(&candidates,
                  JoinPath(binary_dir, std::string("resources\\") + geo_file));
 
-    const char* core_dir = getenv("V2RAY_BOX_CORE_DIR");
-    if (core_dir != nullptr) {
+    const std::string core_dir = GetEnvVar("V2RAY_BOX_CORE_DIR");
+    if (!core_dir.empty()) {
       AppendUnique(&candidates, JoinPath(core_dir, geo_file));
     }
 
@@ -357,16 +368,16 @@ bool IsValidJson(const std::string& json) {
 std::string DesktopCore::FindBinary(const std::string& engine) const {
   const bool singbox = engine == "singbox";
   const char* binary_name = singbox ? kSingboxName : kXrayName;
-  const char* env_override = singbox ? getenv("V2RAY_BOX_SINGBOX_PATH")
-                                     : getenv("V2RAY_BOX_XRAY_PATH");
+  const std::string env_override =
+      singbox ? GetEnvVar("V2RAY_BOX_SINGBOX_PATH") : GetEnvVar("V2RAY_BOX_XRAY_PATH");
 
   std::vector<std::string> candidates;
-  if (env_override != nullptr && env_override[0] != '\0') {
+  if (!env_override.empty()) {
     AppendUnique(&candidates, env_override);
   }
 
-  const char* core_dir = getenv("V2RAY_BOX_CORE_DIR");
-  if (core_dir != nullptr) {
+  const std::string core_dir = GetEnvVar("V2RAY_BOX_CORE_DIR");
+  if (!core_dir.empty()) {
     AppendUnique(&candidates, JoinPath(core_dir, binary_name));
   }
 
@@ -404,8 +415,9 @@ std::string DesktopCore::Start(const std::string& engine,
   KillOrphanCoreProcesses(config_path);
 
   int socks_port = 1080;
-  if (const char* port_env = getenv("SECURE_VPN_SOCKS_PORT")) {
-    socks_port = std::atoi(port_env);
+  const std::string port_env = GetEnvVar("SECURE_VPN_SOCKS_PORT");
+  if (!port_env.empty()) {
+    socks_port = std::atoi(port_env.c_str());
   }
   if (socks_port <= 0) {
     socks_port = 1080;
@@ -430,11 +442,13 @@ std::string DesktopCore::Start(const std::string& engine,
   }
   SetHandleInformation(read_pipe, HANDLE_FLAG_INHERIT, 0);
 
-  if (const char* user = getenv("SECURE_VPN_SOCKS_USER")) {
-    _putenv_s("SECURE_VPN_SOCKS_USER", user);
+  const std::string user = GetEnvVar("SECURE_VPN_SOCKS_USER");
+  if (!user.empty()) {
+    _putenv_s("SECURE_VPN_SOCKS_USER", user.c_str());
   }
-  if (const char* pass = getenv("SECURE_VPN_SOCKS_PASS")) {
-    _putenv_s("SECURE_VPN_SOCKS_PASS", pass);
+  const std::string pass = GetEnvVar("SECURE_VPN_SOCKS_PASS");
+  if (!pass.empty()) {
+    _putenv_s("SECURE_VPN_SOCKS_PASS", pass.c_str());
   }
 
   const std::string asset_dir = JoinPath(work_dir, "assets");
