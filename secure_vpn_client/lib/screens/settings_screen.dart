@@ -14,6 +14,7 @@ import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
+import '../widgets/kill_switch_card.dart';
 import '../widgets/proxy_credentials_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -251,6 +252,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
+        const SizedBox(height: 14),
+        const KillSwitchCard(),
         const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 140),

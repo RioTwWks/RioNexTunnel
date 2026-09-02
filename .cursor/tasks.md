@@ -104,15 +104,15 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 > Block traffic when VPN/core drops unexpectedly — critical security feature.
 
-- [ ] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
-- [ ] Strict mode — block all outbound internet when core/tunnel is down
-- [ ] Adaptive mode — block only selected apps (per-app)
-- [ ] Linux — iptables/nftables or NetworkManager firewall rules; remove on clean disconnect
-- [ ] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
-- [ ] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
-- [ ] UI — Strict / Adaptive / Off toggle in Settings
-- [ ] Tests — simulate core crash, verify no leak (integration test)
-- [ ] Docs — kill switch limitations in proxy mode vs TUN mode
+- [x] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
+- [x] Strict mode — block all outbound internet when core/tunnel is down
+- [ ] Adaptive mode — block only selected apps (per-app) — deferred for Agent B split tunneling
+- [x] Linux — iptables/nftables firewall rules; remove on clean disconnect
+- [x] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
+- [x] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
+- [x] UI — Strict / Adaptive / Off toggle in Settings
+- [x] Tests — simulate core crash, verify no leak (integration test)
+- [x] Docs — kill switch limitations in proxy mode vs TUN mode
 
 ### Split Tunneling
 
@@ -443,7 +443,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
-| Kill Switch | ❌ Missing | **P1** |
+| Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
 | Split Tunneling | ❌ Missing | **P1** |
 | Obfuscation / DPI (UX) | ⚠️ Via protocols, no UI | **P1** |
 | XHTTP + stream-one | ❌ Missing | **P1** |

@@ -133,6 +133,9 @@ class VPNService : VpnService(), PlatformInterfaceWrapper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false)
         }
+        if (Settings.killSwitchMode == "strict") {
+            builder.setBlocking(true)
+        }
         registerDefaultNetworkCallback()
 
         if (Settings.perAppProxyEnabled) {

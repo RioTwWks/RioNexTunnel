@@ -28,6 +28,7 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Security | [en/security.md](en/security.md) | [ru/security.md](ru/security.md) |
 | Browser extension | [en/browser_extension.md](en/browser_extension.md) | [ru/browser_extension.md](ru/browser_extension.md) |
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
+| Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
 
 For AI agents and contributors, see also [.cursor/AGENTS.md](../.cursor/AGENTS.md) (English).

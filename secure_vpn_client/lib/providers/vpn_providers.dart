@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,8 @@ import '../models/connection_detail.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
+import '../models/kill_switch_mode.dart';
+import '../providers/kill_switch_provider.dart';
 import '../services/vpn_service.dart';
 
 const _profilesKey = 'vpn_profiles';
@@ -19,7 +22,12 @@ const _engineKey = 'vpn_engine';
 const _enginePreferenceKey = 'vpn_engine_preference';
 
 final vpnServiceProvider = Provider<VpnService>((ref) {
-  final service = VpnService();
+  final killSwitch = ref.watch(killSwitchServiceProvider);
+  final service = VpnService(killSwitchService: killSwitch);
+  ref.listen<KillSwitchMode>(killSwitchModeProvider, (previous, next) {
+    service.setKillSwitchMode(next);
+    unawaited(killSwitch.loadMode(next));
+  }, fireImmediately: true);
   ref.onDispose(() {
     service.disconnect();
   });

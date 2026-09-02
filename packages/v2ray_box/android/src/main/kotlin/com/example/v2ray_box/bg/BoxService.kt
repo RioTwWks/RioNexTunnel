@@ -765,6 +765,7 @@ class BoxService(
             emitServiceLog("Service stopped", force = true)
 
             Settings.startedByUser = false
+            Settings.killSwitchEngaged = false
             status.postValue(Status.Stopped)
         }
     }
@@ -852,9 +853,20 @@ class BoxService(
         Log.d(TAG, "CoreCallbackHandler: shutdown")
         emitServiceLog("Core callback: shutdown", force = true)
         mainHandler.post {
-            stopService()
+            if (Settings.killSwitchMode == "strict") {
+                engageKillSwitchOnCoreDrop()
+            } else {
+                stopService()
+            }
         }
         return 0
+    }
+
+    private fun engageKillSwitchOnCoreDrop() {
+        emitServiceLog("Kill switch: engaging after core shutdown", force = true)
+        Settings.killSwitchEngaged = true
+        stopCore(async = true, closeTun = false)
+        notification.show(activeProfileName, "Kill switch active")
     }
 
     override fun onEmitStatus(status: Long, message: String?): Long {
@@ -866,7 +878,11 @@ class BoxService(
         }
         if (message?.contains("core stopped", ignoreCase = true) == true) {
             mainHandler.post {
-                stopService()
+                if (Settings.killSwitchMode == "strict") {
+                    engageKillSwitchOnCoreDrop()
+                } else {
+                    stopService()
+                }
             }
         }
         return 0

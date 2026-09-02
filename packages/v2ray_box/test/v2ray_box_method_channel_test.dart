@@ -115,6 +115,25 @@ void main() {
           return true;
         case 'get_ping_test_url':
           return 'http://test.com';
+        case 'set_kill_switch_mode':
+          return true;
+        case 'arm_kill_switch':
+          return true;
+        case 'engage_kill_switch':
+          return true;
+        case 'disengage_kill_switch':
+          return true;
+        case 'release_kill_switch':
+          return true;
+        case 'get_kill_switch_status':
+          return {
+            'mode': 'strict',
+            'armed': true,
+            'engaged': false,
+            'available': true,
+          };
+        case 'is_core_running':
+          return true;
         default:
           return null;
       }
@@ -332,6 +351,25 @@ void main() {
 
     test('setLocale', () async {
       expect(await platform.setLocale('fa'), isTrue);
+    });
+  });
+
+  group('MethodChannel kill switch', () {
+    test('setKillSwitchMode and status', () async {
+      final box = V2rayBox();
+      expect(await box.setKillSwitchMode('strict'), isTrue);
+      final status = await box.getKillSwitchStatus();
+      expect(status['mode'], 'strict');
+      expect(status['armed'], isTrue);
+    });
+
+    test('arm engage release cycle', () async {
+      final box = V2rayBox();
+      expect(await box.armKillSwitch(socksPort: 1080), isTrue);
+      expect(await box.engageKillSwitch(), isTrue);
+      expect(await box.disengageKillSwitch(), isTrue);
+      expect(await box.releaseKillSwitch(), isTrue);
+      expect(await box.isCoreRunning(), isTrue);
     });
   });
 }
