@@ -104,15 +104,15 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 > Block traffic when VPN/core drops unexpectedly — critical security feature.
 
-- [ ] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
-- [ ] Strict mode — block all outbound internet when core/tunnel is down
-- [ ] Adaptive mode — block only selected apps (per-app)
-- [ ] Linux — iptables/nftables or NetworkManager firewall rules; remove on clean disconnect
-- [ ] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
-- [ ] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
-- [ ] UI — Strict / Adaptive / Off toggle in Settings
-- [ ] Tests — simulate core crash, verify no leak (integration test)
-- [ ] Docs — kill switch limitations in proxy mode vs TUN mode
+- [x] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
+- [x] Strict mode — block all outbound internet when core/tunnel is down
+- [ ] Adaptive mode — block only selected apps (per-app) — deferred for Agent B split tunneling
+- [x] Linux — iptables/nftables or NetworkManager firewall rules; remove on clean disconnect
+- [x] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
+- [x] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
+- [x] UI — Strict / Adaptive / Off toggle in Settings
+- [x] Tests — simulate core crash, verify no leak (integration test)
+- [x] Docs — kill switch limitations in proxy mode vs TUN mode
 
 ### Split Tunneling
 
@@ -131,11 +131,11 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 > Protocols supported by cores, but no presets or wizard for censorship bypass. See **P1 — censorship resistance** below for RKN/TSPU-specific backlog.
 
-- [ ] Transport presets — WebSocket+TLS, gRPC, HTTPUpgrade, REALITY (xray), uTLS fingerprint
-- [ ] UI wizard — "censorship mode" when importing or editing a profile
-- [ ] Auto-detect — suggest transport from subscription metadata when available
-- [ ] Docs — when to use Trojan/VLESS+REALITY vs plain TLS
-- [ ] Tests — validate generated xray/sing-box JSON (no real DPI test needed)
+- [x] Transport presets — WebSocket+TLS, gRPC, HTTPUpgrade, REALITY (xray), uTLS fingerprint
+- [x] UI wizard — "censorship mode" when importing or editing a profile
+- [x] Auto-detect — suggest transport from subscription metadata when available
+- [x] Docs — when to use Trojan/VLESS+REALITY vs plain TLS
+- [x] Tests — validate generated xray/sing-box JSON (no real DPI test needed)
 
 ---
 
@@ -273,41 +273,41 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 1 — XHTTP transport
 
-- [ ] `LinkConfigBuilder` — parse `vless://` / subscription params: `type=xhttp`, `path`, `host`, `mode`
-- [ ] Default generated XHTTP outbound: `"mode": "stream-one"` when mode omitted
+- [x] `LinkConfigBuilder` — parse `vless://` / subscription params: `type=xhttp`, `path`, `host`, `mode`
+- [x] Default generated XHTTP outbound: `"mode": "stream-one"` when mode omitted
 - [ ] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
-- [ ] Validation warning if `mode: auto` detected in imported config
-- [ ] Tests — round-trip XHTTP link → JSON → required fields present (`stream-one`)
-- [ ] Docs — XHTTP+Reality as 2026 default; link param reference in `docs/`
+- [x] Validation warning if `mode: auto` detected in imported config
+- [x] Tests — round-trip XHTTP link → JSON → required fields present (`stream-one`)
+- [x] Docs — XHTTP+Reality as 2026 default; link param reference in `docs/`
 
 ### 2 — mux (mobile fallback stack)
 
-- [ ] Profile setting: **Enable mux** with `concurrency` (default `8`) for VLESS+TLS profiles
-- [ ] Apply mux only when user enables or profile tag is `mux` / `mobile` (do not force globally)
+- [x] Profile setting: **Enable mux** with `concurrency` (default `8`) for VLESS+TLS profiles
+- [x] Apply mux only when user enables or profile tag is `mux` / `mobile` (do not force globally)
 - [ ] Desktop proxy mode — document that mux is optional and often unnecessary when XHTTP is available
 - [ ] `ping_config_builder` — respect mux for latency probes or strip consistently (today: strips mux)
-- [ ] Tests — mux injected only when setting on; sing-box vs xray field names
+- [x] Tests — mux injected only when setting on; sing-box vs xray field names
 
 ### 3 — uTLS / TLS fingerprint (ClientHello obfuscation)
 
-- [ ] UI: **TLS fingerprint** picker — `firefox`, `edge`, `chrome`, `safari`, `random` (advanced)
-- [ ] Sensible default: **`firefox`** or **`edge`** (2026 RU blocks reportedly flag `chrome`/`safari` more often)
-- [ ] `LinkConfigBuilder` — stop defaulting `fp` to `chrome` when absent; use profile default or `firefox`
-- [ ] Ensure xray `fingerprint` + sing-box `utls.fingerprint` stay in sync when editing profile
-- [ ] Subscription import — honor `fp` from link; allow override in profile without rewriting server URL
-- [ ] Tests — fingerprint flows into outbound JSON for both engines
+- [x] UI: **TLS fingerprint** picker — `firefox`, `edge`, `chrome`, `safari`, `random` (advanced)
+- [x] Sensible default: **`firefox`** or **`edge`** (2026 RU blocks reportedly flag `chrome`/`safari` more often)
+- [x] `LinkConfigBuilder` — stop defaulting `fp` to `chrome` when absent; use profile default or `firefox`
+- [x] Ensure xray `fingerprint` + sing-box `utls.fingerprint` stay in sync when editing profile
+- [x] Subscription import — honor `fp` from link; allow override in profile without rewriting server URL
+- [x] Tests — fingerprint flows into outbound JSON for both engines
 
 ### 4 — Smart routing (RU split tunnel preset)
 
 > Overlaps with **Split Tunneling** above; this preset is censorship-specific.
 
-- [ ] Preset: **RU direct** — `geosite:ru`, `geoip:ru`, and common RU domains (Yandex, Gosuslugi, major banks) → `direct` / bypass tunnel
-- [ ] All other traffic → proxy outbound (existing subscription routing merged, not replaced)
-- [ ] Desktop proxy mode — document limits (browser/OS may ignore app routing rules)
-- [ ] Requires geo assets (`geoip.dat`, `geosite.dat`); fail closed with clear error if rules reference geo but assets missing
-- [ ] Security — direct path must not expose unauthenticated localhost SOCKS; no bypass via `127.0.0.1` scanning
-- [ ] UI toggle: **Censorship preset: RU sites direct** in Advanced → Routing
-- [ ] Tests — generated routing rules contain expected `geosite:ru` / `geoip:ru` tags
+- [x] Preset: **RU direct** — `geosite:ru`, `geoip:ru`, and common RU domains (Yandex, Gosuslugi, major banks) → `direct` / bypass tunnel
+- [x] All other traffic → proxy outbound (existing subscription routing merged, not replaced)
+- [x] Desktop proxy mode — document limits (browser/OS may ignore app routing rules)
+- [x] Requires geo assets (`geoip.dat`, `geosite.dat`); fail closed with clear error if rules reference geo but assets missing
+- [x] Security — direct path must not expose unauthenticated localhost SOCKS; no bypass via `127.0.0.1` scanning
+- [x] UI toggle: **Censorship preset: RU sites direct** in Advanced → Routing
+- [x] Tests — generated routing rules contain expected `geosite:ru` / `geoip:ru` tags
 
 ### 5 — Protocol & server auto-fallback
 
@@ -315,7 +315,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [ ] Default probe order: `VLESS+Reality+XHTTP` → `VLESS+TLS+mux` → `TCP+Reality+Vision` → `AmneziaWG` (if present)
 - [ ] On connect failure or mid-session drop — try next candidate with exponential backoff (reuse P0 reconnect)
 - [ ] Persist last working stack per server (latency + success rate) for faster reconnect
-- [ ] UI: show active transport stack (e.g. "XHTTP · Reality · firefox") without secrets
+- [x] UI: show active transport stack (e.g. "XHTTP · Reality · firefox") without secrets
 - [ ] Tests — mock failure on first outbound, assert fallback to second profile fragment
 
 ### 6 — Platform & engine notes
@@ -327,10 +327,10 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 7 — Testing & docs (client)
 
-- [ ] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
-- [ ] No live DPI test in CI — validate JSON shape and parser resilience only
-- [ ] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
-- [ ] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
+- [x] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [x] No live DPI test in CI — validate JSON shape and parser resilience only
+- [x] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
+- [x] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
 
 ### Client roadmap (censorship resistance track)
 
@@ -444,13 +444,13 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
-| Kill Switch | ❌ Missing | **P1** |
+| Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
 | Split Tunneling | ✅ Android + docs | **P1** |
-| Obfuscation / DPI (UX) | ⚠️ Via protocols, no UI | **P1** |
-| XHTTP + stream-one | ❌ Missing | **P1** |
-| TLS fingerprint UI (uTLS) | ⚠️ Link `fp` only; defaults chrome | **P1** |
-| mux toggle (mobile) | ❌ Missing | **P1** |
-| RU direct routing preset | ❌ Missing | **P1** |
+| Obfuscation / DPI (UX) | ✅ Wizard + presets | **P1** |
+| XHTTP + stream-one | ✅ Link builder | **P1** |
+| TLS fingerprint UI (uTLS) | ✅ Picker + firefox default | **P1** |
+| mux toggle (mobile) | ✅ Profile wizard | **P1** |
+| RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
 | Protocol auto-fallback chain | ⚠️ Latency pick only | **P1** |
 | AmneziaWG | ❌ Missing | P1/P2 |
 | Double VPN / Multihop | ❌ Missing | P2 |
@@ -473,4 +473,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — P0 Foundation stability completed (reconnect, states, CI probe, geo fail-closed, fork docs); P1 censorship resistance backlog (XHTTP, uTLS, mux, RU routing, fallback; official Xray only, no REALITY-rkn-fix fork).*
+*Last updated: 2026-09-02 — P0 Foundation stability; P1 split tunneling (Android + docs), kill switch strict mode, censorship resistance (XHTTP, uTLS, mux, RU routing), RioNexGate panel MVP; official Xray only, no REALITY-rkn-fix fork.*

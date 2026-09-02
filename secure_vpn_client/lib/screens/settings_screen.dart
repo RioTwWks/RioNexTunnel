@@ -10,6 +10,7 @@ import '../models/engine_preference.dart';
 import '../models/split_tunnel_settings.dart';
 import '../models/vpn_engine.dart';
 import '../providers/per_app_proxy_provider.dart';
+import '../providers/profile_advanced_provider.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
@@ -95,6 +96,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final perAppProxy = ref.watch(perAppProxyProvider);
+    final ruDirectDefault = ref.watch(ruDirectRoutingDefaultProvider);
     final androidVpn = !kIsWeb && Platform.isAndroid;
     final scheme = Theme.of(context).colorScheme;
     final engineSubtitle = preference.isAuto
@@ -296,6 +298,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ],
+        const SizedBox(height: 14),
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 175),
+          child: _SectionCard(
+            title: 'Censorship resistance',
+            subtitle: 'Transport presets, uTLS fingerprint, RU routing',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SwitchListTile(
+                  key: const ValueKey('ru_direct_default_toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('RU sites direct (default for new profiles)'),
+                  subtitle: const Text(
+                    'When censorship wizard is enabled, route Russian sites/IP direct',
+                  ),
+                  value: ruDirectDefault,
+                  onChanged: (enabled) => ref
+                      .read(ruDirectRoutingDefaultProvider.notifier)
+                      .setEnabled(enabled),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.menu_book_outlined, color: scheme.primary),
+                  title: const Text('When to use which stack'),
+                  subtitle: const Text(
+                    'docs/en/censorship_resistance.md — REALITY vs TLS, XHTTP, mux',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 140),
