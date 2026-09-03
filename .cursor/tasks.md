@@ -287,7 +287,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [x] `LinkConfigBuilder` — parse `vless://` / subscription params: `type=xhttp`, `path`, `host`, `mode`
 - [x] Default generated XHTTP outbound: `"mode": "stream-one"` when mode omitted
-- [ ] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
+- [x] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
 - [x] Validation warning if `mode: auto` detected in imported config
 - [x] Tests — round-trip XHTTP link → JSON → required fields present (`stream-one`)
 - [x] Docs — XHTTP+Reality as 2026 default; link param reference in `docs/`
@@ -296,8 +296,8 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [x] Profile setting: **Enable mux** with `concurrency` (default `8`) for VLESS+TLS profiles
 - [x] Apply mux only when user enables or profile tag is `mux` / `mobile` (do not force globally)
-- [ ] Desktop proxy mode — document that mux is optional and often unnecessary when XHTTP is available
-- [ ] `ping_config_builder` — respect mux for latency probes or strip consistently (today: strips mux)
+- [x] Desktop proxy mode — document that mux is optional and often unnecessary when XHTTP is available
+- [x] `ping_config_builder` — respect mux for latency probes or strip consistently (today: strips mux)
 - [x] Tests — mux injected only when setting on; sing-box vs xray field names
 
 ### 3 — uTLS / TLS fingerprint (ClientHello obfuscation)
@@ -459,7 +459,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
 | Split Tunneling | ✅ Android + docs | **P1** |
 | Obfuscation / DPI (UX) | ✅ Wizard + presets | **P1** |
-| XHTTP + stream-one | ✅ Link builder | **P1** |
+| XHTTP + stream-one | ✅ Link builder + ConfigParser | **P1** |
 | TLS fingerprint UI (uTLS) | ✅ Picker + firefox default | **P1** |
 | mux toggle (mobile) | ✅ Profile wizard | **P1** |
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |

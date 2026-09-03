@@ -14,6 +14,17 @@ RioNexTunnel supports standard VLESS/VMess/Trojan links from any provider. **Cen
 | Legacy / simple server | **Plain TLS (TCP)** | Easiest for DPI to classify; use only if required |
 | Trojan vs VLESS+REALITY | Prefer **VLESS+REALITY** when available | Trojan+TLS is fine behind CDN; REALITY hides proxy TLS without a real cert |
 
+## Desktop proxy mode and mux
+
+Linux, Windows, and macOS use **proxy mode** (`VpnMode.proxy`), not a full TUN VPN. On desktop:
+
+- **Mux is optional** — leave it off unless your provider or network specifically needs it (e.g. mobile-operator-style blocking on a tethered connection).
+- When the server supports **VLESS + REALITY + XHTTP** (`mode: stream-one`), prefer that stack; mux is usually **unnecessary** on desktop and adds multiplexing overhead without improving browser proxy throughput.
+- Enable mux in the censorship wizard only for **VLESS + TLS** fallback paths (same mobile-first use case as in the table above).
+- **Latency probes** (subscription server picker, auto-select best server) always measure the **base outbound** without mux, so servers are compared fairly. Your profile mux setting still applies on **Connect**.
+
+See [linux_setup.md](linux_setup.md) for proxy-mode behavior and [split_tunneling.md](split_tunneling.md) for routing limits on desktop.
+
 **Do not use** unmaintained REALITY forks (e.g. REALITY-rkn-fix). RioNexTunnel uses **official Xray-core** from `scripts/fetch_cores.sh`.
 
 ## uTLS fingerprint
