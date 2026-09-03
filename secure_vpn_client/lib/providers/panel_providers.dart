@@ -8,16 +8,12 @@ import '../models/panel_sync_status.dart';
 import '../models/profile.dart';
 import '../services/panel_command_service.dart';
 import '../services/panel_manager.dart';
+import 'panel_manager_provider.dart';
 import 'vpn_providers.dart';
 
-const panelProfileName = 'RioNexGate';
-const _panelProfileName = panelProfileName;
+export 'panel_manager_provider.dart';
 
-final panelManagerProvider = Provider<PanelManager>((ref) {
-  final manager = PanelManager();
-  ref.onDispose(manager.dispose);
-  return manager;
-});
+const _panelProfileName = 'RioNexGate';
 
 final panelCommandServiceProvider = Provider<PanelCommandService>((ref) {
   final service = PanelCommandService(

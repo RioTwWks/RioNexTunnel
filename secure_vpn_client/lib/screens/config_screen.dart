@@ -7,6 +7,7 @@ import '../models/transport_preset.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/censorship_wizard_screen.dart';
 import '../widgets/animated_entrance.dart';
+import '../widgets/socks_auth_mode_strings.dart';
 import '../widgets/transport_stack_chip.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
@@ -112,11 +113,21 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     );
   }
 
+  Future<void> _toggleDisableSocksInjection(Profile profile) async {
+    if (profile.type != ProfileType.link) return;
+    final updated = profile.copyWith(disableSocksInjection: !profile.disableSocksInjection);
+    await ref.read(profilesProvider.notifier).updateProfile(updated);
+    if (ref.read(selectedProfileProvider)?.id == profile.id) {
+      await ref.read(selectedProfileProvider.notifier).select(updated);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profiles = ref.watch(profilesProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final scheme = Theme.of(context).colorScheme;
+    final locale = Localizations.localeOf(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -287,6 +298,10 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                           const SizedBox(height: 6),
                           TransportStackChip(profile: profile, compact: true),
                         ],
+                        if (profile.type == ProfileType.link && profile.disableSocksInjection) ...[
+                          const SizedBox(height: 6),
+                          Text(SocksAuthModeStrings.disableInjectionTitle(locale), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.tertiary)),
+                        ],
                       ],
                     ),
                     trailing: Row(
@@ -297,6 +312,12 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                           icon: const Icon(Icons.shield_outlined),
                           onPressed: () => _editCensorship(profile),
                         ),
+                        if (profile.type == ProfileType.link)
+                          IconButton(
+                            tooltip: SocksAuthModeStrings.disableInjectionTitle(locale),
+                            icon: Icon(profile.disableSocksInjection ? Icons.lock_open_outlined : Icons.build_circle_outlined, color: profile.disableSocksInjection ? scheme.tertiary : null),
+                            onPressed: () => _toggleDisableSocksInjection(profile),
+                          ),
                         if (selected)
                           Icon(Icons.check_circle, color: scheme.primary),
                         IconButton(
