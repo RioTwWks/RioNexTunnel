@@ -686,7 +686,80 @@ class VpnService {
     }
   }
 
-  Future<void> _setSessionCredentials(SessionCredentials credentials) async {
+  SocksAuthMode _resolveSocksAuthMode(Profile profile) {
+    if (profile.type == ProfileType.link && profile.disableSocksInjection) {
+      return SocksAuthMode.disableInjection;
+    }
+    return _socksAuthMode;
+  }
+
+  Future<PanelSocksInbound?> _loadPanelSocksAuth(VpnEngine engine) async {
+    final manager = _panelManager;
+    if (manager == null || !manager.isActive) {
+      return null;
+    }
+    final cached = await manager.loadCachedConfig();
+    if (cached != null) {
+      final fromCache = ConfigParser.extractPanelSocksAuth(cached, engine: engine);
+      if (fromCache != null) {
+        return fromCache;
+      }
+    }
+    try {
+      final synced = await manager.syncConfig();
+      final config = synced?.configJson ?? await manager.loadCachedConfig();
+      if (config == null) {
+        return null;
+      }
+      return ConfigParser.extractPanelSocksAuth(config, engine: engine);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<SessionCredentials> _resolveSessionCredentials({
+    required Profile profile,
+    required String rawConfig,
+  }) async {
+    final mode = _resolveSocksAuthMode(profile);
+    if (mode == SocksAuthMode.staticFromPanel) {
+      final panelSocks = await _loadPanelSocksAuth(_engine);
+      if (panelSocks != null && panelSocks.isValid) {
+        return SessionCredentials(
+          username: panelSocks.username,
+          password: panelSocks.password,
+        );
+      }
+      AppLog.warn(
+        'Static panel SOCKS unavailable; falling back to per-session creds',
+      );
+      return _credentialService.generate();
+    }
+    if (mode == SocksAuthMode.disableInjection) {
+      try {
+        final decoded = jsonDecode(rawConfig);
+        if (decoded is Map<String, dynamic>) {
+          final existing = ConfigParser.extractPanelSocksAuth(
+            decoded,
+            engine: _engine,
+          );
+          if (existing != null && existing.isValid) {
+            return SessionCredentials(
+              username: existing.username,
+              password: existing.password,
+            );
+          }
+        }
+      } catch (_) {}
+      return _credentialService.generate();
+    }
+    return _credentialService.generate();
+  }
+
+  Future<void> _setSessionCredentials(
+    SessionCredentials credentials, {
+    int? port,
+  }) async {
     const channel = MethodChannel('secure_vpn/credentials');
     try {
       await channel.invokeMethod<void>('setSessionCredentials', {
