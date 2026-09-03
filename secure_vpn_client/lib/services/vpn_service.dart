@@ -10,7 +10,9 @@ import 'package:v2ray_box/v2ray_box.dart';
 import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
+import '../models/panel_socks_inbound.dart';
 import '../models/profile.dart';
+import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
@@ -23,6 +25,7 @@ import '../utils/subscription_latency_probe.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
 import 'kill_switch_service.dart';
+import 'panel_manager.dart';
 
 class ConnectResult {
   const ConnectResult({required this.profile, required this.engine});
@@ -36,15 +39,18 @@ class VpnService {
     V2rayBox? v2rayBox,
     CredentialService? credentialService,
     KillSwitchService? killSwitchService,
+    PanelManager? panelManager,
     this.applicationId = 'com.example.secure_vpn_client',
     this.socksPort = ConfigParser.defaultSocksPort,
   }) : _v2rayBox = v2rayBox ?? V2rayBox(),
        _credentialService = credentialService ?? CredentialService(),
-       _killSwitchService = killSwitchService;
+       _killSwitchService = killSwitchService,
+       _panelManager = panelManager;
 
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
   final KillSwitchService? _killSwitchService;
+  final PanelManager? _panelManager;
   final String applicationId;
   final int socksPort;
 
@@ -57,6 +63,7 @@ class VpnService {
   SessionCredentials? _sessionCredentials;
   VpnEngine _engine = VpnEngine.xray;
   EnginePreference _enginePreference = EnginePreference.auto;
+  SocksAuthMode _socksAuthMode = SocksAuthMode.randomPerSession;
   VpnStatus _currentStatus = VpnStatus.stopped;
   ConnectionDetail _connectionDetail = ConnectionDetail.disconnected();
   Profile? _activeProfile;
@@ -75,6 +82,7 @@ class VpnService {
   SessionCredentials? get sessionCredentials => _sessionCredentials;
   VpnEngine get engine => _engine;
   EnginePreference get enginePreference => _enginePreference;
+  SocksAuthMode get socksAuthMode => _socksAuthMode;
   V2rayBox get v2rayBox => _v2rayBox;
   VpnStatus get currentStatus => _currentStatus;
   ConnectionDetail get connectionDetail => _connectionDetail;
@@ -288,6 +296,11 @@ class VpnService {
 
   void setEnginePreference(EnginePreference preference) {
     _enginePreference = preference;
+  }
+
+  void setSocksAuthMode(SocksAuthMode mode) {
+    if (mode == SocksAuthMode.disableInjection) return;
+    _socksAuthMode = mode;
   }
 
   Future<void> setEngine(
@@ -510,15 +523,27 @@ class VpnService {
       );
     }
 
-    final credentials = _credentialService.generate();
+    final credentials = await _resolveSessionCredentials(
+      profile: effectiveProfile,
+      rawConfig: rawConfig,
+    );
     final desktopProxy =
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    final authMode = _resolveSocksAuthMode(effectiveProfile);
+    final panelSocks = authMode == SocksAuthMode.staticFromPanel
+        ? await _loadPanelSocksAuth(_engine)
+        : null;
+    final effectiveSocksPort = panelSocks?.isValid == true
+        ? panelSocks!.port
+        : socksPort;
     final secureConfig = ConfigParser.injectSecureSocksInbound(
       rawConfig,
       credentials,
       _engine,
-      socksPort: socksPort,
+      socksPort: effectiveSocksPort,
       proxyOnly: desktopProxy,
+      authMode: authMode,
+      panelSocks: panelSocks,
     );
     AppLog.info(
       'Secure config ready proxyOnly=$desktopProxy '
@@ -532,13 +557,13 @@ class VpnService {
       throw StateError('Invalid VPN config: $validationError');
     }
 
-    await _setSessionCredentials(credentials);
+    await _setSessionCredentials(credentials, port: effectiveSocksPort);
     final started = await _v2rayBox.connectWithJson(
       secureConfig,
       name: effectiveProfile.name,
       socksUsername: credentials.username,
       socksPassword: credentials.password,
-      socksPort: socksPort,
+      socksPort: effectiveSocksPort,
     );
     if (!started) {
       AppLog.error('connectWithJson returned false');
@@ -668,13 +693,86 @@ class VpnService {
     }
   }
 
-  Future<void> _setSessionCredentials(SessionCredentials credentials) async {
+  SocksAuthMode _resolveSocksAuthMode(Profile profile) {
+    if (profile.type == ProfileType.link && profile.disableSocksInjection) {
+      return SocksAuthMode.disableInjection;
+    }
+    return _socksAuthMode;
+  }
+
+  Future<PanelSocksInbound?> _loadPanelSocksAuth(VpnEngine engine) async {
+    final manager = _panelManager;
+    if (manager == null || !manager.isActive) {
+      return null;
+    }
+    final cached = await manager.loadCachedConfig();
+    if (cached != null) {
+      final fromCache = ConfigParser.extractPanelSocksAuth(cached, engine: engine);
+      if (fromCache != null) {
+        return fromCache;
+      }
+    }
+    try {
+      final synced = await manager.syncConfig();
+      final config = synced?.configJson ?? await manager.loadCachedConfig();
+      if (config == null) {
+        return null;
+      }
+      return ConfigParser.extractPanelSocksAuth(config, engine: engine);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<SessionCredentials> _resolveSessionCredentials({
+    required Profile profile,
+    required String rawConfig,
+  }) async {
+    final mode = _resolveSocksAuthMode(profile);
+    if (mode == SocksAuthMode.staticFromPanel) {
+      final panelSocks = await _loadPanelSocksAuth(_engine);
+      if (panelSocks != null && panelSocks.isValid) {
+        return SessionCredentials(
+          username: panelSocks.username,
+          password: panelSocks.password,
+        );
+      }
+      AppLog.warn(
+        'Static panel SOCKS unavailable; falling back to per-session creds',
+      );
+      return _credentialService.generate();
+    }
+    if (mode == SocksAuthMode.disableInjection) {
+      try {
+        final decoded = jsonDecode(rawConfig);
+        if (decoded is Map<String, dynamic>) {
+          final existing = ConfigParser.extractPanelSocksAuth(
+            decoded,
+            engine: _engine,
+          );
+          if (existing != null && existing.isValid) {
+            return SessionCredentials(
+              username: existing.username,
+              password: existing.password,
+            );
+          }
+        }
+      } catch (_) {}
+      return _credentialService.generate();
+    }
+    return _credentialService.generate();
+  }
+
+  Future<void> _setSessionCredentials(
+    SessionCredentials credentials, {
+    int? port,
+  }) async {
     const channel = MethodChannel('secure_vpn/credentials');
     try {
       await channel.invokeMethod<void>('setSessionCredentials', {
         'username': credentials.username,
         'password': credentials.password,
-        'port': socksPort,
+        'port': port ?? socksPort,
       });
     } catch (_) {
       // Native channel may be unavailable on some platforms during tests.

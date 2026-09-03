@@ -14,6 +14,9 @@ import '../models/profile.dart';
 import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
 import '../models/kill_switch_mode.dart';
+import '../models/socks_auth_mode.dart';
+import '../providers/panel_manager_provider.dart';
+import '../providers/socks_auth_mode_provider.dart';
 import '../providers/kill_switch_provider.dart';
 import '../services/vpn_service.dart';
 
@@ -24,9 +27,16 @@ const _enginePreferenceKey = 'vpn_engine_preference';
 
 final vpnServiceProvider = Provider<VpnService>((ref) {
   final killSwitch = ref.watch(killSwitchServiceProvider);
-  final service = VpnService(killSwitchService: killSwitch);
+  final panelManager = ref.watch(panelManagerProvider);
+  final service = VpnService(
+    killSwitchService: killSwitch,
+    panelManager: panelManager,
+  );
   ref.listen<KillSwitchMode>(killSwitchModeProvider, (previous, next) {
     unawaited(killSwitch.loadMode(next));
+  }, fireImmediately: true);
+  ref.listen<SocksAuthMode>(socksAuthModeProvider, (previous, next) {
+    service.setSocksAuthMode(next);
   }, fireImmediately: true);
   ref.onDispose(() {
     service.disconnect();

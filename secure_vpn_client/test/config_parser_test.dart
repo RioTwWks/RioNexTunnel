@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:secure_vpn_client/models/credentials.dart';
+import 'package:secure_vpn_client/models/socks_auth_mode.dart';
 import 'package:secure_vpn_client/models/vpn_engine.dart';
 import 'package:secure_vpn_client/services/credential_service.dart';
 import 'package:secure_vpn_client/utils/config_parser.dart';
@@ -374,6 +376,34 @@ vless://11111111-2222-3333-4444-555555555555@example.com:443?security=tls
         () => ConfigParser.validateSecure(injected, engine: VpnEngine.xray),
         returnsNormally,
       );
+    });
+
+
+    test('extractPanelSocksAuth reads xray inbound and local_proxy shortcut', () {
+      const xrayConfig = '{"inbounds":[{"protocol":"socks","listen":"127.0.0.1","port":2080,"settings":{"auth":"password","accounts":[{"user":"panel-user","pass":"panel-pass"}]}}],"outbounds":[]}';
+      final fromInbound = ConfigParser.extractPanelSocksAuth(jsonDecode(xrayConfig) as Map<String, dynamic>, engine: VpnEngine.xray);
+      expect(fromInbound?.username, 'panel-user');
+      expect(fromInbound?.port, 2080);
+      final fromShortcut = ConfigParser.extractPanelSocksAuth({'local_proxy': {'port': 1090, 'username': 'shortcut-user', 'password': 'shortcut-pass'}}, engine: VpnEngine.singbox);
+      expect(fromShortcut?.username, 'shortcut-user');
+    });
+
+    test('staticFromPanel uses panel port and credentials', () {
+      const config = '{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}';
+      final panelSocks = ConfigParser.extractPanelSocksAuth({'local_proxy': {'port': 2080, 'username': 'static-user', 'password': 'static-pass'}}, engine: VpnEngine.xray);
+      final credentials = SessionCredentials(username: panelSocks!.username, password: panelSocks.password);
+      final result = ConfigParser.injectSecureSocksInbound(config, credentials, VpnEngine.xray, authMode: SocksAuthMode.staticFromPanel, panelSocks: panelSocks);
+      final socks = (jsonDecode(result) as Map)['inbounds'].whereType<Map>().firstWhere((inbound) => inbound['tag'] == 'secure-socks-in');
+      expect(socks['port'], 2080);
+    });
+
+    test('disableInjection keeps existing authenticated socks inbound', () {
+      const config = '{"inbounds":[{"tag":"custom-socks","protocol":"socks","listen":"127.0.0.1","port":1080,"settings":{"auth":"password","accounts":[{"user":"cfg-user","pass":"cfg-pass"}]}}],"outbounds":[{"protocol":"freedom","tag":"direct"}]}';
+      final credentials = SessionCredentials(username: 'cfg-user', password: 'cfg-pass');
+      final result = ConfigParser.injectSecureSocksInbound(config, credentials, VpnEngine.xray, authMode: SocksAuthMode.disableInjection);
+      final inbounds = (jsonDecode(result) as Map)['inbounds'] as List;
+      expect(inbounds.length, 1);
+      expect(inbounds.first['tag'], 'custom-socks');
     });
   });
 }
