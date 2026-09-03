@@ -10,7 +10,9 @@ import 'package:v2ray_box/v2ray_box.dart';
 import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
+import '../models/panel_socks_inbound.dart';
 import '../models/profile.dart';
+import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
@@ -23,6 +25,7 @@ import '../utils/subscription_latency_probe.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
 import 'kill_switch_service.dart';
+import 'panel_manager.dart';
 
 class ConnectResult {
   const ConnectResult({required this.profile, required this.engine});
@@ -36,6 +39,7 @@ class VpnService {
     V2rayBox? v2rayBox,
     CredentialService? credentialService,
     KillSwitchService? killSwitchService,
+    PanelManager? panelManager,
     this.applicationId = 'com.example.secure_vpn_client',
     this.socksPort = ConfigParser.defaultSocksPort,
   }) : _v2rayBox = v2rayBox ?? V2rayBox(),
@@ -46,6 +50,7 @@ class VpnService {
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
   final KillSwitchService? _killSwitchService;
+  final PanelManager? _panelManager;
   final String applicationId;
   final int socksPort;
 
@@ -58,6 +63,7 @@ class VpnService {
   SessionCredentials? _sessionCredentials;
   VpnEngine _engine = VpnEngine.xray;
   EnginePreference _enginePreference = EnginePreference.auto;
+  SocksAuthMode _socksAuthMode = SocksAuthMode.randomPerSession;
   VpnStatus _currentStatus = VpnStatus.stopped;
   ConnectionDetail _connectionDetail = ConnectionDetail.disconnected();
   Profile? _activeProfile;
@@ -76,6 +82,7 @@ class VpnService {
   SessionCredentials? get sessionCredentials => _sessionCredentials;
   VpnEngine get engine => _engine;
   EnginePreference get enginePreference => _enginePreference;
+  SocksAuthMode get socksAuthMode => _socksAuthMode;
   V2rayBox get v2rayBox => _v2rayBox;
   VpnStatus get currentStatus => _currentStatus;
   ConnectionDetail get connectionDetail => _connectionDetail;
