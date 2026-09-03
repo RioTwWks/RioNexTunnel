@@ -29,7 +29,7 @@ For Xray-core:
   # Build it from official sing-box source and place it at ios/Frameworks/Libbox.xcframework.
   s.vendored_frameworks = 'Frameworks/Libbox.xcframework'
   
-  s.frameworks = 'NetworkExtension'
+  s.frameworks = 'NetworkExtension', 'UIKit'
   s.libraries = 'resolv'
   
   s.pod_target_xcconfig = { 
