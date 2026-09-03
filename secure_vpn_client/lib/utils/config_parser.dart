@@ -7,6 +7,7 @@ import '../models/panel_socks_inbound.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
+import 'transport_presets.dart';
 
 class ConfigParserException implements Exception {
   ConfigParserException(this.message);
@@ -337,10 +338,12 @@ class ConfigParser {
     final config = Map<String, dynamic>.from(decoded);
     if (engine == VpnEngine.xray) {
       _normalizeXraySubscriptionConfig(config);
+      _normalizeXrayXhttpTransport(config);
       _stripDeprecatedXrayTlsFlags(config);
     }
     if (engine == VpnEngine.singbox) {
       _migrateSingboxLegacyDns(config);
+      _normalizeSingboxXhttpTransport(config);
       _ensureSingboxRemoteDns(config);
       _ensureSingboxClashApi(config);
     }
@@ -503,6 +506,146 @@ class ConfigParser {
         {'username': credentials.username, 'password': credentials.password},
       ],
     };
+  }
+
+  /// Coerces XHTTP `mode: auto` (or missing mode) to [TransportPresets.defaultXhttpMode]
+  /// on proxy outbounds. Preserves path, host, and other XHTTP fields from subscription JSON.
+  static void _normalizeXrayXhttpTransport(Map<String, dynamic> config) {
+    final outbounds = config['outbounds'];
+    if (outbounds is! List) {
+      return;
+    }
+    for (var i = 0; i < outbounds.length; i++) {
+      final raw = outbounds[i];
+      if (raw is! Map) {
+        continue;
+      }
+      final outbound = Map<String, dynamic>.from(raw);
+      if (!_isXrayProxyOutbound(outbound)) {
+        continue;
+      }
+      _normalizeXrayOutboundXhttp(outbound);
+      outbounds[i] = outbound;
+    }
+    config['outbounds'] = outbounds;
+  }
+
+  static void _normalizeSingboxXhttpTransport(Map<String, dynamic> config) {
+    final outbounds = config['outbounds'];
+    if (outbounds is! List) {
+      return;
+    }
+    for (var i = 0; i < outbounds.length; i++) {
+      final raw = outbounds[i];
+      if (raw is! Map) {
+        continue;
+      }
+      final outbound = Map<String, dynamic>.from(raw);
+      if (!_isSingboxProxyOutbound(outbound)) {
+        continue;
+      }
+      _normalizeSingboxOutboundXhttp(outbound);
+      outbounds[i] = outbound;
+    }
+    config['outbounds'] = outbounds;
+  }
+
+  static bool _isXrayProxyOutbound(Map<String, dynamic> outbound) {
+    final protocol = outbound['protocol']?.toString();
+    return protocol == 'vless' ||
+        protocol == 'vmess' ||
+        protocol == 'trojan' ||
+        protocol == 'shadowsocks';
+  }
+
+  static bool _isSingboxProxyOutbound(Map<String, dynamic> outbound) {
+    final type = outbound['type']?.toString();
+    return type == 'vless' ||
+        type == 'vmess' ||
+        type == 'trojan' ||
+        type == 'shadowsocks';
+  }
+
+  static void _normalizeXrayOutboundXhttp(Map<String, dynamic> outbound) {
+    final stream = outbound['streamSettings'];
+    if (stream is! Map) {
+      return;
+    }
+    final streamMap = Map<String, dynamic>.from(stream);
+    final network = streamMap['network']?.toString().toLowerCase();
+    final hasXhttpSettings = streamMap['xhttpSettings'] is Map;
+    if (network != 'xhttp' && !hasXhttpSettings) {
+      return;
+    }
+
+    streamMap['network'] = 'xhttp';
+    final xhttpRaw = streamMap['xhttpSettings'];
+    final xhttp = xhttpRaw is Map
+        ? Map<String, dynamic>.from(xhttpRaw)
+        : <String, dynamic>{};
+    xhttp.putIfAbsent('path', () => '/');
+    xhttp['mode'] = _resolveXhttpMode(xhttp['mode']);
+    streamMap['xhttpSettings'] = xhttp;
+    outbound['streamSettings'] = streamMap;
+  }
+
+  static void _normalizeSingboxOutboundXhttp(Map<String, dynamic> outbound) {
+    final transport = outbound['transport'];
+    if (transport is! Map) {
+      return;
+    }
+    final transportMap = Map<String, dynamic>.from(transport);
+    if (transportMap['type']?.toString().toLowerCase() != 'xhttp') {
+      return;
+    }
+
+    transportMap.putIfAbsent('path', () => '/');
+    transportMap['mode'] = _resolveXhttpMode(transportMap['mode']);
+    outbound['transport'] = transportMap;
+  }
+
+  static String _resolveXhttpMode(dynamic mode) {
+    final value = mode?.toString().trim();
+    if (value == null || value.isEmpty || value.toLowerCase() == 'auto') {
+      return TransportPresets.defaultXhttpMode;
+    }
+    return value;
+  }
+
+  /// True when imported JSON still contains XHTTP `mode: auto` before normalization.
+  static bool configHasXhttpAutoMode(String jsonConfig) {
+    final decoded = jsonDecode(jsonConfig);
+    if (decoded is! Map<String, dynamic>) {
+      return false;
+    }
+    final outbounds = decoded['outbounds'];
+    if (outbounds is! List) {
+      return false;
+    }
+    for (final raw in outbounds) {
+      if (raw is! Map) {
+        continue;
+      }
+      final outbound = Map<String, dynamic>.from(raw);
+      if (outbound.containsKey('type')) {
+        final transport = outbound['transport'];
+        if (transport is Map &&
+            transport['type']?.toString().toLowerCase() == 'xhttp' &&
+            transport['mode']?.toString().toLowerCase() == 'auto') {
+          return true;
+        }
+        continue;
+      }
+      final stream = outbound['streamSettings'];
+      if (stream is Map &&
+          stream['network']?.toString().toLowerCase() == 'xhttp') {
+        final xhttp = stream['xhttpSettings'];
+        if (xhttp is Map && xhttp['mode']?.toString().toLowerCase() == 'auto') {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   static void _normalizeXraySubscriptionConfig(Map<String, dynamic> config) {

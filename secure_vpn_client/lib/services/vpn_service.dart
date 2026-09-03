@@ -14,6 +14,7 @@ import '../models/panel_socks_inbound.dart';
 import '../models/profile.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
+import '../models/transport_stack.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
 import '../utils/config_parser.dart';
@@ -22,12 +23,15 @@ import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
 import '../utils/platform_transport_selector.dart';
 import '../utils/transport_presets.dart';
+import '../utils/transport_stack_classifier.dart';
 import '../utils/server_latency.dart';
 import '../utils/subscription_latency_probe.dart';
 import 'app_log.dart';
 import 'credential_service.dart';
 import 'kill_switch_service.dart';
 import 'panel_manager.dart';
+import 'subscription_manager.dart';
+import 'transport_stack_store.dart';
 
 class ConnectResult {
   const ConnectResult({required this.profile, required this.engine});
@@ -42,17 +46,22 @@ class VpnService {
     CredentialService? credentialService,
     KillSwitchService? killSwitchService,
     PanelManager? panelManager,
+    SubscriptionManager? subscriptionManager,
+    TransportStackStore? transportStackStore,
     this.applicationId = 'com.example.secure_vpn_client',
     this.socksPort = ConfigParser.defaultSocksPort,
   }) : _v2rayBox = v2rayBox ?? V2rayBox(),
        _credentialService = credentialService ?? CredentialService(),
        _killSwitchService = killSwitchService,
-       _panelManager = panelManager;
+       _panelManager = panelManager,
+       _subscriptionManager = subscriptionManager ??
+           SubscriptionManager(store: transportStackStore);
 
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
   final KillSwitchService? _killSwitchService;
   final PanelManager? _panelManager;
+  final SubscriptionManager _subscriptionManager;
   final String applicationId;
   final int socksPort;
 
@@ -69,6 +78,9 @@ class VpnService {
   VpnStatus _currentStatus = VpnStatus.stopped;
   ConnectionDetail _connectionDetail = ConnectionDetail.disconnected();
   Profile? _activeProfile;
+  List<TransportStackCandidate> _activeStackCandidates = const [];
+  int _activeStackIndex = 0;
+  TransportStackCandidate? _activeTransportStack;
   bool _userInitiatedDisconnect = false;
   bool _reconnectEnabled = true;
   int _reconnectAttempt = 0;
@@ -91,6 +103,8 @@ class VpnService {
   bool get reconnectEnabled => _reconnectEnabled;
   DateTime? get connectedAt => _connectedAt;
   String get panelSessionId => _panelSessionId;
+  TransportStackCandidate? get activeTransportStack => _activeTransportStack;
+  SubscriptionManager get subscriptionManager => _subscriptionManager;
 
   Duration? get connectionUptime {
     if (_connectedAt == null || _currentStatus != VpnStatus.started) {
@@ -106,14 +120,11 @@ class VpnService {
     }
   }
 
-  /// Latest status first, then live updates. Prefer this over calling
-  /// [V2rayBox.watchStatus] directly so UI and connect() share one source.
   Stream<VpnStatus> watchStatus() async* {
     yield _currentStatus;
     yield* _statusController.stream;
   }
 
-  /// Rich connection phase for UI (connecting, reconnecting, error reason).
   Stream<ConnectionDetail> watchConnectionDetail() async* {
     yield _connectionDetail;
     yield* _connectionDetailController.stream;
@@ -181,9 +192,7 @@ class VpnService {
         if (previous == VpnStatus.started &&
             _reconnectEnabled &&
             _activeProfile != null) {
-          _scheduleReconnect(
-            'Connection dropped unexpectedly',
-          );
+          _scheduleReconnect('Connection dropped unexpectedly');
           return;
         }
         if (_connectionDetail.phase == ConnectionPhase.reconnecting) {
@@ -227,10 +236,13 @@ class VpnService {
     unawaited(_killSwitchService?.onTunnelDown());
     _reconnectAttempt++;
     final delay = _reconnectBackoffDelay(_reconnectAttempt);
+    final stackHint = _activeStackCandidates.length > 1
+        ? ' — next transport stack after backoff'
+        : '';
     _publishConnectionDetail(
       ConnectionDetail(
         phase: ConnectionPhase.reconnecting,
-        reason: '$reason — retry in ${delay.inSeconds}s',
+        reason: '$reason — retry in ${delay.inSeconds}s$stackHint',
         reconnectAttempt: _reconnectAttempt,
         maxReconnectAttempts: _maxReconnectAttempts,
         vpnStatus: VpnStatus.stopped,
@@ -323,7 +335,10 @@ class VpnService {
     }
   }
 
-  Future<String> resolveProfileConfig(Profile profile) async {
+  Future<String> resolveProfileConfig(
+    Profile profile, {
+    String? contentOverride,
+  }) async {
     var linkForBuild = profile.configLink.trim();
     if (profile.type == ProfileType.link &&
         profile.censorshipModeEnabled &&
@@ -336,14 +351,19 @@ class VpnService {
       );
     }
 
-    final raw = profile.type == ProfileType.subscription
-        ? await ConfigParser.parseFromUrl(
-            profile.configLink,
-            engine: _engine,
-            serverIndex: profile.selectedServerIndex,
-          )
-        : linkForBuild;
+    final raw = contentOverride ??
+        (profile.type == ProfileType.subscription
+            ? await ConfigParser.parseFromUrl(
+                profile.configLink,
+                engine: _engine,
+                serverIndex: profile.selectedServerIndex,
+              )
+            : linkForBuild);
 
+    return _rawContentToJsonConfig(profile, raw);
+  }
+
+  Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
     String jsonConfig;
     if (raw.startsWith('{')) {
       jsonConfig = raw;
@@ -374,26 +394,35 @@ class VpnService {
     return ConfigEnhancer.applyProfileSettings(jsonConfig, profile, _engine);
   }
 
-  /// Fetches subscription and returns selectable non-decoy servers.
   Future<List<SubscriptionServer>> listSubscriptionServers(
-    Profile profile,
-  ) async {
+    Profile profile, {
+    bool logicalServers = true,
+  }) async {
     if (profile.type != ProfileType.subscription) {
       return const [];
     }
-    return ConfigParser.listServersFromUrl(profile.configLink, engine: _engine);
+    final servers = await ConfigParser.listServersFromUrl(
+      profile.configLink,
+      engine: _engine,
+    );
+    if (!logicalServers) {
+      return servers;
+    }
+    return _subscriptionManager.listLogicalServers(servers);
   }
 
   SubscriptionLatencyProbe get _latencyProbe =>
       SubscriptionLatencyProbe(_v2rayBox, engine: _engine);
 
-  /// Probes latency for all servers in [profile]'s subscription.
   Future<List<ServerLatencyResult>> probeSubscriptionServers(
     Profile profile, {
     void Function(ServerLatencyResult result)? onResult,
     Duration timeout = ServerLatencyProbe.defaultTimeout,
   }) async {
-    final servers = await listSubscriptionServers(profile);
+    final servers = await listSubscriptionServers(
+      profile,
+      logicalServers: false,
+    );
     return _latencyProbe.probeAll(
       servers,
       timeoutMs: timeout.inMilliseconds,
@@ -401,18 +430,21 @@ class VpnService {
     );
   }
 
-  /// Returns the lowest-latency reachable server, or throws if none respond.
   Future<ServerLatencyResult> selectBestSubscriptionServer(
     Profile profile, {
     void Function(ServerLatencyResult result)? onResult,
     Duration timeout = ServerLatencyProbe.defaultTimeout,
   }) async {
-    final results = await probeSubscriptionServers(
+    final servers = await listSubscriptionServers(
       profile,
-      onResult: onResult,
-      timeout: timeout,
+      logicalServers: false,
     );
-    final best = SubscriptionLatencyProbe.selectBest(results);
+    final results = await _latencyProbe.probeAll(
+      servers,
+      timeoutMs: timeout.inMilliseconds,
+      onResult: onResult,
+    );
+    final best = _selectBestLogicalServer(servers, results);
     if (best == null) {
       throw ServerLatencyException(
         'No reachable servers in subscription. Check network and try again.',
@@ -424,8 +456,7 @@ class VpnService {
     }
     AppLog.info(
       'Best server=${best.server.name} latency=${best.latencyMs}ms '
-      'index=${best.server.index} stack='
-      '${PlatformTransportSelector.classifyStack(best.server.content).name}',
+      'index=${best.server.index}',
     );
     return best;
   }
@@ -434,6 +465,7 @@ class VpnService {
     await initialize();
     _userInitiatedDisconnect = false;
     _reconnectAttempt = 0;
+    _activeStackIndex = 0;
     _cancelReconnect();
     _activeProfile = profile;
     _publishConnectionDetail(
@@ -508,7 +540,8 @@ class VpnService {
 
     var effectiveProfile = profile;
     if (profile.type == ProfileType.subscription &&
-        profile.autoSelectBestServer) {
+        profile.autoSelectBestServer &&
+        !isReconnect) {
       final best = await selectBestSubscriptionServer(profile);
       effectiveProfile = profile.copyWith(
         selectedServerIndex: best.server.index,
@@ -517,7 +550,81 @@ class VpnService {
       );
     }
 
-    final rawConfig = await resolveProfileConfig(effectiveProfile);
+    final stackCandidates = await _resolveStackCandidates(effectiveProfile);
+    _activeStackCandidates = stackCandidates;
+    final startIndex = isReconnect && stackCandidates.length > 1
+        ? (_activeStackIndex + 1) % stackCandidates.length
+        : _activeStackIndex;
+
+    if (stackCandidates.isEmpty) {
+      return _connectSingleStack(effectiveProfile, stack: null);
+    }
+
+    Object? lastError;
+    for (var offset = 0; offset < stackCandidates.length; offset++) {
+      final stackIndex = (startIndex + offset) % stackCandidates.length;
+      final stack = stackCandidates[stackIndex];
+      if (offset > 0) {
+        final delay = _reconnectBackoffDelay(offset);
+        AppLog.info(
+          'Protocol fallback: trying ${stack.tag} in ${delay.inSeconds}s',
+        );
+        await Future<void>.delayed(delay);
+      }
+      try {
+        final connected = await _connectSingleStack(
+          effectiveProfile,
+          stack: stack,
+        );
+        _activeStackIndex = stackIndex;
+        _activeTransportStack = stack;
+        return connected;
+      } catch (error) {
+        lastError = error;
+        AppLog.error('Connect with stack ${stack.tag} failed: $error');
+        await _recordStackAttempt(
+          profile: effectiveProfile,
+          stack: stack,
+          success: false,
+        );
+        await disconnect(userInitiated: true);
+      }
+    }
+
+    throw lastError ?? StateError('Failed to connect with any transport stack');
+  }
+
+  Future<List<TransportStackCandidate>> _resolveStackCandidates(
+    Profile profile,
+  ) async {
+    if (profile.type != ProfileType.subscription) {
+      return const [];
+    }
+    final servers = await ConfigParser.listServersFromUrl(
+      profile.configLink,
+      engine: _engine,
+    );
+    return _subscriptionManager.orderedProbeList(
+      profileId: profile.id,
+      servers: servers,
+      selectedIndex: profile.selectedServerIndex,
+    );
+  }
+
+  Future<Profile> _connectSingleStack(
+    Profile effectiveProfile, {
+    TransportStackCandidate? stack,
+  }) async {
+    if (stack != null) {
+      AppLog.info(
+        'Trying transport stack=${stack.tag} server=${stack.server.name}',
+      );
+    }
+
+    final rawConfig = await resolveProfileConfig(
+      effectiveProfile,
+      contentOverride: stack?.content,
+    );
     AppLog.info('Resolved profile config (${rawConfig.length} bytes)');
 
     if (_engine == VpnEngine.xray) {
@@ -598,11 +705,67 @@ class VpnService {
     _sessionCredentials = credentials;
     _activeProfile = effectiveProfile;
     _panelSessionId = const Uuid().v4();
+    if (stack != null) {
+      await _recordStackAttempt(
+        profile: effectiveProfile,
+        stack: stack,
+        success: true,
+      );
+    }
     await _killSwitchService?.onTunnelRestored();
-    // Ensure UI flips to Disconnect even if a status event was raced/missed.
     _publishStatus(VpnStatus.started);
-    AppLog.info('VPN connected with ${_engine.coreName}');
+    AppLog.info(
+      'VPN connected with ${_engine.coreName}'
+      '${stack != null ? ' stack=${stack.tag}' : ''}',
+    );
     return effectiveProfile;
+  }
+
+  Future<void> _recordStackAttempt({
+    required Profile profile,
+    required TransportStackCandidate stack,
+    required bool success,
+    int? latencyMs,
+  }) async {
+    if (profile.type != ProfileType.subscription) {
+      return;
+    }
+    final serverKey = TransportStackClassifier.serverKey(stack.server);
+    await _subscriptionManager.store.recordAttempt(
+      profileId: profile.id,
+      serverKey: serverKey,
+      kind: stack.kind,
+      success: success,
+      latencyMs: latencyMs,
+    );
+  }
+
+  ServerLatencyResult? _selectBestLogicalServer(
+    List<SubscriptionServer> servers,
+    List<ServerLatencyResult> results,
+  ) {
+    if (results.isEmpty) {
+      return null;
+    }
+    final platformBest = PlatformTransportSelector.selectBest(results);
+    if (platformBest != null) {
+      final logical = _subscriptionManager.groupServers(servers);
+      for (final group in logical) {
+        final indices = group.stacks.map((s) => s.server.index).toSet();
+        if (indices.contains(platformBest.server.index)) {
+          return ServerLatencyResult(
+            server: SubscriptionServer(
+              index: group.primaryIndex,
+              name: group.displayName,
+              content: platformBest.server.content,
+            ),
+            latencyMs: platformBest.latencyMs,
+          );
+        }
+      }
+      return platformBest;
+    }
+    return SubscriptionLatencyProbe.selectBest(results);
   }
 
   String _inboundSummary(String configJson) {
@@ -634,6 +797,9 @@ class VpnService {
       _userInitiatedDisconnect = true;
       _activeProfile = null;
       _reconnectAttempt = 0;
+      _activeStackCandidates = const [];
+      _activeStackIndex = 0;
+      _activeTransportStack = null;
     }
     _cancelReconnect();
     await _killSwitchService?.onSessionEnd(userInitiated: userInitiated);
@@ -660,7 +826,6 @@ class VpnService {
     if (await _v2rayBox.checkVpnPermission()) {
       return;
     }
-    // Shows the system VPN consent dialog and returns immediately.
     await _v2rayBox.requestVpnPermission();
     final deadline = DateTime.now().add(const Duration(seconds: 60));
     while (DateTime.now().isBefore(deadline)) {
@@ -682,21 +847,16 @@ class VpnService {
       return;
     }
     final seen = <VpnStatus>{_currentStatus};
-    await _statusController.stream
-        .timeout(timeout)
-        .firstWhere((status) {
-          seen.add(status);
-          if (status == target) {
-            return true;
-          }
-          // Core often returns started=true then fails → Starting → Stopped.
-          // Fail fast so Auto engine fallback can run.
-          if (status == VpnStatus.stopped &&
-              seen.contains(VpnStatus.starting)) {
-            return true;
-          }
-          return false;
-        });
+    await _statusController.stream.timeout(timeout).firstWhere((status) {
+      seen.add(status);
+      if (status == target) {
+        return true;
+      }
+      if (status == VpnStatus.stopped && seen.contains(VpnStatus.starting)) {
+        return true;
+      }
+      return false;
+    });
     if (_currentStatus != target) {
       throw StateError(
         'VPN failed to reach Connected (status=${_currentStatus.name})',
@@ -802,17 +962,13 @@ class VpnService {
         'password': credentials.password,
         'port': port ?? socksPort,
       });
-    } catch (_) {
-      // Native channel may be unavailable on some platforms during tests.
-    }
+    } catch (_) {}
   }
 
   Future<void> _clearSessionCredentials() async {
     const channel = MethodChannel('secure_vpn/credentials');
     try {
       await channel.invokeMethod<void>('clearSessionCredentials');
-    } catch (_) {
-      // Ignore when channel is not registered.
-    }
+    } catch (_) {}
   }
 }

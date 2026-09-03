@@ -323,12 +323,12 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 5 — Protocol & server auto-fallback
 
-- [ ] Extend server picker / `SubscriptionManager`: ordered probe list per subscription entry tags
-- [ ] Default probe order: `VLESS+Reality+XHTTP` → `VLESS+TLS+mux` → `TCP+Reality+Vision` → `AmneziaWG` (if present)
-- [ ] On connect failure or mid-session drop — try next candidate with exponential backoff (reuse P0 reconnect)
-- [ ] Persist last working stack per server (latency + success rate) for faster reconnect
+- [x] Extend server picker / `SubscriptionManager`: ordered probe list per subscription entry tags
+- [x] Default probe order: `VLESS+Reality+XHTTP` → `VLESS+TLS+mux` → `TCP+Reality+Vision` → `AmneziaWG` (if present)
+- [x] On connect failure or mid-session drop — try next candidate with exponential backoff (reuse P0 reconnect)
+- [x] Persist last working stack per server (latency + success rate) for faster reconnect
 - [x] UI: show active transport stack (e.g. "XHTTP · Reality · firefox") without secrets
-- [ ] Tests — mock failure on first outbound, assert fallback to second profile fragment
+- [x] Tests — mock failure on first outbound, assert fallback to second profile fragment
 
 ### 6 — Platform & engine notes
 
@@ -463,7 +463,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | TLS fingerprint UI (uTLS) | ✅ Picker + firefox default | **P1** |
 | mux toggle (mobile) | ✅ Profile wizard | **P1** |
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
-| Protocol auto-fallback chain | ⚠️ Latency pick only | **P1** |
+| Protocol auto-fallback chain | ✅ Stack probe + reconnect fallback | **P1** |
 | AmneziaWG | ❌ Missing | P1/P2 |
 | Double VPN / Multihop | ❌ Missing | P2 |
 | DNS leak protection, DoH/DoT | ⚠️ Basic DNS only | P2 |
