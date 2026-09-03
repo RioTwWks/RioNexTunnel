@@ -20,6 +20,7 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
   List<AppInfo> _apps = [];
   List<AppInfo> _filteredApps = [];
   bool _loadingApps = true;
+  String? _loadError;
   String _searchQuery = '';
 
   @override
@@ -44,12 +45,16 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
         _apps = apps;
         _filteredApps = apps;
         _loadingApps = false;
+        _loadError = null;
       });
     } catch (_) {
       if (!mounted) {
         return;
       }
-      setState(() => _loadingApps = false);
+      setState(() {
+        _loadingApps = false;
+        _loadError = 'Could not load installed apps';
+      });
     }
   }
 
@@ -154,9 +159,10 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
                 : _filteredApps.isEmpty
                 ? Center(
                     child: Text(
-                      _searchQuery.isEmpty
-                          ? 'No apps found'
-                          : 'No apps matching "$_searchQuery"',
+                      _loadError ??
+                          (_searchQuery.isEmpty
+                              ? 'No apps found'
+                              : 'No apps matching "$_searchQuery"'),
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
