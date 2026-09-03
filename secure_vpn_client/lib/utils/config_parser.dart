@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/credentials.dart';
+import '../models/panel_socks_inbound.dart';
+import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 
@@ -265,22 +267,76 @@ class ConfigParser {
     return value + '=' * (4 - padding);
   }
 
+  static PanelSocksInbound? extractPanelSocksAuth(
+    Map<String, dynamic> config, {
+    required VpnEngine engine,
+  }) {
+    final shortcut = _panelSocksFromShortcut(config);
+    if (shortcut != null) return shortcut;
+    final inbounds = config['inbounds'];
+    if (inbounds is! List) return null;
+    for (final raw in inbounds) {
+      if (raw is! Map) continue;
+      final inbound = Map<String, dynamic>.from(raw);
+      if (!_isSocksInbound(inbound, engine)) continue;
+      final listen = (inbound['listen'] ?? '127.0.0.1').toString();
+      if (listen != '127.0.0.1' && listen != 'localhost') continue;
+      if (engine == VpnEngine.xray) {
+        final settings = inbound['settings'];
+        if (settings is! Map || settings['auth']?.toString() != 'password') continue;
+        final accounts = settings['accounts'];
+        if (accounts is! List || accounts.isEmpty) continue;
+        final account = accounts.first;
+        if (account is! Map) continue;
+        final user = account['user']?.toString() ?? '';
+        final pass = account['pass']?.toString() ?? '';
+        final port = inbound['port'];
+        if (user.isEmpty || pass.isEmpty || port is! num) continue;
+        return PanelSocksInbound(username: user, password: pass, port: port.toInt());
+      }
+      final users = inbound['users'];
+      if (users is! List || users.isEmpty) continue;
+      final userEntry = users.first;
+      if (userEntry is! Map) continue;
+      final user = userEntry['username']?.toString() ?? '';
+      final pass = userEntry['password']?.toString() ?? '';
+      final port = inbound['listen_port'] ?? inbound['port'];
+      if (user.isEmpty || pass.isEmpty || port is! num) continue;
+      return PanelSocksInbound(username: user, password: pass, port: port.toInt());
+    }
+    return null;
+  }
+
+  static PanelSocksInbound? _panelSocksFromShortcut(Map<String, dynamic> config) {
+    for (final key in ['local_proxy', 'socks', 'localProxy']) {
+      final raw = config[key];
+      if (raw is! Map) continue;
+      final map = Map<String, dynamic>.from(raw);
+      final user = map['username']?.toString() ?? map['user']?.toString() ?? '';
+      final pass = map['password']?.toString() ?? map['pass']?.toString() ?? '';
+      final portRaw = map['port'] ?? map['listen_port'];
+      if (user.isEmpty || pass.isEmpty || portRaw is! num) continue;
+      return PanelSocksInbound(username: user, password: pass, port: portRaw.toInt());
+    }
+    return null;
+  }
+
   static String injectSecureSocksInbound(
     String jsonConfig,
     SessionCredentials credentials,
     VpnEngine engine, {
     int socksPort = defaultSocksPort,
     bool proxyOnly = false,
+    SocksAuthMode authMode = SocksAuthMode.randomPerSession,
+    PanelSocksInbound? panelSocks,
   }) {
     final decoded = jsonDecode(jsonConfig);
     if (decoded is! Map<String, dynamic>) {
       throw ConfigParserException('Config root must be a JSON object');
     }
-
     final config = Map<String, dynamic>.from(decoded);
     if (engine == VpnEngine.xray) {
       _normalizeXraySubscriptionConfig(config);
-      // Modern libXray rejects deprecated allowInsecure (use pcs/vcn instead).
       _stripDeprecatedXrayTlsFlags(config);
     }
     if (engine == VpnEngine.singbox) {
@@ -288,34 +344,37 @@ class ConfigParser {
       _ensureSingboxRemoteDns(config);
       _ensureSingboxClashApi(config);
     }
-    _sanitizeInboundsForProxy(config, engine, proxyOnly: proxyOnly);
-    _removeUnsafeSocksInbounds(config, engine);
-
-    final inbound = engine == VpnEngine.singbox
-        ? _buildSingboxSocksInbound(credentials, socksPort)
-        : _buildXraySocksInbound(credentials, socksPort);
-
-    final inbounds = <dynamic>[
-      ...(config['inbounds'] as List<dynamic>? ?? const []),
-      inbound,
-    ];
-    if (proxyOnly) {
-      final httpPort = socksPort + 1;
-      inbounds.add(
-        engine == VpnEngine.singbox
-            ? _buildSingboxHttpInbound(credentials, httpPort)
-            : _buildXrayHttpInbound(credentials, httpPort),
-      );
+    final skipInjection = authMode == SocksAuthMode.disableInjection;
+    final effectivePort = authMode == SocksAuthMode.staticFromPanel &&
+            panelSocks != null &&
+            panelSocks.isValid
+        ? panelSocks.port
+        : socksPort;
+    if (!skipInjection) {
+      _sanitizeInboundsForProxy(config, engine, proxyOnly: proxyOnly);
     }
-    config['inbounds'] = inbounds;
-
-    // Mobile VPN mode: Android/iOS create a system TUN and pass its fd to the
-    // core. Subscription JSON only has SOCKS/HTTP — without a tun inbound the
-    // fd is ignored and all device traffic blackholes.
-    if (!proxyOnly && engine == VpnEngine.xray) {
+    _removeUnsafeSocksInbounds(config, engine);
+    if (!skipInjection) {
+      final inbound = engine == VpnEngine.singbox
+          ? _buildSingboxSocksInbound(credentials, effectivePort)
+          : _buildXraySocksInbound(credentials, effectivePort);
+      final inbounds = <dynamic>[
+        ...(config['inbounds'] as List<dynamic>? ?? const []),
+        inbound,
+      ];
+      if (proxyOnly) {
+        final httpPort = effectivePort + 1;
+        inbounds.add(
+          engine == VpnEngine.singbox
+              ? _buildSingboxHttpInbound(credentials, httpPort)
+              : _buildXrayHttpInbound(credentials, httpPort),
+        );
+      }
+      config['inbounds'] = inbounds;
+    }
+    if (!proxyOnly && !skipInjection && engine == VpnEngine.xray) {
       _ensureXrayTunInbound(config);
     }
-
     validateSecure(jsonEncode(config), engine: engine);
     return const JsonEncoder.withIndent('  ').convert(config);
   }

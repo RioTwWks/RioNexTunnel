@@ -9,7 +9,10 @@ import 'package:v2ray_box/v2ray_box.dart';
 import '../models/engine_preference.dart';
 import '../models/split_tunnel_settings.dart';
 import '../models/vpn_engine.dart';
+import '../models/socks_auth_mode.dart';
+import '../providers/panel_providers.dart';
 import '../providers/per_app_proxy_provider.dart';
+import '../providers/socks_auth_mode_provider.dart';
 import '../providers/profile_advanced_provider.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/per_app_proxy_screen.dart';
@@ -19,6 +22,7 @@ import '../widgets/browser_helper_card.dart';
 import '../widgets/kill_switch_card.dart';
 import '../widgets/panel_settings_section.dart';
 import '../widgets/proxy_credentials_card.dart';
+import '../widgets/socks_auth_mode_strings.dart';
 import '../widgets/split_tunnel_desktop_banner.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -99,8 +103,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final perAppProxy = ref.watch(perAppProxyProvider);
     final ruDirectDefault = ref.watch(ruDirectRoutingDefaultProvider);
+    final socksAuthMode = ref.watch(socksAuthModeProvider);
+    final panelState = ref.watch(panelStateProvider);
     final androidVpn = !kIsWeb && Platform.isAndroid;
     final scheme = Theme.of(context).colorScheme;
+    final locale = Localizations.localeOf(context);
     final engineSubtitle = preference.isAuto
         ? (_coreVersion.isEmpty
               ? 'Auto: pick by availability, subscription format, connect fallback'
@@ -339,21 +346,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 140),
           child: _SectionCard(
-          title: 'Security',
+          title: SocksAuthModeStrings.sectionTitle(locale),
+          subtitle: SocksAuthModeStrings.sectionSubtitle(locale),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.lock_outline, color: scheme.primary),
-                title: const Text('Dynamic SOCKS5 credentials'),
-                subtitle: const Text('New username/password every session'),
+              SegmentedButton<SocksAuthMode>(
+                key: const ValueKey('socks_auth_mode_selector'),
+                segments: [
+                  ButtonSegment(value: SocksAuthMode.randomPerSession, label: Text(SocksAuthModeStrings.randomPerSession(locale)), icon: const Icon(Icons.shuffle, size: 18)),
+                  ButtonSegment(value: SocksAuthMode.staticFromPanel, label: Text(SocksAuthModeStrings.staticFromPanel(locale)), icon: const Icon(Icons.cloud_sync_outlined, size: 18)),
+                ],
+                selected: {socksAuthMode.isDisableInjection ? SocksAuthMode.randomPerSession : socksAuthMode},
+                onSelectionChanged: (s) => ref.read(socksAuthModeProvider.notifier).setMode(s.first),
               ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.home_outlined, color: scheme.primary),
-                title: const Text('Local bind'),
-                subtitle: const Text('127.0.0.1 only, password required'),
-              ),
+              const SizedBox(height: 8),
+              Text(socksAuthMode == SocksAuthMode.staticFromPanel ? SocksAuthModeStrings.staticDescription(locale) : SocksAuthModeStrings.randomDescription(locale), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              if (socksAuthMode == SocksAuthMode.staticFromPanel && !panelState.settings.isConfigured) ...[
+                const SizedBox(height: 8),
+                Text(SocksAuthModeStrings.staticUnavailable(locale), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.error)),
+              ],
+              const SizedBox(height: 8),
+              ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.home_outlined, color: scheme.primary), title: Text(locale.languageCode == 'ru' ? 'Привязка' : 'Local bind'), subtitle: Text(locale.languageCode == 'ru' ? 'Только 127.0.0.1, пароль обязателен' : '127.0.0.1 only, password required')),
             ],
           ),
         ),
@@ -410,6 +424,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 }
+
+bool _isRu(Locale? locale) => locale?.languageCode.toLowerCase() == 'ru';
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child, this.subtitle});

@@ -40,7 +40,8 @@ class VpnService {
     this.socksPort = ConfigParser.defaultSocksPort,
   }) : _v2rayBox = v2rayBox ?? V2rayBox(),
        _credentialService = credentialService ?? CredentialService(),
-       _killSwitchService = killSwitchService;
+       _killSwitchService = killSwitchService,
+       _panelManager = panelManager;
 
   final V2rayBox _v2rayBox;
   final CredentialService _credentialService;
@@ -290,6 +291,11 @@ class VpnService {
     _enginePreference = preference;
   }
 
+  void setSocksAuthMode(SocksAuthMode mode) {
+    if (mode == SocksAuthMode.disableInjection) return;
+    _socksAuthMode = mode;
+  }
+
   Future<void> setEngine(
     VpnEngine engine, {
     bool disconnectIfNeeded = true,
@@ -510,15 +516,27 @@ class VpnService {
       );
     }
 
-    final credentials = _credentialService.generate();
+    final credentials = await _resolveSessionCredentials(
+      profile: effectiveProfile,
+      rawConfig: rawConfig,
+    );
     final desktopProxy =
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    final authMode = _resolveSocksAuthMode(effectiveProfile);
+    final panelSocks = authMode == SocksAuthMode.staticFromPanel
+        ? await _loadPanelSocksAuth(_engine)
+        : null;
+    final effectiveSocksPort = panelSocks?.isValid == true
+        ? panelSocks!.port
+        : socksPort;
     final secureConfig = ConfigParser.injectSecureSocksInbound(
       rawConfig,
       credentials,
       _engine,
-      socksPort: socksPort,
+      socksPort: effectiveSocksPort,
       proxyOnly: desktopProxy,
+      authMode: authMode,
+      panelSocks: panelSocks,
     );
     AppLog.info(
       'Secure config ready proxyOnly=$desktopProxy '
@@ -532,13 +550,13 @@ class VpnService {
       throw StateError('Invalid VPN config: $validationError');
     }
 
-    await _setSessionCredentials(credentials);
+    await _setSessionCredentials(credentials, port: effectiveSocksPort);
     final started = await _v2rayBox.connectWithJson(
       secureConfig,
       name: effectiveProfile.name,
       socksUsername: credentials.username,
       socksPassword: credentials.password,
-      socksPort: socksPort,
+      socksPort: effectiveSocksPort,
     );
     if (!started) {
       AppLog.error('connectWithJson returned false');
@@ -674,7 +692,7 @@ class VpnService {
       await channel.invokeMethod<void>('setSessionCredentials', {
         'username': credentials.username,
         'password': credentials.password,
-        'port': socksPort,
+        'port': port ?? socksPort,
       });
     } catch (_) {
       // Native channel may be unavailable on some platforms during tests.

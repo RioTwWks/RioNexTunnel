@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:secure_vpn_client/models/credentials.dart';
+import 'package:secure_vpn_client/models/panel_socks_inbound.dart';
+import 'package:secure_vpn_client/models/socks_auth_mode.dart';
 import 'package:secure_vpn_client/models/vpn_engine.dart';
 import 'package:secure_vpn_client/services/credential_service.dart';
 import 'package:secure_vpn_client/utils/config_parser.dart';
@@ -98,6 +101,22 @@ void main() {
           isFalse,
         );
       }
+    });
+
+
+    test('staticFromPanel still binds localhost with auth', () {
+      const config = '{"inbounds":[],"outbounds":[{"protocol":"freedom"}]}';
+      final credentials = SessionCredentials(username: 'panel-static', password: 'panel-secret');
+      final secure = ConfigParser.injectSecureSocksInbound(config, credentials, VpnEngine.xray, authMode: SocksAuthMode.staticFromPanel, panelSocks: const PanelSocksInbound(username: 'panel-static', password: 'panel-secret', port: 2080));
+      final socks = (jsonDecode(secure) as Map)['inbounds'].cast<Map>().firstWhere((inbound) => inbound['tag'] == 'secure-socks-in');
+      expect(socks['listen'], '127.0.0.1');
+      expect(socks['port'], 2080);
+    });
+
+    test('disableInjection rejects unauthenticated socks', () {
+      const config = '{"inbounds":[{"protocol":"socks","listen":"127.0.0.1","port":1080,"settings":{"auth":"noauth"}}],"outbounds":[{"protocol":"freedom"}]}';
+      final credentials = CredentialService().generate();
+      expect(() => ConfigParser.injectSecureSocksInbound(config, credentials, VpnEngine.xray, authMode: SocksAuthMode.disableInjection), throwsA(isA<ConfigParserException>()));
     });
   });
 }

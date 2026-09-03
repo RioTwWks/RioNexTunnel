@@ -17,6 +17,7 @@ class Profile {
     this.muxEnabled = false,
     this.muxConcurrency = 8,
     this.ruDirectRouting = false,
+    this.disableSocksInjection = false,
   });
 
   final String id;
@@ -32,6 +33,7 @@ class Profile {
   final bool muxEnabled;
   final int muxConcurrency;
   final bool ruDirectRouting;
+  final bool disableSocksInjection;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -47,6 +49,7 @@ class Profile {
     'muxEnabled': muxEnabled,
     'muxConcurrency': muxConcurrency,
     'ruDirectRouting': ruDirectRouting,
+    'disableSocksInjection': disableSocksInjection,
   };
 
   factory Profile.fromJson(Map<String, dynamic> json) {
@@ -77,6 +80,7 @@ class Profile {
       muxEnabled: json['muxEnabled'] as bool? ?? false,
       muxConcurrency: (json['muxConcurrency'] as num?)?.toInt() ?? 8,
       ruDirectRouting: json['ruDirectRouting'] as bool? ?? false,
+      disableSocksInjection: json['disableSocksInjection'] as bool? ?? false,
     );
   }
 
@@ -96,6 +100,7 @@ class Profile {
     bool? muxEnabled,
     int? muxConcurrency,
     bool? ruDirectRouting,
+    bool? disableSocksInjection,
   }) {
     return Profile(
       id: id ?? this.id,
@@ -116,6 +121,8 @@ class Profile {
       muxEnabled: muxEnabled ?? this.muxEnabled,
       muxConcurrency: muxConcurrency ?? this.muxConcurrency,
       ruDirectRouting: ruDirectRouting ?? this.ruDirectRouting,
+      disableSocksInjection:
+          disableSocksInjection ?? this.disableSocksInjection,
     );
   }
 }
