@@ -202,10 +202,10 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 2.4 — Remote commands (push)
 
-- [ ] Prefer WebSocket: `wss://<panel>/api/client/commands` with `device_token`
-- [ ] Handle commands: `refresh_config`, `disconnect`, `switch_server` (as server defines)
-- [ ] Fallback: long polling `GET /api/client/commands?last_seq=...` every ~5 min if WS unavailable
-- [ ] Commands trigger existing `VpnService` / profile refresh — no duplicate connect logic
+- [x] Prefer WebSocket: `wss://<panel>/api/client/commands` with `device_token`
+- [x] Handle commands: `refresh_config`, `disconnect`, `switch_server` (as server defines)
+- [x] Fallback: long polling `GET /api/client/commands?last_seq=...` every ~5 min if WS unavailable
+- [x] Commands trigger existing `VpnService` / profile refresh — no duplicate connect logic
 
 ### 2.5 — SOCKS5 auth & panel configs
 
@@ -245,7 +245,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 |-------|-------------------|
 | **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` — **done (MVP)** |
 | **2** | Stats collector + offline queue + `session_id` — **partial** (disconnect flush; no 60s timer) |
-| **3** | WebSocket / long-poll commands; reconnect on `refresh_config` |
+| **3** | WebSocket / long-poll commands; reconnect on `refresh_config` — **done (§2.4)** |
 | **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing |
 
 ### Expected outcomes
