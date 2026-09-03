@@ -93,6 +93,8 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     }
     
     func reloadService() async throws {
+        reasserting = true
+        defer { reasserting = false }
         try await startService()
     }
     
@@ -129,7 +131,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     
     func writeMessage(_ message: String) {
         if let server = commandServer {
-            server.writeMessage(0, message: message)
+            server.writeMessage(2, message: message)
         } else {
             NSLog(message)
         }
@@ -403,7 +405,8 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
     func getSystemProxyStatus() throws -> LibboxSystemProxyStatus {
         let status = LibboxSystemProxyStatus()
         guard let settings = networkSettings?.proxySettings else { return status }
-        status.available = settings.httpServer != nil
+        guard settings.httpServer != nil else { return status }
+        status.available = true
         status.enabled = settings.httpEnabled
         return status
     }
