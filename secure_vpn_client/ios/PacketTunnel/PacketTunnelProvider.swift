@@ -56,12 +56,13 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw error
         }
         
-        // Create platform interface
-        platformInterface = TunnelPlatformInterface(tunnel: self)
+        // Create platform interface (non-optional local for LibboxNewCommandServer)
+        let platform = TunnelPlatformInterface(tunnel: self)
+        platformInterface = platform
         
         // Create command server
         var serverError: NSError?
-        guard let server = LibboxNewCommandServer(platformInterface, platformInterface, &serverError) else {
+        guard let server = LibboxNewCommandServer(platform, platform, &serverError) else {
             if let serverError = serverError {
                 throw serverError
             }
