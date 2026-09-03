@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models/socks_auth_mode.dart';
-
 class SocksAuthModeStrings {
   SocksAuthModeStrings._();
   static bool _isRu(Locale? locale) => locale?.languageCode.toLowerCase() == 'ru';

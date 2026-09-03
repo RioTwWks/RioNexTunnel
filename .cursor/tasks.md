@@ -209,11 +209,11 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 2.5 — SOCKS5 auth & panel configs
 
-- [ ] **Default:** keep per-session random SOCKS creds (`CredentialService` + `injectSecureSocksInbound`)
-- [ ] Setting: **Random per session** vs **Static from panel** (when panel JSON includes inbound auth)
-- [ ] When panel supplies SOCKS params, align port/method with injected inbounds before connect
-- [ ] Manual link import: option to disable dynamic SOCKS injection for broken third-party configs (advanced)
-- [ ] Golden rule unchanged: `127.0.0.1` only, auth always required — static password from panel is still auth
+- [x] **Default:** keep per-session random SOCKS creds (`CredentialService` + `injectSecureSocksInbound`)
+- [x] Setting: **Random per session** vs **Static from panel** (when panel JSON includes inbound auth)
+- [x] When panel supplies SOCKS params, align port/method with injected inbounds before connect
+- [x] Manual link import: option to disable dynamic SOCKS injection for broken third-party configs (advanced)
+- [x] Golden rule unchanged: `127.0.0.1` only, auth always required — static password from panel is still auth
 
 ### 2.6 — Errors & fallback
 
