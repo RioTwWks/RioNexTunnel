@@ -23,6 +23,7 @@ class SecureVpnApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(panelStatsLifecycleProvider);
+    ref.watch(panelCommandsLifecycleProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
