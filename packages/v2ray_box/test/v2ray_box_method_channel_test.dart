@@ -232,6 +232,33 @@ void main() {
       expect(apps[0].packageName, 'com.test');
     });
 
+    test('getInstalledPackages accepts native list payload', () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+        if (methodCall.method == 'get_installed_packages') {
+          return [
+            {
+              'package-name': 'com.one',
+              'name': 'One',
+              'is-system-app': false,
+            },
+            {
+              'packageName': 'com.two',
+              'name': 'Two',
+              'isSystemApp': true,
+            },
+          ];
+        }
+        return null;
+      });
+
+      final apps = await platform.getInstalledPackages();
+      expect(apps, hasLength(2));
+      expect(apps[0].packageName, 'com.one');
+      expect(apps[1].packageName, 'com.two');
+      expect(apps[1].isSystemApp, isTrue);
+    });
+
     test('getPackageIcon', () async {
       expect(await platform.getPackageIcon('com.test'), 'icondata');
     });

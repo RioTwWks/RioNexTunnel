@@ -792,14 +792,12 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
             "get_installed_packages" -> {
                 scope.launch(Dispatchers.IO) {
-                    result.runCatching {
-                        val pm = packageManager ?: run {
-                            success("[]")
-                            return@runCatching
-                        }
-                        val context = applicationContext ?: run {
-                            success("[]")
-                            return@runCatching
+                    try {
+                        val pm = packageManager
+                        val context = applicationContext
+                        if (pm == null || context == null) {
+                            result.success(emptyList<Map<String, Any>>())
+                            return@launch
                         }
                         // List installed apps for split tunneling. Do not filter by
                         // INTERNET permission — requestedPermissions is often null on
@@ -817,16 +815,26 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                             .asSequence()
                             .filter { it.packageName != context.packageName }
                             .map { appInfo ->
-                                val label = appInfo.loadLabel(pm)?.toString()?.trim().orEmpty()
-                                AppItem(
-                                    appInfo.packageName,
-                                    label.ifEmpty { appInfo.packageName },
-                                    (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                                val label = runCatching {
+                                    appInfo.loadLabel(pm)?.toString()?.trim().orEmpty()
+                                }.getOrDefault("")
+                                mapOf(
+                                    "package-name" to appInfo.packageName,
+                                    "name" to label.ifEmpty { appInfo.packageName },
+                                    "is-system-app" to
+                                        ((appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0),
                                 )
                             }
-                            .sortedBy { it.name }
+                            .sortedBy { it["name"] as String }
                             .toList()
-                        success(gson.toJson(list))
+                        result.success(list)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "get_installed_packages failed", e)
+                        result.error(
+                            "installed_apps",
+                            e.message ?: "Failed to enumerate installed apps",
+                            null,
+                        )
                     }
                 }
             }

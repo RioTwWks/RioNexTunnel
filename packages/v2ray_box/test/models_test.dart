@@ -353,6 +353,17 @@ void main() {
       expect(app.isSystemApp, isFalse);
     });
 
+    test('fromJson accepts Gson camelCase keys', () {
+      final app = AppInfo.fromJson({
+        'packageName': 'com.example.app',
+        'name': 'Example App',
+        'isSystemApp': true,
+      });
+      expect(app.packageName, 'com.example.app');
+      expect(app.name, 'Example App');
+      expect(app.isSystemApp, isTrue);
+    });
+
     test('toJson produces correct keys', () {
       final app = AppInfo(packageName: 'com.test', name: 'Test', isSystemApp: true);
       final json = app.toJson();
