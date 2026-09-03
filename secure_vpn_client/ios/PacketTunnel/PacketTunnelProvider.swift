@@ -9,7 +9,6 @@ import Libbox
 class PacketTunnelProvider: NEPacketTunnelProvider {
 
     private var commandServer: LibboxCommandServer?
-    private var boxService: LibboxBoxService?
     private var platformInterface: TunnelPlatformInterface?
     private var config: String?
     private var coreEngine: String = "singbox"
@@ -55,7 +54,10 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         platformInterface = TunnelPlatformInterface(tunnel: self)
 
-        commandServer = LibboxNewCommandServer(platformInterface, 30)
+        commandServer = LibboxNewCommandServer(platformInterface, platformInterface, &error)
+        if let error = error {
+            throw error
+        }
         try commandServer?.start()
 
         try await startService()
@@ -66,30 +68,23 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
             throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Config is nil"])
         }
 
-        var error: NSError?
-        guard let service = LibboxNewService(config, platformInterface, &error) else {
-            if let error = error {
-                throw error
-            }
-            throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to create service"])
-        }
-
-        try service.start()
-        boxService = service
-        commandServer?.setService(service)
+        let options = LibboxOverrideOptions()
+        try commandServer?.startOrReloadService(config, options: options)
     }
 
-    private func stopService() {
-        if let service = boxService {
-            do {
-                try service.close()
-            } catch {
-                NSLog("Error closing service: \(error.localizedDescription)")
-            }
-            boxService = nil
-            commandServer?.setService(nil)
+    func stopService() {
+        do {
+            try commandServer?.closeService()
+        } catch {
+            NSLog("Error closing service: \(error.localizedDescription)")
         }
         platformInterface?.reset()
+    }
+
+    func reloadService() async throws {
+        reasserting = true
+        defer { reasserting = false }
+        try await startService()
     }
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
@@ -97,7 +92,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
 
         if let server = commandServer {
             try? await Task.sleep(nanoseconds: 100_000_000)
-            try? server.close()
+            server.close()
             commandServer = nil
         }
     }
@@ -116,16 +111,16 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     }
 
     override func sleep() {
-        boxService?.pause()
+        commandServer?.pause()
     }
 
     override func wake() {
-        boxService?.wake()
+        commandServer?.wake()
     }
 
     func writeMessage(_ message: String) {
         if let server = commandServer {
-            server.writeMessage(message)
+            server.writeMessage(2, message: message)
         } else {
             NSLog(message)
         }
@@ -196,10 +191,18 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
         if options.getAutoRoute() {
             settings.mtu = NSNumber(value: options.getMTU())
 
-            var error: NSError?
-            if let dnsServer = options.getDNSServerAddress(&error) {
-                settings.dnsSettings = NEDNSSettings(servers: [dnsServer.value])
+            var dnsServers = ["8.8.8.8", "8.8.4.4"]
+            if let dnsMode = options.getDNSMode(), dnsMode.value != LibboxDNSModeDisabled {
+                let dnsIterator = try options.getDNSServerAddress()
+                var parsed: [String] = []
+                while dnsIterator.hasNext() {
+                    parsed.append(dnsIterator.next())
+                }
+                if !parsed.isEmpty {
+                    dnsServers = parsed
+                }
             }
+            settings.dnsSettings = NEDNSSettings(servers: dnsServers)
 
             var ipv4Addresses: [String] = []
             var ipv4Masks: [String] = []
@@ -274,16 +277,10 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
         }
     }
 
-    func usePlatformAutoDetectControl() -> Bool { true }
+    func usePlatformAutoDetectControl() -> Bool { false }
     func autoDetectControl(_ fd: Int32) throws {}
 
-    func findConnectionOwner(_ ipProtocol: Int32, sourceAddress: String?, sourcePort: Int32, destinationAddress: String?, destinationPort: Int32, ret0_: UnsafeMutablePointer<Int32>?) throws {
-        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not implemented"])
-    }
-
-    func packageName(byUid uid: Int32, error: NSErrorPointer) -> String { "" }
-
-    func uid(byPackageName packageName: String?, ret0_: UnsafeMutablePointer<Int32>?) throws {
+    func findConnectionOwner(_ ipProtocol: Int32, sourceAddress: String?, sourcePort: Int32, destinationAddress: String?, destinationPort: Int32) throws -> LibboxConnectionOwner {
         throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not implemented"])
     }
 
@@ -294,11 +291,8 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
         tunnel?.writeMessage(message)
     }
 
-    func usePlatformDefaultInterfaceMonitor() -> Bool { false }
     func startDefaultInterfaceMonitor(_ listener: (any LibboxInterfaceUpdateListenerProtocol)?) throws {}
     func closeDefaultInterfaceMonitor(_ listener: (any LibboxInterfaceUpdateListenerProtocol)?) throws {}
-
-    func useGetter() -> Bool { false }
 
     func getInterfaces() throws -> any LibboxNetworkInterfaceIteratorProtocol {
         throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not implemented"])
@@ -308,6 +302,9 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
     func includeAllNetworks() -> Bool {
         UserDefaults.standard.string(forKey: "flutter.kill_switch_mode") == "strict"
     }
+
+    func localDNSTransport() -> (any LibboxLocalDNSTransportProtocol)? { nil }
+    func systemCertificates() -> (any LibboxStringIteratorProtocol)? { nil }
 
     func clearDNSCache() {
         guard let settings = networkSettings, let tunnel = tunnel else { return }
@@ -319,12 +316,66 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
 
     func readWIFIState() -> LibboxWIFIState? { nil }
 
-    func sendNotification(_ notification: LibboxNotification?) throws {}
+    func send(_ notification: LibboxNotification?) throws {}
 
-    func getSystemProxyStatus() -> LibboxSystemProxyStatus? {
+    func cancelNotification(_ identifier: String?, typeID: Int32) throws {}
+
+    func startNeighborMonitor(_ listener: (any LibboxNeighborUpdateListenerProtocol)?) throws {}
+    func closeNeighborMonitor(_ listener: (any LibboxNeighborUpdateListenerProtocol)?) throws {}
+    func registerMyInterface(_ name: String?) {}
+
+    func usePlatformShell() -> Bool { false }
+    func checkPlatformShell() throws {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
+
+    func openShellSession(_ user: LibboxPlatformUser?, command: String?, environ: (any LibboxStringIteratorProtocol)?, term: String?, rows: Int32, cols: Int32) throws -> any LibboxShellSessionProtocol {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
+
+    func readSystemSSHHostKey(_ error: NSErrorPointer) -> String {
+        error?.pointee = NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+        return ""
+    }
+
+    func lookupSFTPServer(_ error: NSErrorPointer) -> String {
+        error?.pointee = NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+        return ""
+    }
+
+    func tailscaleHostname() -> String { "" }
+
+    func usePlatformBridge() -> Bool { false }
+    func createBridge(_ options: LibboxBridgeOptions?) throws -> any LibboxBridgeSessionProtocol {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
+
+    func usePlatformAutoRedirect() -> Bool { false }
+    func createAutoRedirect(_ options: Data?, handler: (any LibboxAutoRedirectHandlerProtocol)?) throws -> any LibboxAutoRedirectSessionProtocol {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
+
+    func lookupUser(_ username: String?) throws -> LibboxPlatformUser {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
+
+    // MARK: - LibboxCommandServerHandlerProtocol
+
+    func serviceStop() throws {
+        tunnel?.stopService()
+    }
+
+    func serviceReload() throws {
+        try runBlocking { [self] in
+            try await tunnel?.reloadService()
+        }
+    }
+
+    func getSystemProxyStatus() throws -> LibboxSystemProxyStatus {
         let status = LibboxSystemProxyStatus()
         guard let settings = networkSettings?.proxySettings else { return status }
-        status.available = settings.httpServer != nil
+        guard settings.httpServer != nil else { return status }
+        status.available = true
         status.enabled = settings.httpEnabled
         return status
     }
@@ -342,9 +393,16 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
         }
     }
 
-    func postServiceClose() {}
+    func triggerNativeCrash() throws {}
 
-    func serviceReload() throws {}
+    func writeDebugMessage(_ message: String?) {
+        guard let message = message else { return }
+        NSLog(message)
+    }
+
+    func connectSSHAgent(_ ret0_: UnsafeMutablePointer<Int32>?) throws {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
 }
 
 private func runBlocking<T>(_ block: @escaping () async throws -> T) throws -> T {
