@@ -142,11 +142,14 @@ class PanelManager {
     return PanelSyncStatus.stale;
   }
 
-  Future<void> _persistSettings(PanelSettings next) async {
+  Future<void> _persistSettings(
+    PanelSettings next, {
+    PanelSyncStatus? syncStatus,
+  }) async {
     _settings = next;
     final prefs = await _prefs();
     await prefs.setString(_settingsKey, jsonEncode(next.toJson()));
-    _syncStatus = _deriveStatus();
+    _syncStatus = syncStatus ?? _deriveStatus();
   }
 
   Future<void> setEnabled(bool enabled) async {
@@ -282,8 +285,32 @@ class PanelManager {
         try {
           configJson = Map<String, dynamic>.from(jsonDecode(configRaw) as Map);
         } catch (_) {
-          throw PanelApiException('Invalid config JSON from panel');
+          AppLog.warn('Panel config JSON invalid (device=$deviceIdHash)');
+          await _persistSettings(
+            _settings.copyWith(lastError: 'Invalid config JSON from panel'),
+            syncStatus: await _hasCachedConfig()
+                ? PanelSyncStatus.stale
+                : PanelSyncStatus.error,
+          );
+          return PanelConfigResult(
+            configHash: _settings.configHash ?? configHash,
+            configJson: await loadCachedConfig(),
+            subscriptionUrl: _settings.subscriptionUrl,
+          );
         }
+      } else if (configRaw != null) {
+        AppLog.warn('Panel config has unexpected type (device=$deviceIdHash)');
+        await _persistSettings(
+          _settings.copyWith(lastError: 'Invalid config JSON from panel'),
+          syncStatus: await _hasCachedConfig()
+              ? PanelSyncStatus.stale
+              : PanelSyncStatus.error,
+        );
+        return PanelConfigResult(
+          configHash: _settings.configHash ?? configHash,
+          configJson: await loadCachedConfig(),
+          subscriptionUrl: _settings.subscriptionUrl,
+        );
       }
 
       if (configJson != null) {
@@ -310,17 +337,20 @@ class PanelManager {
         subscriptionUrl: subscriptionUrl,
       );
     } on PanelApiException catch (error) {
-      await _persistSettings(_settings.copyWith(lastError: error.message));
-      _syncStatus = await _hasCachedConfig()
-          ? PanelSyncStatus.stale
-          : PanelSyncStatus.error;
+      final hasCache = await _hasCachedConfig();
+      await _persistSettings(
+        _settings.copyWith(lastError: hasCache ? null : error.message),
+        syncStatus: hasCache ? PanelSyncStatus.stale : PanelSyncStatus.error,
+      );
       rethrow;
     } on SocketException {
-      _syncStatus = await _hasCachedConfig()
-          ? PanelSyncStatus.stale
-          : PanelSyncStatus.offline;
+      final hasCache = await _hasCachedConfig();
       await _persistSettings(
-        _settings.copyWith(lastError: 'Panel unreachable'),
+        _settings.copyWith(
+          lastError: hasCache ? null : 'Panel unreachable',
+        ),
+        syncStatus:
+            hasCache ? PanelSyncStatus.stale : PanelSyncStatus.offline,
       );
       rethrow;
     }
