@@ -121,7 +121,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         }
     }
     
-    override func sleep() {
+    override func sleep() async {
         commandServer?.pause()
     }
     
