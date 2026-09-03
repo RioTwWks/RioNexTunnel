@@ -213,14 +213,23 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
 
   @override
   Future<List<AppInfo>> getInstalledPackages() async {
-    final result = await methodChannel.invokeMethod<String>(
+    final result = await methodChannel.invokeMethod<dynamic>(
       'get_installed_packages',
     );
-    if (result == null || result.isEmpty) return [];
+    if (result == null) return [];
 
-    final List<dynamic> jsonList = jsonDecode(result);
-    return jsonList
-        .map((e) => AppInfo.fromJson(e as Map<String, dynamic>))
+    final List<dynamic> entries;
+    if (result is List) {
+      entries = result;
+    } else if (result is String) {
+      if (result.isEmpty) return [];
+      entries = jsonDecode(result) as List<dynamic>;
+    } else {
+      return [];
+    }
+
+    return entries
+        .map((e) => AppInfo.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
 

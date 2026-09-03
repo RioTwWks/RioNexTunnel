@@ -24,10 +24,19 @@ class AppInfo {
   });
 
   factory AppInfo.fromJson(Map<String, dynamic> json) {
+    final packageName =
+        (json['package-name'] ?? json['packageName']) as String? ?? '';
+    final name = (json['name'] as String?)?.trim();
+    final systemRaw = json['is-system-app'] ?? json['isSystemApp'];
+    final isSystemApp = switch (systemRaw) {
+      true || 1 => true,
+      false || 0 || null => false,
+      _ => systemRaw.toString() == 'true',
+    };
     return AppInfo(
-      packageName: json['package-name'] as String,
-      name: json['name'] as String,
-      isSystemApp: json['is-system-app'] as bool? ?? false,
+      packageName: packageName,
+      name: (name == null || name.isEmpty) ? packageName : name,
+      isSystemApp: isSystemApp,
     );
   }
 
