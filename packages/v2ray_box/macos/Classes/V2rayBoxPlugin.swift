@@ -366,12 +366,17 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 "armed": killSwitchMode == "strict",
                 "engaged": killSwitchEngaged,
                 "available": true,
-                "backend": "ne_packet_tunnel",
+                "backend": "desktop_proxy",
             ] as [String: Any])
 
         case "is_core_running":
-            let connected = tunnelManager?.connection.status == .connected
-            result(connected == true && !killSwitchEngaged)
+            let processRunning: Bool
+            if coreEngine == "xray" {
+                processRunning = XrayProcess.shared.isRunning
+            } else {
+                processRunning = SingboxProcess.shared.isRunning
+            }
+            result(isRunning && processRunning && !killSwitchEngaged)
 
         case "get_logs":
             result([String]())
