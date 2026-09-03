@@ -39,6 +39,43 @@ curl_github() {
   return 1
 }
 
+CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-30}"
+CURL_MAX_TIME="${CURL_MAX_TIME:-600}"
+CURL_DOWNLOAD_RETRIES="${CURL_DOWNLOAD_RETRIES:-5}"
+
+curl_download_file() {
+  local url="$1"
+  local output="$2"
+  local attempt
+  local delay
+  local -a curl_args=(
+    -fsSL
+    --connect-timeout "${CURL_CONNECT_TIMEOUT}"
+    --max-time "${CURL_MAX_TIME}"
+    --retry 2
+    --retry-delay 2
+    --retry-max-time 120
+    -H "User-Agent: RioNexTunnel-fetch-cores"
+  )
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    curl_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+  fi
+
+  for ((attempt = 1; attempt <= CURL_DOWNLOAD_RETRIES; attempt++)); do
+    if curl "${curl_args[@]}" "${url}" -o "${output}"; then
+      return 0
+    fi
+    if ((attempt < CURL_DOWNLOAD_RETRIES)); then
+      delay=$((attempt * 2))
+      echo "  download retry ${attempt}/${CURL_DOWNLOAD_RETRIES} in ${delay}s..." >&2
+      sleep "${delay}"
+    fi
+  done
+
+  return 1
+}
+
 fetch_latest_tag() {
   local repo="$1"
   local fallback="$2"
@@ -91,7 +128,7 @@ download_and_extract() {
   fi
 
   echo "  -> ${url}"
-  if ! curl -fsSL "${url}" -o "${tmp}/archive"; then
+  if ! curl_download_file "${url}" "${tmp}/archive"; then
     if [[ "${optional}" == "true" ]]; then
       echo "  skip (download failed, optional): ${binary_name}"
       rm -rf "${tmp}"
@@ -229,8 +266,8 @@ GEO_DEST="${DEST}/geo"
 mkdir -p "${GEO_DEST}"
 
 echo "Fetching Xray geo assets..."
-curl -fsSL "${GEO_BASE_URL}/geoip.dat" -o "${GEO_DEST}/geoip.dat"
-curl -fsSL "${GEO_BASE_URL}/geosite.dat" -o "${GEO_DEST}/geosite.dat"
+curl_download_file "${GEO_BASE_URL}/geoip.dat" "${GEO_DEST}/geoip.dat"
+curl_download_file "${GEO_BASE_URL}/geosite.dat" "${GEO_DEST}/geosite.dat"
 
 copy_if_exists "${GEO_DEST}/geoip.dat" "${LINUX_RES}/geoip.dat"
 copy_if_exists "${GEO_DEST}/geosite.dat" "${LINUX_RES}/geosite.dat"
