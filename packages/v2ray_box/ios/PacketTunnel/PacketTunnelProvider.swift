@@ -214,16 +214,18 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
         if options.getAutoRoute() {
             settings.mtu = NSNumber(value: options.getMTU())
             
-            do {
+            var dnsServers = ["8.8.8.8", "8.8.4.4"]
+            if let dnsMode = options.getDNSMode(), dnsMode.value != LibboxDNSModeDisabled {
                 let dnsIterator = try options.getDNSServerAddress()
-                var dnsServers: [String] = []
+                var parsed: [String] = []
                 while dnsIterator.hasNext() {
-                    dnsServers.append(dnsIterator.next())
+                    parsed.append(dnsIterator.next())
                 }
-                if !dnsServers.isEmpty {
-                    settings.dnsSettings = NEDNSSettings(servers: dnsServers)
+                if !parsed.isEmpty {
+                    dnsServers = parsed
                 }
-            } catch {}
+            }
+            settings.dnsSettings = NEDNSSettings(servers: dnsServers)
             
             // IPv4
             var ipv4Addresses: [String] = []
