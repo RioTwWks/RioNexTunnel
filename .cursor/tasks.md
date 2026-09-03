@@ -332,10 +332,10 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ### 6 — Platform & engine notes
 
-- [ ] iOS — detect platform; deprioritize XHTTP+Reality, prioritize TCP+Reality+Vision from same subscription
-- [ ] Engine version gate — warn if bundled Xray is older than feature requiring XHTTP (compare against `fetch_cores.sh` pin)
-- [ ] **Do not** vendor custom Xray builds for REALITY cert randomization; track [XTLS/Xray-core](https://github.com/XTLS/Xray-core) issues/PRs instead
-- [ ] Optional: document upstream REALITY improvements in `docs/` when official core catches up to fork ideas
+- [x] iOS — detect platform; deprioritize XHTTP+Reality, prioritize TCP+Reality+Vision from same subscription
+- [x] Engine version gate — warn if bundled Xray is older than feature requiring XHTTP (compare against `fetch_cores.sh` pin)
+- [x] **Do not** vendor custom Xray builds for REALITY cert randomization; track [XTLS/Xray-core](https://github.com/XTLS/Xray-core) issues/PRs instead
+- [x] Optional: document upstream REALITY improvements in `docs/` when official core catches up to fork ideas
 
 ### 7 — Testing & docs (client)
 

@@ -9,6 +9,7 @@ import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import 'config_parser.dart';
 import 'ping_config_builder.dart';
+import 'platform_transport_selector.dart';
 import 'server_latency.dart';
 
 /// Probes subscription servers for latency using the best method per platform.
@@ -94,7 +95,8 @@ class SubscriptionLatencyProbe {
   }
 
   static ServerLatencyResult? selectBest(List<ServerLatencyResult> results) {
-    return ServerLatencyProbe.selectBest(results);
+    return PlatformTransportSelector.selectBest(results) ??
+        ServerLatencyProbe.selectBest(results);
   }
 
   Future<int> _probeWithCore(

@@ -57,4 +57,34 @@ RioNexTunnel поддерживает обычные ссылки VLESS/VMess/Tr
 | Ошибки geo / RU direct | `scripts/fetch_cores.sh` или отключить пресет |
 | iOS + XHTTP+REALITY | Узел TCP+REALITY+Vision из той же подписки |
 
+## Политика платформы и движка
+
+### Выбор транспорта на iOS
+
+При **Automatic (best latency)** в подписке с узлами **XHTTP+REALITY** и **TCP+REALITY+Vision** клиент на **iOS понижает приоритет XHTTP** и предпочитает TCP+REALITY+Vision. На остальных платформах при доступности обоих стеков по умолчанию выбирается XHTTP.
+
+Это **только ранжирование серверов** (§6), а не цепочка fallback при connect (§5). Если в подписке только XHTTP, iOS подключается к лучшему доступному XHTTP-узлу.
+
+### Только официальный Xray-core
+
+RioNexTunnel поставляет **официальные бинарники [Xray-core](https://github.com/XTLS/Xray-core)** через `scripts/fetch_cores.sh`. Мы **не** включаем кастомные сборки Xray для рандомизации REALITY-сертификатов и прочих патчей форков (например, неподдерживаемый [REALITY-rkn-fix](https://github.com/fwflunky/REALITY-rkn-fix)).
+
+Защита от статического отпечатка REALITY — **выбор транспорта** (XHTTP где возможно), **uTLS** и **настройки сервера**, а не пропатченный клиентский core.
+
+### Проверка версии core (XHTTP)
+
+Версия bundled Xray сравнивается с пином в `scripts/fetch_cores.sh` (`DEFAULT_XRAY_VERSION`, сейчас **26.3.27**). При подключении с **XHTTP+REALITY** на более старом core:
+
+- в лог пишется **некритичное предупреждение**
+- в **Settings → Core engine** — напоминание запустить `scripts/fetch_cores.sh`
+
+Обновление: `./scripts/fetch_cores.sh` из корня репозитория, затем пересборка приложения.
+
+### Улучшения REALITY в upstream
+
+Когда официальный Xray-core получит функции из community-форков (динамические REALITY-серты, фрагментация ServerHello и т.д.), RioNexTunnel подключает их через **обычное обновление core** в `fetch_cores.sh`, без приватного форка. Следите за:
+
+- [релизами XTLS/Xray-core](https://github.com/XTLS/Xray-core/releases)
+- [issues XTLS/Xray-core](https://github.com/XTLS/Xray-core/issues) (REALITY / XHTTP)
+
 См. также [security.md](security.md) и [troubleshooting.md](troubleshooting.md).
