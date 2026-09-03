@@ -425,8 +425,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-bool _isRu(Locale? locale) => locale?.languageCode.toLowerCase() == 'ru';
-
 class _SectionCard extends StatelessWidget {
   const _SectionCard({required this.title, required this.child, this.subtitle});
 
