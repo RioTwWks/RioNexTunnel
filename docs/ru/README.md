@@ -67,6 +67,8 @@
 | [Участие в разработке](contributing.md) | Чеклист PR и пути правок |
 | [Форк v2ray_box](v2ray_box_fork.md) | Патчи относительно upstream, зачем example |
 | [Мобильный VPN config](mobile_vpn_config.md) | Аудит sing-box `mixed` и DNS |
+| [Тесты RioNexGate](rionexgate_testing.md) | Интеграционные тесты панели (CI и опционально живая панель) |
+| [Release notes v0.6.0](release_notes_v0.6.0.md) | RioNexGate фазы 2–4: команды, sync, режимы SOCKS |
 
 ---
 

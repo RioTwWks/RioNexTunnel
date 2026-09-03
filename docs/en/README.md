@@ -67,6 +67,8 @@ The project is built from scratch on Flutter for five platforms: **Android, iOS,
 | [Contributing](contributing.md) | PR checklist and edit targets |
 | [v2ray_box fork](v2ray_box_fork.md) | Patch set vs upstream, example app rationale |
 | [Mobile VPN config](mobile_vpn_config.md) | sing-box `mixed` inbound and DNS migration audit |
+| [RioNexGate testing](rionexgate_testing.md) | Panel integration tests (CI and optional live panel) |
+| [Release notes v0.6.0](release_notes_v0.6.0.md) | RioNexGate Phase 2–4: commands, sync, SOCKS modes |
 
 ---
 
