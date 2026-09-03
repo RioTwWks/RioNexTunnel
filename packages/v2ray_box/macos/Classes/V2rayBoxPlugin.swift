@@ -366,7 +366,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 "armed": killSwitchMode == "strict",
                 "engaged": killSwitchEngaged,
                 "available": true,
-                "backend": "ne_packet_tunnel",
+                "backend": "desktop_proxy",
             ] as [String: Any])
 
         case "is_core_running":

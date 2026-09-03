@@ -381,6 +381,12 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
     func createBridge(_ options: LibboxBridgeOptions?) throws -> any LibboxBridgeSessionProtocol {
         throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
     }
+
+    func usePlatformAutoRedirect() -> Bool { false }
+
+    func createAutoRedirect(_ options: Data?, handler: (any LibboxAutoRedirectHandlerProtocol)?) throws -> any LibboxAutoRedirectSessionProtocol {
+        throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
+    }
     
     // MARK: - LibboxCommandServerHandlerProtocol
     
@@ -422,7 +428,7 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
         NSLog(message)
     }
     
-    func connectSSHAgent(_ ret0_: UnsafeMutablePointer?) throws {
+    func connectSSHAgent(_ ret0_: UnsafeMutablePointer<Int32>?) throws {
         throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "not supported"])
     }
 }
