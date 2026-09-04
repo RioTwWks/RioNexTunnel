@@ -91,9 +91,16 @@ On connect the Windows plugin:
 
 Session username/password are generated per Connect, shown on **Home** and in **Settings → System proxy (this session)**, and wiped on disconnect. They are **local proxy credentials**, not your VPN server login.
 
-### Browser proxy auth (planned)
+### Browser proxy auth (extension)
 
-Chromium on Windows may ignore stored proxy passwords. A browser extension and native messaging host (similar to Linux) are planned; until then, manual credential entry from Home/Settings is the fallback.
+Chromium on Windows may ignore stored proxy passwords. Use the **browser extension** (`extensions/secure-vpn-proxy-auth/`) with the native messaging host (installed automatically on first `setup()`).
+
+1. Load the extension in Chrome or Edge (`chrome://extensions`) or Firefox (`about:debugging`).
+2. Connect VPN in the app.
+3. Check **Settings → Browser helper** — all indicators should be green.
+4. Browse — no proxy login dialog.
+
+See [browser_extension.md](browser_extension.md). Manual fallback: copy credentials from **Home** or **Settings → System proxy (this session)**.
 
 ## Runtime directories
 
@@ -101,6 +108,7 @@ Chromium on Windows may ignore stored proxy passwords. A browser extension and n
 |------|---------|
 | `%LOCALAPPDATA%\v2ray_box\profiles\active_config.json` | Active core config (wiped on disconnect) |
 | `%LOCALAPPDATA%\v2ray_box\assets\` | Xray geo databases |
+| `%LOCALAPPDATA%\v2ray_box\native_host\` | Native messaging host + session creds for browser extension |
 | `%LOCALAPPDATA%\v2ray_box\proxy_backup.env` | Saved system proxy settings (restored on disconnect) |
 
 Linux uses `~/.local/share/v2ray_box/`; Windows uses `%LOCALAPPDATA%\v2ray_box\`.
