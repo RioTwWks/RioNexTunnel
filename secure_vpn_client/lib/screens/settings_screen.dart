@@ -17,6 +17,7 @@ import '../providers/profile_advanced_provider.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
+import '../utils/core_version_gate.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
 import '../widgets/kill_switch_card.dart';
@@ -45,6 +46,7 @@ String _splitTunnelModeDescription(SplitTunnelMode mode) {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _coreVersion = '';
+  String? _coreVersionWarning;
   String _logPath = '';
 
   @override
@@ -59,9 +61,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!mounted) {
       return;
     }
+    final version = info['version']?.toString();
     setState(() {
-      _coreVersion = '${info['engine'] ?? 'unknown'} ${info['version'] ?? ''}'
-          .trim();
+      _coreVersion = '${info['engine'] ?? 'unknown'} ${version ?? ''}'.trim();
+      _coreVersionWarning = CoreVersionGate.isOlderThanPin(version)
+          ? 'Bundled Xray is older than v${CoreVersionGate.bundledXrayPin}. '
+              'Run scripts/fetch_cores.sh before using XHTTP+REALITY.'
+          : null;
     });
   }
 
@@ -113,6 +119,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ? 'Auto: pick by availability, subscription format, connect fallback'
               : 'Auto · active: $_coreVersion')
         : (_coreVersion.isEmpty ? null : 'Active: $_coreVersion');
+    final engineWarning = _coreVersionWarning;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -154,10 +161,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           delay: const Duration(milliseconds: 70),
           child: _SectionCard(
           title: 'Core engine',
-          subtitle: engineSubtitle,
+          subtitle: engineWarning ?? engineSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (engineWarning != null && engineSubtitle != null) ...[
+                Text(
+                  engineSubtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 8),
+              ],
               SegmentedButton<EnginePreference>(
                 key: const ValueKey('engine_selector'),
                 segments: const [

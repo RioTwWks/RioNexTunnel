@@ -17,8 +17,10 @@ import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
 import '../utils/config_parser.dart';
+import '../utils/core_version_gate.dart';
 import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
+import '../utils/platform_transport_selector.dart';
 import '../utils/transport_presets.dart';
 import '../utils/server_latency.dart';
 import '../utils/subscription_latency_probe.dart';
@@ -416,9 +418,14 @@ class VpnService {
         'No reachable servers in subscription. Check network and try again.',
       );
     }
+    final iosNote = PlatformTransportSelector.iosSelectionNote(results, best);
+    if (iosNote != null) {
+      AppLog.info(iosNote);
+    }
     AppLog.info(
       'Best server=${best.server.name} latency=${best.latencyMs}ms '
-      'index=${best.server.index}',
+      'index=${best.server.index} stack='
+      '${PlatformTransportSelector.classifyStack(best.server.content).name}',
     );
     return best;
   }
@@ -512,6 +519,10 @@ class VpnService {
 
     final rawConfig = await resolveProfileConfig(effectiveProfile);
     AppLog.info('Resolved profile config (${rawConfig.length} bytes)');
+
+    if (_engine == VpnEngine.xray) {
+      await _warnIfXrayTooOldForXhttp(rawConfig);
+    }
 
     if (_engine == VpnEngine.xray &&
         ConfigParser.configRequiresXrayGeoRules(rawConfig) &&
@@ -761,6 +772,23 @@ class VpnService {
       return _credentialService.generate();
     }
     return _credentialService.generate();
+  }
+
+  Future<void> _warnIfXrayTooOldForXhttp(String configOrContent) async {
+    if (!CoreVersionGate.contentUsesXhttp(configOrContent)) {
+      return;
+    }
+    try {
+      final info = await _v2rayBox.getCoreInfo();
+      final version = info['version']?.toString();
+      final warning = CoreVersionGate.xhttpCompatibilityWarning(
+        actualVersion: version,
+        content: configOrContent,
+      );
+      if (warning != null) {
+        AppLog.warn(warning);
+      }
+    } catch (_) {}
   }
 
   Future<void> _setSessionCredentials(
