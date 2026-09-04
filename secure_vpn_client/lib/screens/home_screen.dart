@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/connection_detail.dart';
+import '../utils/l10n_helpers.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
@@ -30,7 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _connect() async {
     final profile = ref.read(selectedProfileProvider);
     if (profile == null) {
-      setState(() => _error = 'Select or add a profile first');
+      setState(() => _error = AppLocalizations.of(context).errorSelectProfileFirst);
       return;
     }
 
@@ -39,7 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _error = null;
       _connectStatus = profile.type == ProfileType.subscription &&
               profile.autoSelectBestServer
-          ? 'Testing servers…'
+          ? AppLocalizations.of(context).statusTestingServers
           : null;
     });
 
@@ -92,6 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final status = ref.watch(vpnStatusProvider).value ?? VpnStatus.stopped;
     final connectionDetail = ref.watch(connectionDetailProvider).value;
     final stats = ref.watch(vpnStatsProvider).value;
@@ -123,6 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             selectedProfile: selectedProfile,
             stats: stats,
             uptime: uptime,
+            l10n: l10n,
           ),
         ),
         const SizedBox(height: 32),
@@ -203,6 +207,7 @@ class _StatusCard extends StatelessWidget {
     required this.selectedProfile,
     required this.stats,
     required this.uptime,
+    required this.l10n,
   });
 
   final VpnStatus status;
@@ -215,6 +220,7 @@ class _StatusCard extends StatelessWidget {
   final Profile? selectedProfile;
   final VpnStats? stats;
   final Duration? uptime;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +259,7 @@ class _StatusCard extends StatelessWidget {
                         ? Icons.hdr_auto_outlined
                         : Icons.memory_outlined,
                     label: enginePreference.isAuto
-                        ? 'auto · ${engine.coreName}'
+                        ? l10n.engineAutoLabel(engine.coreName)
                         : engine.coreName,
                   ),
                 ],
@@ -273,7 +279,7 @@ class _StatusCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _StatTile(
-                        label: 'Upload',
+                        label: l10n.statsUpload,
                         value: stats!.formattedUplinkTotal,
                         icon: Icons.arrow_upward_rounded,
                       ),
@@ -281,7 +287,7 @@ class _StatusCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _StatTile(
-                        label: 'Download',
+                        label: l10n.statsDownload,
                         value: stats!.formattedDownlinkTotal,
                         icon: Icons.arrow_downward_rounded,
                       ),
@@ -291,8 +297,8 @@ class _StatusCard extends StatelessWidget {
                 if (uptime != null) ...[
                   const SizedBox(height: 10),
                   _StatTile(
-                    label: 'Uptime',
-                    value: _formatUptime(uptime!),
+                    label: l10n.statsUptime,
+                    value: formatUptime(l10n, uptime!),
                     icon: Icons.schedule_rounded,
                   ),
                 ],
@@ -303,19 +309,6 @@ class _StatusCard extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatUptime(Duration duration) {
-  final hours = duration.inHours;
-  final minutes = duration.inMinutes.remainder(60);
-  final seconds = duration.inSeconds.remainder(60);
-  if (hours > 0) {
-    return '${hours}h ${minutes}m';
-  }
-  if (minutes > 0) {
-    return '${minutes}m ${seconds}s';
-  }
-  return '${seconds}s';
 }
 
 class _MetaChip extends StatelessWidget {

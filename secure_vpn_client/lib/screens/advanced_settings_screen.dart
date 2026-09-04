@@ -5,40 +5,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
-import '../models/split_tunnel_settings.dart';
+import '../l10n/app_localizations.dart';
 import '../models/socks_auth_mode.dart';
+import '../models/split_tunnel_settings.dart';
 import '../providers/panel_providers.dart';
 import '../providers/per_app_proxy_provider.dart';
 import '../providers/profile_advanced_provider.dart';
 import '../providers/routing_rules_provider.dart';
 import '../providers/socks_auth_mode_provider.dart';
 import '../providers/vpn_providers.dart';
+import '../utils/l10n_helpers.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/dns_settings_card.dart';
 import '../widgets/kill_switch_card.dart';
 import '../widgets/section_card.dart';
-import '../widgets/socks_auth_mode_strings.dart';
 import '../widgets/split_tunnel_desktop_banner.dart';
 import '../widgets/subscription_pinning_card.dart';
 import 'per_app_proxy_screen.dart';
 import 'routing_editor_screen.dart';
-
-String _splitTunnelModeDescription(SplitTunnelMode mode) {
-  switch (mode) {
-    case SplitTunnelMode.off:
-      return 'All apps use the VPN tunnel.';
-    case SplitTunnelMode.include:
-      return 'Whitelist: only selected apps are routed through VPN.';
-    case SplitTunnelMode.exclude:
-      return 'Blacklist: selected apps connect directly without VPN.';
-  }
-}
 
 class AdvancedSettingsScreen extends ConsumerWidget {
   const AdvancedSettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final status = ref.watch(vpnStatusProvider).value ?? VpnStatus.stopped;
     final desktopProxy =
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
@@ -49,11 +40,10 @@ class AdvancedSettingsScreen extends ConsumerWidget {
     final socksAuthMode = ref.watch(socksAuthModeProvider);
     final panelState = ref.watch(panelStateProvider);
     final scheme = Theme.of(context).colorScheme;
-    final locale = Localizations.localeOf(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Advanced'),
+        title: Text(l10n.advancedTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -67,8 +57,8 @@ class AdvancedSettingsScreen extends ConsumerWidget {
           if (androidVpn) ...[
             FadeSlideIn(
               child: SectionCard(
-                title: 'Split tunneling',
-                subtitle: 'Choose which apps use the VPN tunnel (Android)',
+                title: l10n.splitTunnelTitle,
+                subtitle: l10n.splitTunnelSubtitleAndroid,
                 child: perAppProxy.loading
                     ? const Center(
                         child: Padding(
@@ -81,21 +71,27 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                         children: [
                           SegmentedButton<SplitTunnelMode>(
                             key: const ValueKey('split_tunnel_mode_selector'),
-                            segments: const [
+                            segments: [
                               ButtonSegment(
                                 value: SplitTunnelMode.off,
-                                label: Text('Off'),
-                                icon: Icon(Icons.public_outlined, size: 18),
+                                label: Text(l10n.actionOff),
+                                icon: const Icon(Icons.public_outlined, size: 18),
                               ),
                               ButtonSegment(
                                 value: SplitTunnelMode.include,
-                                label: Text('VPN only'),
-                                icon: Icon(Icons.verified_user_outlined, size: 18),
+                                label: Text(l10n.splitTunnelVpnOnly),
+                                icon: const Icon(
+                                  Icons.verified_user_outlined,
+                                  size: 18,
+                                ),
                               ),
                               ButtonSegment(
                                 value: SplitTunnelMode.exclude,
-                                label: Text('Bypass'),
-                                icon: Icon(Icons.open_in_browser_outlined, size: 18),
+                                label: Text(l10n.splitTunnelBypass),
+                                icon: const Icon(
+                                  Icons.open_in_browser_outlined,
+                                  size: 18,
+                                ),
                               ),
                             ],
                             selected: {perAppProxy.mode},
@@ -105,10 +101,10 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _splitTunnelModeDescription(perAppProxy.mode),
+                            splitTunnelModeDescription(l10n, perAppProxy.mode),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
+                                  color: scheme.onSurfaceVariant,
+                                ),
                           ),
                           if (perAppProxy.isEnabled) ...[
                             const SizedBox(height: 8),
@@ -121,13 +117,15 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                               ),
                               title: Text(
                                 perAppProxy.isIncludeMode
-                                    ? 'Apps using VPN'
-                                    : 'Apps bypassing VPN',
+                                    ? l10n.splitTunnelAppsUsingVpn
+                                    : l10n.splitTunnelAppsBypassingVpn,
                               ),
                               subtitle: Text(
                                 perAppProxy.selectedPackages.isEmpty
-                                    ? 'No apps selected'
-                                    : '${perAppProxy.selectedPackages.length} app(s) selected',
+                                    ? l10n.splitTunnelNoAppsSelected
+                                    : l10n.splitTunnelAppsSelectedCount(
+                                        perAppProxy.selectedPackages.length,
+                                      ),
                               ),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () {
@@ -142,7 +140,7 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                             ),
                             if (status == VpnStatus.started)
                               Text(
-                                'Reconnect VPN after changing split tunnel apps.',
+                                l10n.splitTunnelReconnectAfterChange,
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(color: scheme.onSurfaceVariant),
                               ),
@@ -163,30 +161,28 @@ class AdvancedSettingsScreen extends ConsumerWidget {
             child: DnsSettingsCard(desktopProxy: desktopProxy),
           ),
           const SizedBox(height: 14),
-          const FadeSlideIn(
-            delay: Duration(milliseconds: 140),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 140),
             child: SectionCard(
-              title: 'Advanced security',
-              subtitle: 'Optional hardening for subscription fetch',
-              child: SubscriptionPinningCard(),
+              title: l10n.advancedSecurityTitle,
+              subtitle: l10n.advancedSecuritySubtitle,
+              child: const SubscriptionPinningCard(),
             ),
           ),
           const SizedBox(height: 14),
           FadeSlideIn(
             delay: const Duration(milliseconds: 175),
             child: SectionCard(
-              title: 'Censorship resistance',
-              subtitle: 'Transport presets, uTLS fingerprint, RU routing',
+              title: l10n.censorshipResistanceTitle,
+              subtitle: l10n.censorshipResistanceSubtitle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SwitchListTile(
                     key: const ValueKey('ru_direct_default_toggle'),
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('RU sites direct (default for new profiles)'),
-                    subtitle: const Text(
-                      'When censorship wizard is enabled, route Russian sites/IP direct',
-                    ),
+                    title: Text(l10n.censorshipRuDirectDefault),
+                    subtitle: Text(l10n.censorshipRuDirectDefaultSubtitle),
                     value: ruDirectDefault,
                     onChanged: (enabled) => ref
                         .read(ruDirectRoutingDefaultProvider.notifier)
@@ -196,11 +192,13 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                     key: const ValueKey('custom_routing_editor_tile'),
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.alt_route_outlined, color: scheme.primary),
-                    title: const Text('Custom routing rules'),
+                    title: Text(l10n.censorshipCustomRouting),
                     subtitle: Text(
                       customRouting.rules.isEmpty
-                          ? 'Domain, IP, geosite/geoip — import/export JSON'
-                          : '${customRouting.enabledRules.length} active rule(s)',
+                          ? l10n.censorshipCustomRoutingEmpty
+                          : l10n.censorshipCustomRoutingActiveCount(
+                              customRouting.enabledRules.length,
+                            ),
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
@@ -214,10 +212,8 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.menu_book_outlined, color: scheme.primary),
-                    title: const Text('When to use which stack'),
-                    subtitle: const Text(
-                      'docs/en/censorship_resistance.md — REALITY vs TLS, XHTTP, mux',
-                    ),
+                    title: Text(l10n.censorshipStackGuide),
+                    subtitle: Text(l10n.censorshipStackGuideSubtitle),
                   ),
                 ],
               ),
@@ -227,8 +223,8 @@ class AdvancedSettingsScreen extends ConsumerWidget {
           FadeSlideIn(
             delay: const Duration(milliseconds: 210),
             child: SectionCard(
-              title: SocksAuthModeStrings.sectionTitle(locale),
-              subtitle: SocksAuthModeStrings.sectionSubtitle(locale),
+              title: l10n.socksAuthTitle,
+              subtitle: l10n.socksAuthSubtitle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -237,12 +233,12 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                     segments: [
                       ButtonSegment(
                         value: SocksAuthMode.randomPerSession,
-                        label: Text(SocksAuthModeStrings.randomPerSession(locale)),
+                        label: Text(l10n.socksRandomPerSession),
                         icon: const Icon(Icons.shuffle, size: 18),
                       ),
                       ButtonSegment(
                         value: SocksAuthMode.staticFromPanel,
-                        label: Text(SocksAuthModeStrings.staticFromPanel(locale)),
+                        label: Text(l10n.socksStaticFromPanel),
                         icon: const Icon(Icons.cloud_sync_outlined, size: 18),
                       ),
                     ],
@@ -258,8 +254,8 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Text(
                     socksAuthMode == SocksAuthMode.staticFromPanel
-                        ? SocksAuthModeStrings.staticDescription(locale)
-                        : SocksAuthModeStrings.randomDescription(locale),
+                        ? l10n.socksStaticDesc
+                        : l10n.socksRandomDesc,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -268,7 +264,7 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                       !panelState.settings.isConfigured) ...[
                     const SizedBox(height: 8),
                     Text(
-                      SocksAuthModeStrings.staticUnavailable(locale),
+                      l10n.socksStaticUnavailable,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.error,
                           ),
@@ -278,14 +274,8 @@ class AdvancedSettingsScreen extends ConsumerWidget {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.home_outlined, color: scheme.primary),
-                    title: Text(
-                      locale.languageCode == 'ru' ? 'Привязка' : 'Local bind',
-                    ),
-                    subtitle: Text(
-                      locale.languageCode == 'ru'
-                          ? 'Только 127.0.0.1, пароль обязателен'
-                          : '127.0.0.1 only, password required',
-                    ),
+                    title: Text(l10n.localBindTitle),
+                    subtitle: Text(l10n.localBindSubtitle),
                   ),
                 ],
               ),

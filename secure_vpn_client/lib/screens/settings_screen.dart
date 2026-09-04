@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/engine_preference.dart';
 import '../models/vpn_engine.dart';
+import '../providers/locale_provider.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/advanced_settings_screen.dart';
 import '../services/app_log.dart';
@@ -91,44 +93,79 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final engineSubtitle = preference.isAuto
         ? (_coreVersion.isEmpty
-              ? 'Auto: pick by availability, subscription format, connect fallback'
-              : 'Auto · active: $_coreVersion')
-        : (_coreVersion.isEmpty ? null : 'Active: $_coreVersion');
+              ? l10n.coreEngineAutoSubtitle
+              : l10n.coreEngineActiveAuto(_coreVersion))
+        : (_coreVersion.isEmpty ? null : l10n.coreEngineActive(_coreVersion));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         FadeSlideIn(
           child: SectionCard(
-            title: 'Appearance',
-            subtitle: 'Theme applies on all platforms',
-            child: SegmentedButton<ThemeMode>(
-              key: const ValueKey('theme_mode_selector'),
-              segments: const [
-                ButtonSegment(
-                  value: ThemeMode.system,
-                  label: Text('System'),
-                  icon: Icon(Icons.brightness_auto_outlined),
+            title: l10n.appearanceTitle,
+            subtitle: l10n.appearanceSubtitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SegmentedButton<ThemeMode>(
+                  key: const ValueKey('theme_mode_selector'),
+                  segments: [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text(l10n.themeSystem),
+                      icon: const Icon(Icons.brightness_auto_outlined),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.light,
+                      label: Text(l10n.themeLight),
+                      icon: const Icon(Icons.light_mode_outlined),
+                    ),
+                    ButtonSegment(
+                      value: ThemeMode.dark,
+                      label: Text(l10n.themeDark),
+                      icon: const Icon(Icons.dark_mode_outlined),
+                    ),
+                  ],
+                  selected: {themeMode},
+                  onSelectionChanged: (selection) {
+                    ref
+                        .read(themeModeProvider.notifier)
+                        .setThemeMode(selection.first);
+                  },
                 ),
-                ButtonSegment(
-                  value: ThemeMode.light,
-                  label: Text('Light'),
-                  icon: Icon(Icons.light_mode_outlined),
+                const SizedBox(height: 14),
+                Text(
+                  l10n.languageTitle,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                 ),
-                ButtonSegment(
-                  value: ThemeMode.dark,
-                  label: Text('Dark'),
-                  icon: Icon(Icons.dark_mode_outlined),
+                const SizedBox(height: 8),
+                SegmentedButton<AppLocalePreference>(
+                  key: const ValueKey('locale_selector'),
+                  segments: [
+                    ButtonSegment(
+                      value: AppLocalePreference.system,
+                      label: Text(l10n.languageSystem),
+                    ),
+                    ButtonSegment(
+                      value: AppLocalePreference.english,
+                      label: Text(l10n.languageEnglish),
+                    ),
+                    ButtonSegment(
+                      value: AppLocalePreference.russian,
+                      label: Text(l10n.languageRussian),
+                    ),
+                  ],
+                  selected: {ref.watch(localePreferenceProvider)},
+                  onSelectionChanged: (selection) => ref
+                      .read(localePreferenceProvider.notifier)
+                      .setPreference(selection.first),
                 ),
               ],
-              selected: {themeMode},
-              onSelectionChanged: (selection) {
-                ref
-                    .read(themeModeProvider.notifier)
-                    .setThemeMode(selection.first);
-              },
             ),
           ),
         ),
@@ -136,26 +173,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 70),
           child: SectionCard(
-            title: 'Core engine',
+            title: l10n.coreEngineTitle,
             subtitle: engineSubtitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SegmentedButton<EnginePreference>(
                   key: const ValueKey('engine_selector'),
-                  segments: const [
+                  segments: [
                     ButtonSegment(
                       value: EnginePreference.auto,
-                      label: Text('Auto'),
-                      icon: Icon(Icons.hdr_auto_outlined, size: 18),
+                      label: Text(l10n.engineAuto),
+                      icon: const Icon(Icons.hdr_auto_outlined, size: 18),
                     ),
                     ButtonSegment(
                       value: EnginePreference.xray,
-                      label: Text('Xray'),
+                      label: Text(l10n.engineXray),
                     ),
                     ButtonSegment(
                       value: EnginePreference.singbox,
-                      label: Text('sing-box'),
+                      label: Text(l10n.engineSingbox),
                     ),
                   ],
                   selected: {preference},
@@ -167,19 +204,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 if (preference.isAuto) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'Uses ${engine.coreName} until the next Auto connect',
+                    l10n.coreEngineUsesUntilAuto(engine.coreName),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                          color: scheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
                 if (status == VpnStatus.started) ...[
                   const SizedBox(height: 10),
                   Text(
-                    'Disconnect VPN before switching engine',
+                    l10n.coreEngineDisconnectBeforeSwitch,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                          color: scheme.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ],
@@ -193,10 +230,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: ListTile(
               key: const ValueKey('advanced_settings_tile'),
               leading: Icon(Icons.security_outlined, color: scheme.primary),
-              title: const Text('Advanced'),
-              subtitle: const Text(
-                'Kill switch, DNS, routing, split tunnel, censorship',
-              ),
+              title: Text(l10n.advancedTitle),
+              subtitle: Text(l10n.advancedSettingsSubtitle),
               trailing: const Icon(Icons.chevron_right),
               onTap: _openAdvancedSettings,
             ),
@@ -213,20 +248,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 175),
           child: SectionCard(
-            title: 'Diagnostics',
+            title: l10n.diagnosticsTitle,
             child: ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.article_outlined, color: scheme.primary),
-              title: const Text('Log files'),
+              title: Text(l10n.logFiles),
               subtitle: Text(
                 _logPath.isEmpty
-                    ? 'Resolving…'
+                    ? l10n.logResolving
                     : '$_logPath\n'
-                          'Android also: Android/data/…/files/logs/',
+                          '${l10n.logAndroidHint}',
               ),
               isThreeLine: true,
               trailing: IconButton(
-                tooltip: 'Copy path',
+                tooltip: l10n.copyPath,
                 onPressed: _logPath.isEmpty
                     ? null
                     : () async {
@@ -235,7 +270,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           return;
                         }
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Log path copied')),
+                          SnackBar(content: Text(l10n.logPathCopied)),
                         );
                       },
                 icon: const Icon(Icons.copy),

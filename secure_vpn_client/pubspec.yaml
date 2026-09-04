@@ -33,8 +33,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_riverpod: ^2.6.1
   http: ^1.2.2
+  intl: any
   path_provider: ^2.1.5
   shared_preferences: ^2.3.3
   uuid: ^4.5.1
@@ -55,6 +58,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
