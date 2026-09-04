@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/app_log_level_provider.dart';
 import '../services/app_log.dart';
 
@@ -37,9 +38,11 @@ class _LogViewerScreenState extends ConsumerState<LogViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Logs'),
+        title: Text(l10n.logsTitle),
         actions: [
           IconButton(onPressed: _reload, icon: const Icon(Icons.refresh)),
           IconButton(

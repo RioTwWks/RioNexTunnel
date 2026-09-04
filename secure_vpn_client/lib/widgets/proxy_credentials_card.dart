@@ -4,47 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/credentials.dart';
 import '../utils/config_parser.dart';
 
-/// Localized strings for the proxy credentials card (RU / EN).
-class ProxyCredentialsStrings {
-  ProxyCredentialsStrings._();
-
-  static bool _isRu(Locale? locale) =>
-      locale?.languageCode.toLowerCase() == 'ru';
-
-  static String title(Locale? locale) => _isRu(locale)
-      ? 'Системный прокси (эта сессия)'
-      : 'System proxy (this session)';
-
-  static String description(Locale? locale, int httpPort) => _isRu(locale)
-      ? 'Если браузер запрашивает логин прокси, используйте эти значения. '
-          'Это не аккаунт VPN-сервера — только локальный прокси '
-          '127.0.0.1:$httpPort.'
-      : 'If the browser asks for proxy login, use these values. '
-          'They are not your VPN server account — only for local proxy '
-          '127.0.0.1:$httpPort.';
-
-  static String extensionHint(Locale? locale) => _isRu(locale)
-      ? 'Установите расширение Browser helper (Settings), чтобы не вводить '
-          'логин вручную.'
-      : 'Install the Browser helper extension (Settings) to skip manual login.';
-
-  static String username(Locale? locale) =>
-      _isRu(locale) ? 'Имя пользователя прокси' : 'Proxy username';
-
-  static String password(Locale? locale) =>
-      _isRu(locale) ? 'Пароль прокси' : 'Proxy password';
-
-  static String copyBoth(Locale? locale) =>
-      _isRu(locale) ? 'Копировать оба' : 'Copy both';
-
-  static String copied(Locale? locale, String label) => _isRu(locale)
-      ? '$label скопировано'
-      : '$label copied';
-}
-
+/// Desktop proxy credentials card with per-session auth values.
 class ProxyCredentialsCard extends StatelessWidget {
   const ProxyCredentialsCard({
     super.key,
@@ -72,22 +36,21 @@ class ProxyCredentialsCard extends StatelessWidget {
     if (!context.mounted) {
       return;
     }
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ProxyCredentialsStrings.copied(locale, label))),
+      SnackBar(content: Text(l10n.proxyCopied(label))),
     );
   }
 
   Future<void> _copyBoth(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final text = '${credentials.username}\n${credentials.password}';
-    await _copy(context, ProxyCredentialsStrings.copyBoth(
-      Localizations.localeOf(context),
-    ), text);
+    await _copy(context, l10n.proxyCopyBoth, text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     if (compact) {
@@ -98,18 +61,18 @@ class ProxyCredentialsCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                ProxyCredentialsStrings.title(locale),
+                l10n.proxyCredsTitle,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
               Text(
-                ProxyCredentialsStrings.description(locale, _httpPort),
+                l10n.proxyCredsDescription(_httpPort),
                 style: theme.textTheme.bodySmall,
               ),
               if (showExtensionHint) ...[
                 const SizedBox(height: 4),
                 Text(
-                  ProxyCredentialsStrings.extensionHint(locale),
+                  l10n.proxyCredsExtensionHint,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.primary,
                   ),
@@ -126,7 +89,7 @@ class ProxyCredentialsCard extends StatelessWidget {
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 20),
-                    tooltip: ProxyCredentialsStrings.copyBoth(locale),
+                    tooltip: l10n.proxyCopyBoth,
                     onPressed: () => _copyBoth(context),
                   ),
                 ],
@@ -141,18 +104,18 @@ class ProxyCredentialsCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          ProxyCredentialsStrings.title(locale),
+          l10n.proxyCredsTitle,
           style: theme.textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
         Text(
-          ProxyCredentialsStrings.description(locale, _httpPort),
+          l10n.proxyCredsDescription(_httpPort),
           style: theme.textTheme.bodySmall,
         ),
         if (showExtensionHint) ...[
           const SizedBox(height: 4),
           Text(
-            ProxyCredentialsStrings.extensionHint(locale),
+            l10n.proxyCredsExtensionHint,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.primary,
             ),
@@ -162,14 +125,14 @@ class ProxyCredentialsCard extends StatelessWidget {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.person_outline),
-          title: Text(ProxyCredentialsStrings.username(locale)),
+          title: Text(l10n.proxyUsername),
           subtitle: Text(credentials.username),
           trailing: IconButton(
             icon: const Icon(Icons.copy),
-            tooltip: ProxyCredentialsStrings.username(locale),
+            tooltip: l10n.proxyUsername,
             onPressed: () => _copy(
               context,
-              ProxyCredentialsStrings.username(locale),
+              l10n.proxyUsername,
               credentials.username,
             ),
           ),
@@ -177,21 +140,21 @@ class ProxyCredentialsCard extends StatelessWidget {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.key_outlined),
-          title: Text(ProxyCredentialsStrings.password(locale)),
+          title: Text(l10n.proxyPassword),
           subtitle: Text('${credentials.password.length} characters'),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextButton(
                 onPressed: () => _copyBoth(context),
-                child: Text(ProxyCredentialsStrings.copyBoth(locale)),
+                child: Text(l10n.proxyCopyBoth),
               ),
               IconButton(
                 icon: const Icon(Icons.copy),
-                tooltip: ProxyCredentialsStrings.password(locale),
+                tooltip: l10n.proxyPassword,
                 onPressed: () => _copy(
                   context,
-                  ProxyCredentialsStrings.password(locale),
+                  l10n.proxyPassword,
                   credentials.password,
                 ),
               ),

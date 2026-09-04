@@ -317,7 +317,9 @@ class VpnService {
   }
 
   Future<void> applyServiceMode([ServiceModePreference? preference]) async {
-    if (preference != null) _serviceModePreference = preference;
+    if (preference != null) {
+      _serviceModePreference = preference;
+    }
     final mode = _serviceModePreference.resolveVpnMode(
       isDesktop: _isDesktopPlatform,
     );

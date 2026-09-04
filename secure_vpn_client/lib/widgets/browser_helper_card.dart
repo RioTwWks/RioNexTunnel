@@ -4,54 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/vpn_providers.dart';
-
-class BrowserHelperStrings {
-  BrowserHelperStrings._();
-
-  static bool _isRu(Locale? locale) =>
-      locale?.languageCode.toLowerCase() == 'ru';
-
-  static String title(Locale? locale) =>
-      _isRu(locale) ? 'Помощник браузера' : 'Browser helper';
-
-  static String description(Locale? locale) => _isRu(locale)
-      ? 'Один раз установите расширение из extensions/secure-vpn-proxy-auth. '
-          'Оно автоматически подставляет логин прокси — без диалога в Chromium и Firefox.'
-      : 'Install the extension once from extensions/secure-vpn-proxy-auth. '
-          'It auto-fills proxy login for Chromium and Firefox.';
-
-  static String ready(Locale? locale) =>
-      _isRu(locale) ? 'Готово — диалог не нужен' : 'Ready — no login dialog';
-
-  static String waiting(Locale? locale) => _isRu(locale)
-      ? 'Подключите VPN и откройте расширение в браузере'
-      : 'Connect VPN and enable the browser extension';
-
-  static String hostMissing(Locale? locale) => _isRu(locale)
-      ? 'Native host не установлен — перезапустите приложение'
-      : 'Native host missing — restart the app';
-
-  static String manifestMissing(Locale? locale) => _isRu(locale)
-      ? 'Манифест native messaging не найден'
-      : 'Native messaging manifest not found';
-
-  static String extensionMissing(Locale? locale) => _isRu(locale)
-      ? 'Расширение не подключено к native host'
-      : 'Extension not connected to native host';
-
-  static String labelHost(Locale? locale) =>
-      _isRu(locale) ? 'Native host' : 'Native host';
-
-  static String labelManifest(Locale? locale) =>
-      _isRu(locale) ? 'Манифест' : 'Manifest';
-
-  static String labelExtension(Locale? locale) =>
-      _isRu(locale) ? 'Расширение' : 'Extension';
-
-  static String labelSession(Locale? locale) =>
-      _isRu(locale) ? 'Сессия VPN' : 'VPN session';
-}
 
 final browserHelperStatusProvider =
     FutureProvider<Map<String, bool>>((ref) async {
@@ -73,7 +27,7 @@ class BrowserHelperCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context);
     final statusAsync = ref.watch(browserHelperStatusProvider);
 
     return Card(
@@ -83,17 +37,17 @@ class BrowserHelperCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              BrowserHelperStrings.title(locale),
+              l10n.browserHelperTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
-              BrowserHelperStrings.description(locale),
+              l10n.browserHelperDescription,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 8),
             statusAsync.when(
-              data: (status) => _StatusBody(status: status, locale: locale),
+              data: (status) => _StatusBody(status: status, l10n: l10n),
               loading: () => const LinearProgressIndicator(),
               error: (error, _) => Text(error.toString()),
             ),
@@ -107,11 +61,11 @@ class BrowserHelperCard extends ConsumerWidget {
 class _StatusBody extends StatelessWidget {
   const _StatusBody({
     required this.status,
-    required this.locale,
+    required this.l10n,
   });
 
   final Map<String, bool> status;
-  final Locale locale;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -124,19 +78,19 @@ class _StatusBody extends StatelessWidget {
     String summary;
     Color summaryColor;
     if (ready) {
-      summary = BrowserHelperStrings.ready(locale);
+      summary = l10n.browserHelperReady;
       summaryColor = Theme.of(context).colorScheme.primary;
     } else if (!host) {
-      summary = BrowserHelperStrings.hostMissing(locale);
+      summary = l10n.browserHelperHostMissing;
       summaryColor = Theme.of(context).colorScheme.error;
     } else if (!manifest) {
-      summary = BrowserHelperStrings.manifestMissing(locale);
+      summary = l10n.browserHelperManifestMissing;
       summaryColor = Theme.of(context).colorScheme.error;
     } else if (!extension) {
-      summary = BrowserHelperStrings.extensionMissing(locale);
+      summary = l10n.browserHelperExtensionMissing;
       summaryColor = Theme.of(context).colorScheme.tertiary;
     } else {
-      summary = BrowserHelperStrings.waiting(locale);
+      summary = l10n.browserHelperWaiting;
       summaryColor = Theme.of(context).colorScheme.tertiary;
     }
 
@@ -152,19 +106,19 @@ class _StatusBody extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _StatusRow(
-          label: BrowserHelperStrings.labelHost(locale),
+          label: l10n.browserHelperLabelHost,
           ok: host,
         ),
         _StatusRow(
-          label: BrowserHelperStrings.labelManifest(locale),
+          label: l10n.browserHelperLabelManifest,
           ok: manifest,
         ),
         _StatusRow(
-          label: BrowserHelperStrings.labelExtension(locale),
+          label: l10n.browserHelperLabelExtension,
           ok: extension,
         ),
         _StatusRow(
-          label: BrowserHelperStrings.labelSession(locale),
+          label: l10n.browserHelperLabelSession,
           ok: session,
         ),
       ],
