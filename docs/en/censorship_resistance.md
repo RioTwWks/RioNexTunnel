@@ -68,34 +68,4 @@ Full JSON subscriptions (v2rayNG array or single-object configs) use different f
 | RU direct / geo errors | Run `scripts/fetch_cores.sh` or disable RU preset |
 | iOS XHTTP+REALITY issues | Prefer TCP+REALITY+Vision node from same subscription |
 
-## Platform & engine policy
-
-### iOS transport selection
-
-When **Automatic (best latency)** is enabled on a subscription that lists both **XHTTP+REALITY** and **TCP+REALITY+Vision** nodes, RioNexTunnel **deprioritizes XHTTP on iOS** and prefers Vision-capable TCP+REALITY entries. On other platforms, XHTTP remains the default censorship stack when both are reachable.
-
-This is **server ranking only** (§6) — not a connect-time fallback chain (§5). If only XHTTP nodes exist, iOS still connects to the best reachable XHTTP entry.
-
-### Official Xray-core only
-
-RioNexTunnel ships **official [Xray-core](https://github.com/XTLS/Xray-core)** binaries from `scripts/fetch_cores.sh`. We **do not** vendor custom Xray builds for REALITY certificate randomization or other fork-only tweaks (e.g. unmaintained [REALITY-rkn-fix](https://github.com/fwflunky/REALITY-rkn-fix)).
-
-Mitigations against static REALITY fingerprints are **transport choice** (prefer XHTTP where supported), **uTLS fingerprints**, and **server-side** configuration — not patched client cores.
-
-### Core version gate (XHTTP)
-
-The app compares the bundled Xray version against the pin in `scripts/fetch_cores.sh` (`DEFAULT_XRAY_VERSION`, currently **26.3.27**). When connecting with **XHTTP+REALITY** and the bundled core is older:
-
-- A **non-blocking warning** is logged at connect time
-- **Settings → Core engine** shows a reminder to run `scripts/fetch_cores.sh`
-
-Update cores with `./scripts/fetch_cores.sh` from the repo root, then rebuild the app.
-
-### Upstream REALITY improvements
-
-When official Xray-core adds features inspired by community forks (dynamic REALITY certs, ServerHello fragmentation, etc.), RioNexTunnel adopts them via **normal core updates** in `fetch_cores.sh` — not by maintaining a private fork. Track upstream:
-
-- [XTLS/Xray-core releases](https://github.com/XTLS/Xray-core/releases)
-- [XTLS/Xray-core issues](https://github.com/XTLS/Xray-core/issues) (REALITY / XHTTP tags)
-
 See also [security.md](security.md) and [troubleshooting.md](troubleshooting.md).

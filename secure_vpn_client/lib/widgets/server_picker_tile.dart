@@ -105,7 +105,9 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
   }
 
   Future<List<SubscriptionServer>> _load() {
-    return ref.read(vpnServiceProvider).listSubscriptionServers(widget.profile);
+    return ref
+        .read(vpnServiceProvider)
+        .listSubscriptionServers(widget.profile, logicalServers: true);
   }
 
   Future<void> _persistSelection({
