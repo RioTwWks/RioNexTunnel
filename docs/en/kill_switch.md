@@ -8,7 +8,7 @@ RioNexTunnel can block outbound internet when the VPN tunnel or local core stops
 |------|----------|
 | **Off** | Normal disconnect — apps may use direct internet if proxy/VPN stops. |
 | **Strict** | Block **all** outbound traffic when tunnel/core is down until you reconnect or disconnect. |
-| **Adaptive** | Per-app blocking — **not implemented yet**; requires split tunneling (Agent B). |
+| **Adaptive** | Per-app blocking — uses **Split tunneling** app list on Android. |
 
 Configure in **Settings → Kill switch**.
 

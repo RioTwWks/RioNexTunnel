@@ -473,8 +473,38 @@ abstract class AppLocalizations {
   /// No description provided for @killSwitchAdaptiveSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Requires split tunneling — available after Agent B merges'**
+  /// **'Configure which apps use the VPN in Split tunneling below.'**
   String get killSwitchAdaptiveSubtitle;
+
+  /// No description provided for @killSwitchAdaptiveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'When the tunnel or core drops, only VPN-routed apps lose network access. Other apps keep working.'**
+  String get killSwitchAdaptiveDesc;
+
+  /// No description provided for @killSwitchAdaptiveDesktopNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Per-app blocking is only available in VPN (TUN) mode on Android. On desktop proxy mode, use Strict for OS-level blocking.'**
+  String get killSwitchAdaptiveDesktopNote;
+
+  /// No description provided for @killSwitchAdaptiveIosNote.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS does not support per-app split tunneling; Adaptive behaves like Strict on iOS.'**
+  String get killSwitchAdaptiveIosNote;
+
+  /// No description provided for @killSwitchAdaptiveNoApps.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps selected in Split tunneling — Adaptive falls back to full-tunnel blocking.'**
+  String get killSwitchAdaptiveNoApps;
+
+  /// No description provided for @killSwitchAdaptiveSplitTunnelLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses Split tunneling app list'**
+  String get killSwitchAdaptiveSplitTunnelLink;
 
   /// No description provided for @dnsAdvancedTitle.
   ///
@@ -979,6 +1009,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Error'**
   String get panelSyncError;
+
+  /// No description provided for @panelSyncInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Config sync interval'**
+  String get panelSyncInterval;
 
   /// No description provided for @pinningTitle.
   ///

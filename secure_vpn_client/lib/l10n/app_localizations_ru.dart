@@ -207,7 +207,24 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get killSwitchAdaptiveSubtitle =>
-      'Требует раздельного туннелирования — будет доступен позже';
+      'Настройте приложения для VPN в разделе Split tunneling ниже.';
+
+  @override
+  String get killSwitchAdaptiveDesc =>
+      'При падении туннеля или core сеть отключается только у приложений, идущих через VPN.';
+
+  @override
+  String get killSwitchAdaptiveDesktopNote =>
+      'Per-app blocking только на Android TUN.';
+
+  @override
+  String get killSwitchAdaptiveIosNote => 'iOS: Adaptive как Strict.';
+
+  @override
+  String get killSwitchAdaptiveNoApps => 'Нет приложений в Split tunneling.';
+
+  @override
+  String get killSwitchAdaptiveSplitTunnelLink => 'Использует Split tunneling';
 
   @override
   String get dnsAdvancedTitle => 'Расширенный DNS';
@@ -475,6 +492,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get panelSyncError => 'Ошибка';
+
+  @override
+  String get panelSyncInterval => 'Интервал синхронизации';
 
   @override
   String get pinningTitle => 'Закрепление сертификата';
