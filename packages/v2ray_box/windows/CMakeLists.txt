@@ -68,7 +68,7 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE wininet shell32)
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
 set(v2ray_box_bundled_libraries
-  "${CMAKE_CURRENT_BINARY_DIR}/secure_vpn_native_host.exe"
+  "$<TARGET_FILE:secure_vpn_native_host>"
   PARENT_SCOPE
 )
 
