@@ -17,7 +17,6 @@ import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/transport_stack.dart';
 import '../models/vpn_engine.dart';
-import '../providers/dns_settings_provider.dart';
 import '../utils/config_enhancer.dart';
 import '../utils/config_parser.dart';
 import '../utils/core_version_gate.dart';
@@ -663,7 +662,6 @@ class VpnService {
     final effectiveSocksPort = panelSocks?.isValid == true
         ? panelSocks!.port
         : socksPort;
-    final dnsSettings = await DnsSettingsStore.load();
     final secureConfig = ConfigParser.injectSecureSocksInbound(
       rawConfig,
       credentials,
@@ -672,7 +670,6 @@ class VpnService {
       proxyOnly: desktopProxy,
       authMode: authMode,
       panelSocks: panelSocks,
-      dnsSettings: dnsSettings,
     );
     AppLog.info(
       'Secure config ready proxyOnly=$desktopProxy '
