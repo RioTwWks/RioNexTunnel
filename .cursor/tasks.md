@@ -413,28 +413,28 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 ### Minimal UI
 
-- [ ] Connect in 1–2 taps — Home: profile + prominent Connect button
-- [ ] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately
-- [ ] Full app localization (RU/EN) beyond proxy/browser helper strings
-- [ ] Dark/light theme aligned with system preference
+- [x] Connect in 1–2 taps — Home: profile + prominent Connect button
+- [x] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately
+- [x] Full app localization (RU/EN) beyond proxy/browser helper strings
+- [x] Dark/light theme aligned with system preference
 
 ### Profile management
 
-- [ ] Profile import from clipboard / QR (`vless://`, `trojan://`, etc.)
-- [ ] Scheduled subscription auto-refresh + manual refresh
-- [ ] Server groups — tags, favorites, last used
+- [x] Profile import from clipboard / QR (`vless://`, `trojan://`, etc.)
+- [x] Scheduled subscription auto-refresh + manual refresh
+- [x] Server groups — tags, favorites, last used
 
 ### Transparency
 
-- [ ] Privacy policy doc — zero telemetry, what is stored locally
-- [ ] User-facing log viewer (no credentials); Info / Debug levels
+- [x] Privacy policy doc — zero telemetry, what is stored locally
+- [x] User-facing log viewer (no credentials); Info / Debug levels
 - [ ] Keep this file synced with releases / GitHub Issues
 
 ### Work modes (document & unify)
 
-- [ ] VPN Mode (TUN) — mobile: full tunnel, kill switch, split tunnel
-- [ ] Proxy Mode — desktop: system proxy + browser extension; document kill switch limits
-- [ ] Unified mode switch — auto-detect per platform with power-user override
+- [x] VPN Mode (TUN) — mobile: full tunnel, kill switch, split tunnel
+- [x] Proxy Mode — desktop: system proxy + browser extension; document kill switch limits
+- [x] Unified mode switch — auto-detect per platform with power-user override
 
 ### Other UX
 

@@ -1,3 +1,4 @@
+import 'subscription_refresh_interval.dart';
 import 'transport_preset.dart';
 
 enum ProfileType { link, subscription }
@@ -20,6 +21,11 @@ class Profile {
     this.disableSocksInjection = false,
     this.multihopEnabled = false,
     this.hopServerIndices = const [],
+    this.tags = const [],
+    this.isFavorite = false,
+    this.lastUsedAt,
+    this.subscriptionRefreshInterval = SubscriptionRefreshInterval.hours6,
+    this.lastSubscriptionFetchAt,
   });
 
   final String id;
@@ -38,6 +44,11 @@ class Profile {
   final bool disableSocksInjection;
   final bool multihopEnabled;
   final List<int> hopServerIndices;
+  final List<String> tags;
+  final bool isFavorite;
+  final DateTime? lastUsedAt;
+  final SubscriptionRefreshInterval subscriptionRefreshInterval;
+  final DateTime? lastSubscriptionFetchAt;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -56,6 +67,11 @@ class Profile {
     'disableSocksInjection': disableSocksInjection,
     'multihopEnabled': multihopEnabled,
     'hopServerIndices': hopServerIndices,
+    'tags': tags,
+    'isFavorite': isFavorite,
+    if (lastUsedAt != null) 'lastUsedAt': lastUsedAt!.toIso8601String(),
+    'subscriptionRefreshInterval': subscriptionRefreshInterval.wireValue,
+    if (lastSubscriptionFetchAt != null) 'lastSubscriptionFetchAt': lastSubscriptionFetchAt!.toIso8601String(),
   };
 
   factory Profile.fromJson(Map<String, dynamic> json) {
@@ -89,8 +105,15 @@ class Profile {
       disableSocksInjection: json['disableSocksInjection'] as bool? ?? false,
       multihopEnabled: json['multihopEnabled'] as bool? ?? false,
       hopServerIndices: (json['hopServerIndices'] as List<dynamic>?)?.map((value) => (value as num).toInt()).toList() ?? const [],
+      tags: (json['tags'] as List<dynamic>?)?.map((v) => v.toString()).toList() ?? const [],
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      lastUsedAt: _dt(json['lastUsedAt']),
+      subscriptionRefreshInterval: SubscriptionRefreshIntervalX.fromWire(json['subscriptionRefreshInterval'] as String?),
+      lastSubscriptionFetchAt: _dt(json['lastSubscriptionFetchAt']),
     );
   }
+
+  static DateTime? _dt(Object? v) => v is String && v.isNotEmpty ? DateTime.tryParse(v) : null;
 
   Profile copyWith({
     String? id,
@@ -112,6 +135,13 @@ class Profile {
     bool? multihopEnabled,
     List<int>? hopServerIndices,
     bool clearHopServerIndices = false,
+    List<String>? tags,
+    bool? isFavorite,
+    DateTime? lastUsedAt,
+    bool clearLastUsedAt = false,
+    SubscriptionRefreshInterval? subscriptionRefreshInterval,
+    DateTime? lastSubscriptionFetchAt,
+    bool clearLastSubscriptionFetchAt = false,
   }) {
     return Profile(
       id: id ?? this.id,
@@ -135,6 +165,11 @@ class Profile {
       disableSocksInjection: disableSocksInjection ?? this.disableSocksInjection,
       multihopEnabled: multihopEnabled ?? this.multihopEnabled,
       hopServerIndices: clearHopServerIndices ? const [] : (hopServerIndices ?? this.hopServerIndices),
+      tags: tags ?? this.tags,
+      isFavorite: isFavorite ?? this.isFavorite,
+      lastUsedAt: clearLastUsedAt ? null : (lastUsedAt ?? this.lastUsedAt),
+      subscriptionRefreshInterval: subscriptionRefreshInterval ?? this.subscriptionRefreshInterval,
+      lastSubscriptionFetchAt: clearLastSubscriptionFetchAt ? null : (lastSubscriptionFetchAt ?? this.lastSubscriptionFetchAt),
     );
   }
 }

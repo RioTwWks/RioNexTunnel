@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/kill_switch_mode.dart';
 import '../providers/kill_switch_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/animated_entrance.dart';
 
 class KillSwitchCard extends ConsumerWidget {
@@ -10,6 +11,7 @@ class KillSwitchCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final mode = ref.watch(killSwitchModeProvider);
     final scheme = Theme.of(context).colorScheme;
 
@@ -22,7 +24,7 @@ class KillSwitchCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Kill switch',
+                l10n.killSwitchTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

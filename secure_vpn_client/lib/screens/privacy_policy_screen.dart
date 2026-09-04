@@ -1,0 +1,3 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+class PrivacyPolicyScreen extends StatelessWidget{const PrivacyPolicyScreen({super.key});@override Widget build(BuildContext c){final ru=Localizations.localeOf(c).languageCode=='ru';return Scaffold(appBar:AppBar(title:Text(ru?'Конфиденциальность':'Privacy')),body:FutureBuilder<String>(future:rootBundle.loadString(ru?'assets/docs/privacy_ru.md':'assets/docs/privacy_en.md'),builder:(c,s)=>s.hasData?SingleChildScrollView(padding:const EdgeInsets.all(20),child:SelectableText(s.data!)):const Center(child:CircularProgressIndicator())));}}

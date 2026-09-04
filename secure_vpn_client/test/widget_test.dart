@@ -10,6 +10,7 @@ void main() {
         child: SecureVpnApp(),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('RioNexTunnel'), findsOneWidget);
     expect(find.byType(NavigationBar), findsOneWidget);
