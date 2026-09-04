@@ -50,6 +50,15 @@
 - [x] Auto engine (xray/sing-box): availability, subscription format, connect fallback
 - [x] `docs/linux_setup.md` in `docs/` (mirror android/ios)
 
+## Completed — P2 advanced security & routing (v0.8.0)
+
+> Agent split: [p2-agent-distribution.md](p2-agent-distribution.md) (#71) · Release notes: `docs/en/release_notes/v0.8.0.md`, `docs/ru/release_notes/v0.8.0.md` (#76)
+
+- [x] **Multihop (Double VPN)** — chain model, hop picker, validation, docs (#75)
+- [x] **Advanced DNS** — DoH/DoT, custom resolvers, leak protection (TUN), leak test, desktop docs (#74)
+- [x] **Custom routing UI** — rule editor, presets, import/export, merge with subscription (#73)
+- [x] **Certificate pinning** — opt-in SPKI for subscription fetch (#72)
+
 ## Security checklist (never break)
 
 - [x] No hardcoded credentials
@@ -368,31 +377,33 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ## P2 — Advanced security & routing
 
+> Agent split: [p2-agent-distribution.md](p2-agent-distribution.md) — Multihop → **Agent A** (#75) · Advanced DNS → **Agent B** (#74) · Custom Routing UI → **Agent C** (#73) · Cert pinning → **Agent D** (#72)
+
 ### Multihop (Double VPN / chains)
 
-- [ ] Chain model — 2+ outbounds in config (xray `chain` / sing-box `detour`)
-- [ ] UI — pick second (and further) hop from subscription server list
-- [ ] Validation — incompatible protocols, timeouts, detour order
-- [ ] Docs — latency vs anonymity tradeoff
+- [x] Chain model — 2+ outbounds in config (xray `chain` / sing-box `detour`) (#75)
+- [x] UI — pick second (and further) hop from subscription server list (#75)
+- [x] Validation — incompatible protocols, timeouts, detour order (#75)
+- [x] Docs — latency vs anonymity tradeoff (`docs/en/multihop.md`, `docs/ru/multihop.md`) (#75)
 
 ### Advanced DNS
 
-- [ ] DNS leak protection — force DNS through tunnel in TUN mode; leak test
-- [ ] DoH / DoT — configurable encrypted DNS upstream in UI
-- [ ] Custom DNS — user resolvers (IP, DoH URL, DoT host)
-- [ ] DNS leak test — built-in check or link from Settings
-- [ ] Desktop proxy mode — document DNS behavior differences vs full VPN
+- [x] DNS leak protection — force DNS through tunnel in TUN mode; leak test (#74)
+- [x] DoH / DoT — configurable encrypted DNS upstream in UI (#74)
+- [x] Custom DNS — user resolvers (IP, DoH URL, DoT host) (#74)
+- [x] DNS leak test — built-in check or link from Settings (#74)
+- [x] Desktop proxy mode — document DNS behavior differences vs full VPN (`docs/en/dns.md`, `docs/ru/dns.md`) (#74)
 
 ### Custom routing UI
 
-- [ ] Rule editor — domains, IP/CIDR, geo (geosite/geoip) without raw JSON
-- [ ] Import/export — routing rules as a separate profile
-- [ ] Presets — "blocked sites only", "RU direct / rest proxy"
-- [ ] Merge — user rules with routing from subscription
+- [x] Rule editor — domains, IP/CIDR, geo (geosite/geoip) without raw JSON (#73)
+- [x] Import/export — routing rules as a separate profile (#73)
+- [x] Presets — "blocked sites only", "RU direct / rest proxy" (#73)
+- [x] Merge — user rules with routing from subscription (#73)
 
 ### Security hardening (optional)
 
-- [ ] Certificate pinning for subscription fetch
+- [x] Certificate pinning for subscription fetch — opt-in SPKI (#72)
 
 ---
 
@@ -465,9 +476,10 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
 | Protocol auto-fallback chain | ✅ Stack probe + reconnect fallback | **P1** |
 | AmneziaWG | ❌ Missing | P1/P2 |
-| Double VPN / Multihop | ❌ Missing | P2 |
-| DNS leak protection, DoH/DoT | ⚠️ Basic DNS only | P2 |
-| Custom routing UI | ⚠️ Subscription JSON only | P2 |
+| Double VPN / Multihop | ✅ Done (#75) | **P2** |
+| DNS leak protection, DoH/DoT | ✅ Done (#74) | **P2** |
+| Custom routing UI | ✅ Done (#73) | **P2** |
+| Subscription cert pinning (opt-in) | ✅ Done (#72) | **P2** |
 | Auto-reconnect | ✅ Done | — |
 | Minimalist UI | ⚠️ Partial | P3 |
 | Connection stats | ✅ Done | — |
@@ -485,4 +497,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-02 — P0 Foundation stability; P1 split tunneling (Android + docs), kill switch strict mode, censorship resistance (XHTTP, uTLS, mux, RU routing), RioNexGate panel MVP; official Xray only, no REALITY-rkn-fix fork.*
+*Last updated: 2026-09-04 — P2 advanced security & routing complete (v0.8.0: multihop #75, DNS #74, routing UI #73, cert pinning #72; release notes #76; agent plan #71). Prior: P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
