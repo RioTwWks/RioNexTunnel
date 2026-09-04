@@ -38,6 +38,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   http: ^1.2.2
   intl: any
+  mobile_scanner: ^7.0.1
   path_provider: ^2.1.5
   shared_preferences: ^2.3.3
   uuid: ^4.5.1
@@ -68,6 +69,7 @@ flutter:
   assets:
     - assets/binaries/
     - assets/images/
+    - assets/docs/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -49,6 +49,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final result = await ref.read(vpnServiceProvider).connect(profile);
       ref.read(engineProvider.notifier).noteActiveEngine(result.engine);
       final connectedProfile = result.profile;
+      await ref.read(profilesProvider.notifier).markLastUsed(connectedProfile.id);
       if (connectedProfile.autoSelectBestServer ||
           connectedProfile.selectedServerIndex != profile.selectedServerIndex) {
         final updated = await ref
@@ -102,6 +103,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final engine = ref.watch(engineProvider);
     final enginePreference = ref.watch(enginePreferenceProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
+    final favoriteProfiles = ref.watch(favoriteProfilesProvider);
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final showProxyCard =
         status == VpnStatus.started &&
@@ -129,6 +131,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             l10n: l10n,
           ),
         ),
+        if (favoriteProfiles.isNotEmpty) ...[const SizedBox(height: 16), FadeSlideIn(delay: const Duration(milliseconds: 60), child: Wrap(spacing: 8, runSpacing: 8, children: favoriteProfiles.map((p) => FilterChip(label: Text(p.name), selected: selectedProfile?.id == p.id, onSelected: (_) => ref.read(selectedProfileProvider.notifier).select(p))).toList())),],
         const SizedBox(height: 32),
         if (_connectStatus != null) ...[
           FadeSlideIn(

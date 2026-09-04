@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../models/transport_preset.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/censorship_wizard_screen.dart';
+import '../screens/profile_import_sheet.dart';
+import '../screens/qr_scan_screen.dart';
+import '../services/profile_import_service.dart';
 import '../widgets/animated_entrance.dart';
-import '../l10n/app_localizations.dart';
-import '../widgets/transport_stack_chip.dart';
+import '../widgets/profile_list_tile.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
   const ConfigScreen({super.key});
@@ -20,6 +24,7 @@ class ConfigScreen extends ConsumerStatefulWidget {
 class _ConfigScreenState extends ConsumerState<ConfigScreen> {
   final _nameController = TextEditingController();
   final _linkController = TextEditingController();
+  final _importService = ProfileImportService();
   ProfileType _type = ProfileType.link;
 
   @override
@@ -78,6 +83,40 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     }
   }
 
+  Future<void> _importFromClipboard() async {
+    final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim() ?? '';
+    if (!mounted) return;
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Clipboard is empty')),
+      );
+      return;
+    }
+    await _importFromText(text);
+  }
+
+  Future<void> _importFromQr() async {
+    final text = await collectQrOrPasteText(context);
+    if (text == null || text.trim().isEmpty) return;
+    await _importFromText(text.trim());
+  }
+
+  Future<void> _importFromText(String text) async {
+    final candidates = _importService.parseText(text);
+    if (!mounted) return;
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No valid config links or subscriptions found')),
+      );
+      return;
+    }
+    final imported = await showProfileImportSheet(context, candidates);
+    if (!mounted || imported == null || imported == 0) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$imported profile(s) imported')),
+    );
+  }
+
   Future<void> _editCensorship(Profile profile) async {
     final result = await Navigator.of(context).push<CensorshipWizardResult>(
       MaterialPageRoute(
@@ -124,7 +163,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profiles = ref.watch(profilesProvider);
+    final profiles = ref.watch(sortedProfilesProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
@@ -152,6 +191,25 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                           color: scheme.onSurfaceVariant,
                         ),
                   ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        key: const ValueKey('import_clipboard_button'),
+                        onPressed: _importFromClipboard,
+                        icon: const Icon(Icons.content_paste_rounded),
+                        label: const Text('From clipboard'),
+                      ),
+                      OutlinedButton.icon(
+                        key: const ValueKey('import_qr_button'),
+                        onPressed: _importFromQr,
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
+                        label: Text(qrScannerSupported() ? 'Scan QR' : 'Paste QR text'),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     key: const ValueKey('profile_name_field'),
@@ -166,7 +224,8 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     controller: _linkController,
                     decoration: InputDecoration(
                       labelText: _type == ProfileType.link
-                          ? l10n.configLinkLabel : l10n.configSubscriptionUrl,
+                          ? l10n.configLinkLabel
+                          : l10n.configSubscriptionUrl,
                     ),
                     maxLines: 3,
                   ),
@@ -252,99 +311,29 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
               delay: Duration(milliseconds: 120 + index * 60),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Card(
-                  color: selected
-                      ? scheme.primaryContainer.withValues(alpha: 0.45)
-                      : null,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 6,
-                    ),
-                    leading: CircleAvatar(
-                      backgroundColor: selected
-                          ? scheme.primary
-                          : scheme.surfaceContainerHigh,
-                      foregroundColor: selected
-                          ? scheme.onPrimary
-                          : scheme.onSurfaceVariant,
-                      child: Icon(
-                        profile.type == ProfileType.link
-                            ? Icons.link
-                            : Icons.rss_feed_outlined,
-                        size: 20,
+                child: ProfileListTile(
+                  profile: profile,
+                  selected: selected,
+                  onSelect: () => ref.read(selectedProfileProvider.notifier).select(
+                        ref.read(profilesProvider).firstWhere(
+                              (p) => p.id == profile.id,
+                              orElse: () => profile,
+                            ),
                       ),
-                    ),
-                    title: Text(
-                      profile.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          profile.type == ProfileType.link
-                              ? l10n.configDirectLink
-                              : profile.autoSelectBestServer
-                                  ? (profile.selectedServerName != null
-                                        ? 'Automatic · ${profile.selectedServerName}'
-                                        : l10n.configSubscriptionAutomatic)
-                                  : profile.selectedServerName != null
-                                      ? 'Subscription · ${profile.selectedServerName}'
-                                      : l10n.configSubscription,
-                        ),
-                        if (profile.censorshipModeEnabled) ...[
-                          const SizedBox(height: 6),
-                          TransportStackChip(profile: profile, compact: true),
-                        ],
-                        if (profile.type == ProfileType.link && profile.disableSocksInjection) ...[
-                          const SizedBox(height: 6),
-                          Text(l10n.socksDisableInjection, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.tertiary)),
-                        ],
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: l10n.configCensorshipModeTooltip,
-                          icon: const Icon(Icons.shield_outlined),
-                          onPressed: () => _editCensorship(profile),
-                        ),
-                        if (profile.type == ProfileType.link)
-                          IconButton(
-                            tooltip: l10n.socksDisableInjection,
-                            icon: Icon(profile.disableSocksInjection ? Icons.lock_open_outlined : Icons.build_circle_outlined, color: profile.disableSocksInjection ? scheme.tertiary : null),
-                            onPressed: () => _toggleDisableSocksInjection(profile),
-                          ),
-                        if (selected)
-                          Icon(Icons.check_circle, color: scheme.primary),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () {
-                            ref
-                                .read(profilesProvider.notifier)
-                                .removeProfile(profile.id);
-                            if (selectedProfile?.id == profile.id) {
-                              ref
-                                  .read(selectedProfileProvider.notifier)
-                                  .clear();
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      final matches = ref
-                          .read(profilesProvider)
-                          .where((p) => p.id == profile.id);
-                      final picked =
-                          matches.isEmpty ? profile : matches.first;
-                      ref
-                          .read(selectedProfileProvider.notifier)
-                          .select(picked);
-                    },
-                  ),
+                  onDelete: () {
+                    ref.read(profilesProvider.notifier).removeProfile(profile.id);
+                    if (selectedProfile?.id == profile.id) {
+                      ref.read(selectedProfileProvider.notifier).clear();
+                    }
+                  },
+                  onEditCensorship: () => _editCensorship(profile),
+                  onToggleSocksInjection: profile.type == ProfileType.link
+                      ? () => _toggleDisableSocksInjection(profile)
+                      : null,
+                  onEditTags: () => showProfileTagsEditor(context, ref, profile),
+                  onRefreshSubscription: profile.type == ProfileType.subscription
+                      ? () => refreshProfileSubscription(context, ref, profile)
+                      : null,
                 ),
               ),
             );

@@ -11,6 +11,7 @@ import '../models/credentials.dart';
 import '../models/connection_detail.dart';
 import '../models/engine_preference.dart';
 import '../models/profile.dart';
+import '../models/subscription_refresh_interval.dart';
 import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
 import '../models/kill_switch_mode.dart';
@@ -20,6 +21,7 @@ import '../providers/panel_manager_provider.dart';
 import '../providers/pinning_provider.dart';
 import '../providers/socks_auth_mode_provider.dart';
 import '../providers/kill_switch_provider.dart';
+import '../services/subscription_refresh_service.dart';
 import '../services/vpn_service.dart';
 
 const _profilesKey = 'vpn_profiles';
@@ -133,11 +135,9 @@ final engineProvider = StateNotifierProvider<EngineNotifier, VpnEngine>((ref) {
   return EngineNotifier(ref.watch(vpnServiceProvider));
 });
 
-final profilesProvider = StateNotifierProvider<ProfilesNotifier, List<Profile>>(
-  (ref) {
-    return ProfilesNotifier();
-  },
-);
+final profilesProvider = StateNotifierProvider<ProfilesNotifier, List<Profile>>((ref) => ProfilesNotifier());
+final sortedProfilesProvider = Provider((ref) => sortProfiles(ref.watch(profilesProvider)));
+final favoriteProfilesProvider = Provider((ref) => ref.watch(sortedProfilesProvider).where((p) => p.isFavorite).toList(growable: false));
 
 final selectedProfileProvider =
     StateNotifierProvider<SelectedProfileNotifier, Profile?>((ref) {
@@ -322,6 +322,9 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
     bool muxEnabled = false,
     int muxConcurrency = 8,
     bool ruDirectRouting = false,
+    List<String> tags = const [],
+    bool isFavorite = false,
+    SubscriptionRefreshInterval? subscriptionRefreshInterval,
   }) async {
     final profile = Profile(
       id: const Uuid().v4(),
@@ -335,6 +338,9 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
       muxEnabled: muxEnabled,
       muxConcurrency: muxConcurrency,
       ruDirectRouting: ruDirectRouting,
+      tags: tags,
+      isFavorite: isFavorite,
+      subscriptionRefreshInterval: type == ProfileType.subscription ? (subscriptionRefreshInterval ?? SubscriptionRefreshInterval.hours6) : SubscriptionRefreshInterval.off,
     );
     state = [...state, profile];
     await _persist();
@@ -375,8 +381,11 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
     return updated;
   }
 
-  Future<void> removeProfile(String id) async {
-    state = state.where((profile) => profile.id != id).toList();
-    await _persist();
-  }
+  Future<void> removeProfile(String id) async { state = state.where((profile) => profile.id != id).toList(); await _persist(); }
+  Future<void> markLastUsed(String id, {DateTime? when}) async => _update(id, (p) => p.copyWith(lastUsedAt: when ?? DateTime.now()));
+  Future<void> toggleFavorite(String id) async => _update(id, (p) => p.copyWith(isFavorite: !p.isFavorite));
+  Future<void> setTags(String id, List<String> tags) async => _update(id, (p) => p.copyWith(tags: tags.map((t)=>t.trim()).where((t)=>t.isNotEmpty).toSet().toList()));
+  Future<void> setSubscriptionRefreshInterval(String id, SubscriptionRefreshInterval interval) async => _update(id, (p) => p.copyWith(subscriptionRefreshInterval: interval));
+  Future<void> recordSubscriptionFetch(String id, {DateTime? when}) async => _update(id, (p) => p.copyWith(lastSubscriptionFetchAt: when ?? DateTime.now()));
+  Future<void> _update(String id, Profile Function(Profile) map) async { final i = state.indexWhere((p) => p.id == id); if (i < 0) return; state = [for (var j = 0; j < state.length; j++) j == i ? map(state[j]) : state[j]]; await _persist(); }
 }

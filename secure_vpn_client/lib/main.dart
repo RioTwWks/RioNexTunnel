@@ -6,6 +6,7 @@ import 'constants/app_branding.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'providers/panel_providers.dart';
+import 'providers/subscription_refresh_provider.dart';
 import 'providers/vpn_providers.dart';
 import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
@@ -27,6 +28,7 @@ class SecureVpnApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(panelStatsLifecycleProvider);
     ref.watch(panelCommandsLifecycleProvider);
+    ref.watch(subscriptionRefreshLifecycleProvider);
     final themeMode = ref.watch(themeModeProvider);
     final localePreference = ref.watch(localePreferenceProvider);
 
