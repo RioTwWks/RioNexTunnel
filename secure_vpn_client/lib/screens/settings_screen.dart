@@ -25,6 +25,7 @@ import '../widgets/panel_settings_section.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/socks_auth_mode_strings.dart';
 import '../widgets/split_tunnel_desktop_banner.dart';
+import '../widgets/subscription_pinning_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -312,6 +313,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const KillSwitchCard(),
         const SizedBox(height: 14),
         DnsSettingsCard(desktopProxy: desktopProxy),
+        const SizedBox(height: 14),
+        const FadeSlideIn(
+          delay: Duration(milliseconds: 175),
+          child: _SectionCard(
+            title: 'Advanced security',
+            subtitle: 'Optional hardening for subscription fetch',
+            child: SubscriptionPinningCard(),
+          ),
+        ),
         const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 175),

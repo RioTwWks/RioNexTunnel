@@ -1,14 +1,16 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 import '../models/credentials.dart';
 import '../models/dns_settings.dart';
 import '../models/panel_socks_inbound.dart';
+import '../models/pinning_config.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
 import 'dns_config_builder.dart';
+import 'subscription_http_client.dart';
 import 'transport_presets.dart';
 
 class ConfigParserException implements Exception {
@@ -32,16 +34,28 @@ class ConfigParser {
         ((config['outbounds'] as List).first as Map).containsKey('type');
   }
 
+  static SubscriptionHttpClient _subscriptionHttpClient =
+      SubscriptionHttpClient();
+
+  @visibleForTesting
+  static void setSubscriptionHttpClientForTesting(
+    SubscriptionHttpClient client,
+  ) {
+    _subscriptionHttpClient = client;
+  }
+
   static Future<String> fetchSubscriptionBody(
     String url, {
     required VpnEngine engine,
+    PinningConfig? pinning,
   }) async {
-    final response = await http.get(
+    final response = await _subscriptionHttpClient.get(
       Uri.parse(url),
       headers: {
         'User-Agent': _subscriptionUserAgent(engine),
         'Accept-Encoding': 'identity',
       },
+      pinning: pinning,
     );
     if (response.statusCode != 200) {
       throw ConfigParserException(
@@ -55,16 +69,26 @@ class ConfigParser {
     String url, {
     required VpnEngine engine,
     int serverIndex = 0,
+    PinningConfig? pinning,
   }) async {
-    final body = await fetchSubscriptionBody(url, engine: engine);
+    final body = await fetchSubscriptionBody(
+      url,
+      engine: engine,
+      pinning: pinning,
+    );
     return normalizeSubscriptionContent(body, serverIndex: serverIndex);
   }
 
   static Future<List<SubscriptionServer>> listServersFromUrl(
     String url, {
     required VpnEngine engine,
+    PinningConfig? pinning,
   }) async {
-    final body = await fetchSubscriptionBody(url, engine: engine);
+    final body = await fetchSubscriptionBody(
+      url,
+      engine: engine,
+      pinning: pinning,
+    );
     return listSubscriptionServers(body);
   }
 

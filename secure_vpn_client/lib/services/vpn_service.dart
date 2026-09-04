@@ -11,6 +11,7 @@ import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
 import '../models/panel_socks_inbound.dart';
+import '../models/pinning_config.dart';
 import '../models/profile.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
@@ -75,6 +76,7 @@ class VpnService {
   VpnEngine _engine = VpnEngine.xray;
   EnginePreference _enginePreference = EnginePreference.auto;
   SocksAuthMode _socksAuthMode = SocksAuthMode.randomPerSession;
+  PinningConfig _pinningConfig = PinningConfig.disabled;
   VpnStatus _currentStatus = VpnStatus.stopped;
   ConnectionDetail _connectionDetail = ConnectionDetail.disconnected();
   Profile? _activeProfile;
@@ -317,6 +319,12 @@ class VpnService {
     _socksAuthMode = mode;
   }
 
+  void setPinningConfig(PinningConfig config) {
+    _pinningConfig = config;
+  }
+
+  PinningConfig get pinningConfig => _pinningConfig;
+
   Future<void> setEngine(
     VpnEngine engine, {
     bool disconnectIfNeeded = true,
@@ -357,6 +365,7 @@ class VpnService {
                 profile.configLink,
                 engine: _engine,
                 serverIndex: profile.selectedServerIndex,
+                pinning: _pinningConfig,
               )
             : linkForBuild);
 
@@ -404,6 +413,7 @@ class VpnService {
     final servers = await ConfigParser.listServersFromUrl(
       profile.configLink,
       engine: _engine,
+      pinning: _pinningConfig,
     );
     if (!logicalServers) {
       return servers;
@@ -490,6 +500,7 @@ class VpnService {
       profile: profile,
       box: _v2rayBox,
       preference: _enginePreference,
+      pinning: _pinningConfig,
     );
     AppLog.info(resolution.reason);
 
@@ -603,6 +614,7 @@ class VpnService {
     final servers = await ConfigParser.listServersFromUrl(
       profile.configLink,
       engine: _engine,
+      pinning: _pinningConfig,
     );
     return _subscriptionManager.orderedProbeList(
       profileId: profile.id,
