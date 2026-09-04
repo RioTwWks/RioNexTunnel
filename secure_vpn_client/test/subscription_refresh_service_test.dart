@@ -32,8 +32,8 @@ void main() {
 
     test('isDue respects 6h interval', () {
       final service = SubscriptionRefreshService(engine: VpnEngine.xray);
-      expect(service.isDue(profile, now: DateTime(2026, 1, 1, 14)), isFalse);
-      expect(service.isDue(profile, now: DateTime(2026, 1, 1, 14, 1)), isTrue);
+      expect(service.isDue(profile, now: DateTime(2026, 1, 1, 13, 59)), isFalse);
+      expect(service.isDue(profile, now: DateTime(2026, 1, 1, 14)), isTrue);
     });
 
     test('refreshProfile fetches servers', () async {

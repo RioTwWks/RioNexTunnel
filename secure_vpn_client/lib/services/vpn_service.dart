@@ -14,7 +14,6 @@ import '../models/multihop_chain.dart';
 import '../models/panel_socks_inbound.dart';
 import '../models/pinning_config.dart';
 import '../models/profile.dart';
-import '../models/service_mode_preference.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/transport_stack.dart';
@@ -81,7 +80,6 @@ class VpnService {
   SessionCredentials? _sessionCredentials;
   VpnEngine _engine = VpnEngine.xray;
   EnginePreference _enginePreference = EnginePreference.auto;
-  ServiceModePreference _serviceModePreference = ServiceModePreference.auto;
   SocksAuthMode _socksAuthMode = SocksAuthMode.randomPerSession;
   PinningConfig _pinningConfig = PinningConfig.disabled;
   VpnStatus _currentStatus = VpnStatus.stopped;
@@ -299,43 +297,22 @@ class VpnService {
     }
   }
 
-  bool get _isDesktopPlatform =>
-      !kIsWeb &&
-      (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
-
-  bool get _useProxyMode =>
-      _serviceModePreference.resolveVpnMode(isDesktop: _isDesktopPlatform) ==
-      VpnMode.proxy;
-
   Future<void> initialize() async {
-    if (_initialized) return;
+    if (_initialized) {
+      return;
+    }
     await _v2rayBox.initialize(notificationStopButtonText: 'Stop');
-    await applyServiceMode();
-    await _v2rayBox.setCoreEngine(_engine.coreName);
-    _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
-    _initialized = true;
-  }
-
-  Future<void> applyServiceMode([ServiceModePreference? preference]) async {
-    if (preference != null) _serviceModePreference = preference;
-    final mode = _serviceModePreference.resolveVpnMode(
-      isDesktop: _isDesktopPlatform,
-    );
-    if (_isDesktopPlatform) {
+    final desktopProxy =
+        !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
+    if (desktopProxy) {
       await _v2rayBox.setConfigOptions(
         const ConfigOptions(enableTun: false, setSystemProxy: true),
       );
-    } else if (mode == VpnMode.proxy) {
-      await _v2rayBox.setConfigOptions(
-        const ConfigOptions(enableTun: false, setSystemProxy: false),
-      );
-    } else {
-      await _v2rayBox.setConfigOptions(
-        const ConfigOptions(enableTun: true, setSystemProxy: false),
-      );
     }
-    await _v2rayBox.setServiceMode(mode);
-    AppLog.debug('Work mode applied: ${mode.value}');
+    await _v2rayBox.setServiceMode(desktopProxy ? VpnMode.proxy : VpnMode.vpn);
+    await _v2rayBox.setCoreEngine(_engine.coreName);
+    _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
+    _initialized = true;
   }
 
   void setEnginePreference(EnginePreference preference) {
@@ -705,6 +682,8 @@ class VpnService {
       profile: effectiveProfile,
       rawConfig: rawConfig,
     );
+    final desktopProxy =
+        !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
     final authMode = _resolveSocksAuthMode(effectiveProfile);
     final panelSocks = authMode == SocksAuthMode.staticFromPanel
         ? await _loadPanelSocksAuth(_engine)
@@ -717,12 +696,12 @@ class VpnService {
       credentials,
       _engine,
       socksPort: effectiveSocksPort,
-      proxyOnly: _useProxyMode,
+      proxyOnly: desktopProxy,
       authMode: authMode,
       panelSocks: panelSocks,
     );
     AppLog.info(
-      'Secure config ready proxyOnly=$_useProxyMode '
+      'Secure config ready proxyOnly=$desktopProxy '
       'inbounds=${_inboundSummary(secureConfig)}',
     );
 
