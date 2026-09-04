@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/credentials.dart';
+import '../models/dns_settings.dart';
 import '../models/panel_socks_inbound.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
+import 'dns_config_builder.dart';
 import 'transport_presets.dart';
 
 class ConfigParserException implements Exception {
@@ -330,6 +332,7 @@ class ConfigParser {
     bool proxyOnly = false,
     SocksAuthMode authMode = SocksAuthMode.randomPerSession,
     PanelSocksInbound? panelSocks,
+    DnsSettings? dnsSettings,
   }) {
     final decoded = jsonDecode(jsonConfig);
     if (decoded is! Map<String, dynamic>) {
@@ -344,8 +347,10 @@ class ConfigParser {
     if (engine == VpnEngine.singbox) {
       _migrateSingboxLegacyDns(config);
       _normalizeSingboxXhttpTransport(config);
-      _ensureSingboxRemoteDns(config);
+      DnsConfigBuilder.ensureSingboxRemoteDns(config, settings: dnsSettings);
       _ensureSingboxClashApi(config);
+    } else if (dnsSettings != null && !proxyOnly) {
+      DnsConfigBuilder.apply(config, dnsSettings, engine, proxyOnly: proxyOnly);
     }
     final skipInjection = authMode == SocksAuthMode.disableInjection;
     final effectivePort = authMode == SocksAuthMode.staticFromPanel &&
@@ -847,64 +852,6 @@ class ConfigParser {
       migrated.add(migratedServer);
     }
     dns['servers'] = migrated;
-  }
-
-  /// Replace fragile `local` DNS (breaks under Android VPN → [::1]:53) with
-  /// IP-based UDP resolvers. Do not set `detour: direct` — sing-box ≥1.12
-  /// rejects it as "detour to an empty direct outbound makes no sense".
-  static void _ensureSingboxRemoteDns(Map<String, dynamic> config) {
-    final dns = config['dns'];
-    final dnsMap = dns is Map
-        ? Map<String, dynamic>.from(dns)
-        : <String, dynamic>{};
-    final serversRaw = dnsMap['servers'];
-    final servers = <Map<String, dynamic>>[];
-
-    if (serversRaw is List) {
-      for (final raw in serversRaw) {
-        if (raw is! Map) {
-          continue;
-        }
-        final server = Map<String, dynamic>.from(raw);
-        if (server['type']?.toString() == 'local') {
-          continue;
-        }
-        // Strip redundant/invalid detour=direct (fatal on modern sing-box).
-        if (server['detour']?.toString() == 'direct') {
-          server.remove('detour');
-        }
-        servers.add(server);
-      }
-    }
-
-    if (servers.isEmpty) {
-      servers.addAll([
-        {'type': 'udp', 'tag': 'dns-direct', 'server': '8.8.8.8'},
-        {'type': 'udp', 'tag': 'dns-backup', 'server': '1.1.1.1'},
-      ]);
-    }
-
-    final resolverTag = servers.first['tag']?.toString() ?? 'dns-direct';
-    if (servers.first['tag'] == null) {
-      servers.first['tag'] = resolverTag;
-    }
-
-    dnsMap['servers'] = servers;
-    dnsMap['final'] = resolverTag;
-    dnsMap.putIfAbsent('strategy', () => 'prefer_ipv4');
-    config['dns'] = dnsMap;
-
-    final route = config['route'];
-    final routeMap = route is Map
-        ? Map<String, dynamic>.from(route)
-        : <String, dynamic>{};
-    routeMap['default_domain_resolver'] = {
-      'server': resolverTag,
-      'strategy': dnsMap['strategy'] ?? 'prefer_ipv4',
-    };
-    routeMap.putIfAbsent('final', () => 'proxy');
-    routeMap.putIfAbsent('rules', () => <dynamic>[]);
-    config['route'] = routeMap;
   }
 
   /// Local Clash API for traffic stats (CommandClient polls 127.0.0.1:9090).
