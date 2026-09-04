@@ -20,6 +20,10 @@ class PingMeasureConfig {
 
 /// Builds minimal Xray/sing-box configs that route local inbound traffic through
 /// one subscription outbound (full tunnel path, not raw TCP to host:port).
+///
+/// Latency probes intentionally **strip mux** (`mux` / `multiplex`) so server
+/// comparison measures base transport RTT. Connect-time mux is profile-controlled
+/// via [ConfigEnhancer]; see `docs/en/censorship_resistance.md`.
 class PingConfigBuilder {
   static VpnEngine resolveEngine(String content, VpnEngine preference) {
     final trimmed = content.trim();
@@ -122,7 +126,7 @@ class PingConfigBuilder {
             protocol == 'dns') {
           continue;
         }
-        outbound.remove('mux');
+        _stripMuxForProbe(outbound);
         outbound['tag'] = 'proxy';
         return outbound;
       }
@@ -136,11 +140,18 @@ class PingConfigBuilder {
           type == 'urltest') {
         continue;
       }
+      _stripMuxForProbe(outbound);
       outbound['tag'] = 'proxy';
       return outbound;
     }
 
     throw ConfigParserException('No proxy outbound found for latency probe');
+  }
+
+  /// Removes mux layers so latency probes compare base transport paths.
+  static void _stripMuxForProbe(Map<String, dynamic> outbound) {
+    outbound.remove('mux');
+    outbound.remove('multiplex');
   }
 
   static String _buildXrayMeasureConfig(
