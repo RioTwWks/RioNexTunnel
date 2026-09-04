@@ -10,6 +10,7 @@ import 'package:v2ray_box/v2ray_box.dart';
 import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
+import '../models/multihop_chain.dart';
 import '../models/panel_socks_inbound.dart';
 import '../models/pinning_config.dart';
 import '../models/profile.dart';
@@ -351,6 +352,10 @@ class VpnService {
     Profile profile, {
     String? contentOverride,
   }) async {
+    if (profile.multihopEnabled && profile.type == ProfileType.subscription && contentOverride == null) {
+      return _resolveMultihopProfileConfig(profile);
+    }
+
     var linkForBuild = profile.configLink.trim();
     if (profile.type == ProfileType.link &&
         profile.censorshipModeEnabled &&
@@ -376,37 +381,47 @@ class VpnService {
     return _rawContentToJsonConfig(profile, raw);
   }
 
-  Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
-    String jsonConfig;
-    if (raw.startsWith('{')) {
-      jsonConfig = raw;
-    } else if (raw.startsWith('[')) {
-      final decoded = jsonDecode(raw) as List<dynamic>;
-      if (decoded.isEmpty || decoded.first is! Map) {
-        throw StateError('Subscription JSON array is empty');
-      }
-      jsonConfig = jsonEncode(decoded.first);
-    } else if (LinkConfigBuilder.isConfigLink(raw)) {
-      jsonConfig = LinkConfigBuilder.buildFromLink(
-        raw,
-        _engine,
-        options: LinkBuildOptions.fromProfile(profile),
-      );
-    } else {
-      try {
-        jsonConfig = await _v2rayBox.generateConfig(raw);
-      } on PlatformException {
-        jsonConfig = LinkConfigBuilder.buildFromLink(
-          raw,
-          _engine,
-          options: LinkBuildOptions.fromProfile(profile),
-        );
-      }
+  Future<String> _resolveMultihopProfileConfig(Profile profile) async {
+    final servers = await ConfigParser.listServersFromUrl(profile.configLink, engine: _engine);
+    MultihopChain.validateProfile(profile, serverCount: servers.length);
+    final chain = MultihopChain.fromProfile(profile);
+    final hopConfigs = <Map<String, dynamic>>[];
+    for (final index in chain.serverIndices) {
+      hopConfigs.add(await _contentToJsonMap(profile.copyWith(multihopEnabled: false), servers[index].content));
     }
-
     final customRules = (await _routingRulesService.load()).enabledRules;
     return ConfigEnhancer.applyProfileSettings(
-      jsonConfig,
+      jsonEncode(hopConfigs.last),
+      profile,
+      _engine,
+      multihopHopConfigs: hopConfigs,
+      customRules: customRules,
+    );
+  }
+
+  Future<Map<String, dynamic>> _contentToJsonMap(Profile profile, String raw) async {
+    String jsonConfig;
+    if (raw.startsWith('{')) { jsonConfig = raw; }
+    else if (raw.startsWith('[')) {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      if (decoded.isEmpty || decoded.first is! Map) throw StateError('Subscription JSON array is empty');
+      jsonConfig = jsonEncode(decoded.first);
+    } else if (LinkConfigBuilder.isConfigLink(raw)) {
+      jsonConfig = LinkConfigBuilder.buildFromLink(raw, _engine, options: LinkBuildOptions.fromProfile(profile));
+    } else {
+      try { jsonConfig = await _v2rayBox.generateConfig(raw); }
+      on PlatformException { jsonConfig = LinkConfigBuilder.buildFromLink(raw, _engine, options: LinkBuildOptions.fromProfile(profile)); }
+    }
+    final decoded = jsonDecode(jsonConfig);
+    if (decoded is! Map<String, dynamic>) throw StateError('Resolved config must be a JSON object');
+    return decoded;
+  }
+
+  Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
+    final config = await _contentToJsonMap(profile, raw);
+    final customRules = (await _routingRulesService.load()).enabledRules;
+    return ConfigEnhancer.applyProfileSettings(
+      jsonEncode(config),
       profile,
       _engine,
       customRules: customRules,

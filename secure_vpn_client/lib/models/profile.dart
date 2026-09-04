@@ -18,6 +18,8 @@ class Profile {
     this.muxConcurrency = 8,
     this.ruDirectRouting = false,
     this.disableSocksInjection = false,
+    this.multihopEnabled = false,
+    this.hopServerIndices = const [],
   });
 
   final String id;
@@ -34,6 +36,8 @@ class Profile {
   final int muxConcurrency;
   final bool ruDirectRouting;
   final bool disableSocksInjection;
+  final bool multihopEnabled;
+  final List<int> hopServerIndices;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -50,6 +54,8 @@ class Profile {
     'muxConcurrency': muxConcurrency,
     'ruDirectRouting': ruDirectRouting,
     'disableSocksInjection': disableSocksInjection,
+    'multihopEnabled': multihopEnabled,
+    'hopServerIndices': hopServerIndices,
   };
 
   factory Profile.fromJson(Map<String, dynamic> json) {
@@ -81,6 +87,8 @@ class Profile {
       muxConcurrency: (json['muxConcurrency'] as num?)?.toInt() ?? 8,
       ruDirectRouting: json['ruDirectRouting'] as bool? ?? false,
       disableSocksInjection: json['disableSocksInjection'] as bool? ?? false,
+      multihopEnabled: json['multihopEnabled'] as bool? ?? false,
+      hopServerIndices: (json['hopServerIndices'] as List<dynamic>?)?.map((value) => (value as num).toInt()).toList() ?? const [],
     );
   }
 
@@ -101,6 +109,9 @@ class Profile {
     int? muxConcurrency,
     bool? ruDirectRouting,
     bool? disableSocksInjection,
+    bool? multihopEnabled,
+    List<int>? hopServerIndices,
+    bool clearHopServerIndices = false,
   }) {
     return Profile(
       id: id ?? this.id,
@@ -121,8 +132,9 @@ class Profile {
       muxEnabled: muxEnabled ?? this.muxEnabled,
       muxConcurrency: muxConcurrency ?? this.muxConcurrency,
       ruDirectRouting: ruDirectRouting ?? this.ruDirectRouting,
-      disableSocksInjection:
-          disableSocksInjection ?? this.disableSocksInjection,
+      disableSocksInjection: disableSocksInjection ?? this.disableSocksInjection,
+      multihopEnabled: multihopEnabled ?? this.multihopEnabled,
+      hopServerIndices: clearHopServerIndices ? const [] : (hopServerIndices ?? this.hopServerIndices),
     );
   }
 }

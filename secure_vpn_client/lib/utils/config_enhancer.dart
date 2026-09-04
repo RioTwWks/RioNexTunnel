@@ -5,6 +5,7 @@ import '../models/routing_rule.dart';
 import '../models/transport_preset.dart';
 import 'routing_config_builder.dart';
 import '../models/vpn_engine.dart';
+import 'multihop_config_builder.dart';
 
 /// Options passed when building config from a share link.
 class LinkBuildOptions {
@@ -35,12 +36,17 @@ class ConfigEnhancer {
     String jsonConfig,
     Profile profile,
     VpnEngine engine, {
+    List<Map<String, dynamic>>? multihopHopConfigs,
     List<RoutingRule> customRules = const [],
   }) {
+    final needsMultihop = profile.multihopEnabled &&
+        multihopHopConfigs != null &&
+        multihopHopConfigs.length >= 2;
     final hasCustomRules = customRules.any((rule) => rule.enabled);
     if (!profile.censorshipModeEnabled &&
         !profile.muxEnabled &&
         !profile.ruDirectRouting &&
+        !needsMultihop &&
         !hasCustomRules) {
       return jsonConfig;
     }
@@ -49,7 +55,11 @@ class ConfigEnhancer {
     if (decoded is! Map<String, dynamic>) {
       return jsonConfig;
     }
-    final config = Map<String, dynamic>.from(decoded);
+    var config = Map<String, dynamic>.from(decoded);
+
+    if (needsMultihop) {
+      config = MultihopConfigBuilder.build(multihopHopConfigs, engine);
+    }
 
     if (profile.censorshipModeEnabled || profile.muxEnabled) {
       _applyFingerprintAndMux(config, profile, engine);
@@ -85,9 +95,9 @@ class ConfigEnhancer {
         continue;
       }
       final outbound = Map<String, dynamic>.from(raw);
-      if (!_isProxyOutbound(outbound)) {
-        continue;
-      }
+      if (!_isProxyOutbound(outbound)) continue;
+      final tag = outbound['tag']?.toString();
+      if (tag != null && tag != 'proxy' && tag.startsWith('hop-')) continue;
 
       if (engine == VpnEngine.xray) {
         _applyXrayFingerprint(outbound, profile.tlsFingerprint);

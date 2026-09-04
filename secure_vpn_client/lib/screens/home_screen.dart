@@ -9,6 +9,7 @@ import '../models/vpn_engine.dart';
 import '../providers/vpn_providers.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/connection_button.dart';
+import '../widgets/multihop_picker_tile.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/server_picker_tile.dart';
 import '../widgets/status_indicator.dart';
@@ -281,6 +282,8 @@ class _StatusCard extends StatelessWidget {
                   selectedProfile!.type == ProfileType.subscription) ...[
                 const SizedBox(height: 14),
                 ServerPickerTile(profile: selectedProfile!),
+                const SizedBox(height: 10),
+                MultihopPickerTile(profile: selectedProfile!),
               ],
               if (stats != null && connected) ...[
                 const SizedBox(height: 18),
