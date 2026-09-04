@@ -1513,6 +1513,280 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{seconds}s'**
   String uptimeSeconds(int seconds);
+
+  /// No description provided for @configClipboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard is empty'**
+  String get configClipboardEmpty;
+
+  /// No description provided for @configImportNoValidLinks.
+  ///
+  /// In en, this message translates to:
+  /// **'No valid config links or subscriptions found'**
+  String get configImportNoValidLinks;
+
+  /// No description provided for @configProfilesImported.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 profile imported} other{{count} profiles imported}}'**
+  String configProfilesImported(int count);
+
+  /// No description provided for @configFromClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'From clipboard'**
+  String get configFromClipboard;
+
+  /// No description provided for @configScanQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR'**
+  String get configScanQr;
+
+  /// No description provided for @configPasteQrText.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste QR text'**
+  String get configPasteQrText;
+
+  /// No description provided for @importProfilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import profiles'**
+  String get importProfilesTitle;
+
+  /// No description provided for @importSelectAtLeastOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one profile to import'**
+  String get importSelectAtLeastOne;
+
+  /// No description provided for @importImporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing…'**
+  String get importImporting;
+
+  /// No description provided for @importSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Import selected'**
+  String get importSelected;
+
+  /// No description provided for @qrScanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code'**
+  String get qrScanTitle;
+
+  /// No description provided for @qrPasteConfigLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste config link'**
+  String get qrPasteConfigLink;
+
+  /// No description provided for @qrImport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get qrImport;
+
+  /// No description provided for @censorshipDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected: {summary}'**
+  String censorshipDetected(String summary);
+
+  /// No description provided for @censorshipXhttpAutoWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Warning: XHTTP mode \"auto\" is unreliable — wizard uses stream-one.'**
+  String get censorshipXhttpAutoWarning;
+
+  /// No description provided for @censorshipTlsFingerprintUtls.
+  ///
+  /// In en, this message translates to:
+  /// **'TLS fingerprint (uTLS)'**
+  String get censorshipTlsFingerprintUtls;
+
+  /// No description provided for @perAppProxyTitleOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Split tunnel apps'**
+  String get perAppProxyTitleOff;
+
+  /// No description provided for @perAppProxySelectedForVpn.
+  ///
+  /// In en, this message translates to:
+  /// **'selected for VPN'**
+  String get perAppProxySelectedForVpn;
+
+  /// No description provided for @perAppProxyBypassingVpnLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'bypassing VPN'**
+  String get perAppProxyBypassingVpnLabel;
+
+  /// No description provided for @perAppProxySelectedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'selected'**
+  String get perAppProxySelectedLabel;
+
+  /// No description provided for @perAppProxySelectionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{selectedCount} {selectionLabel} · {shownCount} shown'**
+  String perAppProxySelectionSummary(
+    int selectedCount,
+    String selectionLabel,
+    int shownCount,
+  );
+
+  /// No description provided for @perAppProxyNoAppsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps found'**
+  String get perAppProxyNoAppsFound;
+
+  /// No description provided for @perAppProxyNoAppsMatching.
+  ///
+  /// In en, this message translates to:
+  /// **'No apps matching \"{query}\"'**
+  String perAppProxyNoAppsMatching(String query);
+
+  /// No description provided for @perAppProxyClearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get perAppProxyClearSearch;
+
+  /// No description provided for @profileLastUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Last used {date}'**
+  String profileLastUsed(String date);
+
+  /// No description provided for @profileSubscriptionStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription stale — refresh recommended'**
+  String get profileSubscriptionStale;
+
+  /// No description provided for @actionRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get actionRefresh;
+
+  /// No description provided for @profileTagsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile tags'**
+  String get profileTagsTitle;
+
+  /// No description provided for @profileTagsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Comma-separated tags'**
+  String get profileTagsHint;
+
+  /// No description provided for @profileRefreshing.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshing {name}…'**
+  String profileRefreshing(String name);
+
+  /// No description provided for @profileSubscriptionUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription updated ({count} servers)'**
+  String profileSubscriptionUpdated(int count);
+
+  /// No description provided for @profileSubscriptionRefreshFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription refresh failed'**
+  String get profileSubscriptionRefreshFailed;
+
+  /// No description provided for @profileTapToChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to choose a profile'**
+  String get profileTapToChoose;
+
+  /// No description provided for @profileActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Active profile'**
+  String get profileActiveTitle;
+
+  /// No description provided for @profileSelectFromHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a profile to connect from Home'**
+  String get profileSelectFromHome;
+
+  /// No description provided for @profileNoProfilesAddBelow.
+  ///
+  /// In en, this message translates to:
+  /// **'No profiles yet. Add a config link or subscription below.'**
+  String get profileNoProfilesAddBelow;
+
+  /// No description provided for @profileTypeConfigLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Config link'**
+  String get profileTypeConfigLink;
+
+  /// No description provided for @profileTypeSubscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription'**
+  String get profileTypeSubscription;
+
+  /// No description provided for @serverLatencyTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'timeout'**
+  String get serverLatencyTimeout;
+
+  /// No description provided for @pinningFormatHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin format: sha256/<base64 SHA-256 SPKI>. Update pins when the panel rotates certificates.'**
+  String get pinningFormatHint;
+
+  /// No description provided for @pinningSpkiBytesRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected base64 SHA-256 SPKI (32 bytes)'**
+  String get pinningSpkiBytesRequired;
+
+  /// No description provided for @dnsDoh.
+  ///
+  /// In en, this message translates to:
+  /// **'DoH'**
+  String get dnsDoh;
+
+  /// No description provided for @dnsDot.
+  ///
+  /// In en, this message translates to:
+  /// **'DoT'**
+  String get dnsDot;
+
+  /// No description provided for @dnsCustomLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get dnsCustomLabel;
+
+  /// No description provided for @routingDomainHint.
+  ///
+  /// In en, this message translates to:
+  /// **'example.com'**
+  String get routingDomainHint;
 }
 
 class _AppLocalizationsDelegate

@@ -64,7 +64,7 @@
 > Agent split: [p3-agent-distribution.md](p3-agent-distribution.md) (#78)
 
 - [x] **Minimal UI** — Home quick-picker (≤2 taps to connect), Advanced settings screen, system theme (#79)
-- [x] **Full localization (RU/EN)** — `flutter gen-l10n`, locale selector; *secondary screens from Agents A/C/D may need ARB follow-up after merge* (#83)
+- [x] **Full localization (RU/EN)** — `flutter gen-l10n`, locale selector; secondary screens ARB sweep (Agent D, #83 follow-up) (#83)
 - [x] **Profile management** — clipboard/QR import, subscription auto-refresh, tags/favorites (#81)
 - [x] **Transparency** — privacy policy, credential-safe log viewer (#80)
 - [x] **Work modes** — VPN/Proxy auto-detect + user override, docs (#80)
@@ -426,7 +426,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 - [x] Connect in 1–2 taps — Home: profile + prominent Connect button (#79)
 - [x] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately (#79)
-- [x] Full app localization (RU/EN) beyond proxy/browser helper strings (#83) — *follow-up: ARB keys for Advanced, Log viewer, Privacy, profile import screens added by Agents A/C/D*
+- [x] Full app localization (RU/EN) beyond proxy/browser helper strings (#83) — secondary sweep: censorship wizard, routing editor, config/import/QR, per-app proxy, kill switch, DNS, multihop, profile tiles, server picker, cert pinning (#83 follow-up)
 - [x] Dark/light theme aligned with system preference (#79)
 
 ### Profile management
@@ -493,7 +493,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Subscription cert pinning (opt-in) | ✅ Done (#72) | **P2** |
 | Auto-reconnect | ✅ Done | — |
 | Minimalist UI | ✅ Done (#79) | — |
-| Full RU/EN localization | ✅ Done (#83); secondary screens follow-up | — |
+| Full RU/EN localization | ✅ Done (#83); secondary screens sweep done (Agent D) | — |
 | Profile import / refresh / tags | ✅ Done (#81) | — |
 | Privacy policy / log viewer | ✅ Done (#80) | — |
 | Work mode switch (VPN/Proxy) | ✅ Done (#80) | — |
@@ -513,4 +513,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P3 UX, transparency & competitive edge complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
+*Last updated: 2026-09-04 — P4 Agent D l10n secondary sweep (censorship wizard, routing, config/import/QR, per-app proxy, advanced widgets).*

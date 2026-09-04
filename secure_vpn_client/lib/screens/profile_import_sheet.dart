@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../models/transport_preset.dart';
 import '../providers/vpn_providers.dart';
@@ -40,10 +41,11 @@ class _ProfileImportSheetState extends ConsumerState<ProfileImportSheet> {
   }
 
   Future<void> _importSelected() async {
+    final l10n = AppLocalizations.of(context);
     final selected = _items.where((i) => i.selected).toList();
     if (selected.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one profile to import')),
+        SnackBar(content: Text(l10n.importSelectAtLeastOne)),
       );
       return;
     }
@@ -89,13 +91,17 @@ class _ProfileImportSheetState extends ConsumerState<ProfileImportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Import profiles', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            l10n.importProfilesTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 12),
           Flexible(
             child: ListView.builder(
@@ -110,13 +116,21 @@ class _ProfileImportSheetState extends ConsumerState<ProfileImportSheet> {
                       children: [
                         CheckboxListTile(
                           value: item.selected,
-                          onChanged: _importing ? null : (v) => setState(() => item.selected = v ?? false),
-                          title: Text(item.candidate.type == ProfileType.link ? 'Config link' : 'Subscription URL'),
+                          onChanged: _importing
+                              ? null
+                              : (v) => setState(() => item.selected = v ?? false),
+                          title: Text(
+                            item.candidate.type == ProfileType.link
+                                ? l10n.configLink
+                                : l10n.configSubscriptionUrl,
+                          ),
                         ),
                         TextField(
                           controller: item.nameController,
                           enabled: !_importing,
-                          decoration: const InputDecoration(labelText: 'Profile name'),
+                          decoration: InputDecoration(
+                            labelText: l10n.configProfileName,
+                          ),
                         ),
                       ],
                     ),
@@ -128,7 +142,7 @@ class _ProfileImportSheetState extends ConsumerState<ProfileImportSheet> {
           FilledButton.icon(
             onPressed: _importing ? null : _importSelected,
             icon: const Icon(Icons.download_rounded),
-            label: Text(_importing ? 'Importing…' : 'Import selected'),
+            label: Text(_importing ? l10n.importImporting : l10n.importSelected),
           ),
         ],
       ),
@@ -137,13 +151,20 @@ class _ProfileImportSheetState extends ConsumerState<ProfileImportSheet> {
 }
 
 class _EditableCandidate {
-  _EditableCandidate({required this.candidate, required this.nameController, required this.selected});
+  _EditableCandidate({
+    required this.candidate,
+    required this.nameController,
+    required this.selected,
+  });
   final ProfileImportCandidate candidate;
   final TextEditingController nameController;
   bool selected;
 }
 
-Future<int?> showProfileImportSheet(BuildContext context, List<ProfileImportCandidate> candidates) {
+Future<int?> showProfileImportSheet(
+  BuildContext context,
+  List<ProfileImportCandidate> candidates,
+) {
   return showModalBottomSheet<int>(
     context: context,
     isScrollControlled: true,
