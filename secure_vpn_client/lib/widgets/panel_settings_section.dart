@@ -3,45 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/panel_providers.dart';
 import '../services/panel_manager.dart';
+import '../l10n/app_localizations.dart';
 import 'panel_status_card.dart';
-
-class PanelSettingsStrings {
-  PanelSettingsStrings._();
-
-  static bool _isRu(Locale? locale) =>
-      locale?.languageCode.toLowerCase() == 'ru';
-
-  static String sectionTitle(Locale? locale) =>
-      _isRu(locale) ? 'RioNexGate (опционально)' : 'RioNexGate (optional)';
-
-  static String sectionSubtitle(Locale? locale) => _isRu(locale)
-      ? 'Синхронизация с панелью отключена по умолчанию. Без настройки телеметрия не отправляется.'
-      : 'Panel sync is off by default. No telemetry is sent unless you opt in.';
-
-  static String enable(Locale? locale) =>
-      _isRu(locale) ? 'Включить панель' : 'Enable panel';
-
-  static String panelUrl(Locale? locale) =>
-      _isRu(locale) ? 'URL панели' : 'Panel URL';
-
-  static String pairingToken(Locale? locale) =>
-      _isRu(locale) ? 'Токен сопряжения' : 'Pairing token';
-
-  static String register(Locale? locale) =>
-      _isRu(locale) ? 'Зарегистрировать' : 'Register device';
-
-  static String refresh(Locale? locale) =>
-      _isRu(locale) ? 'Обновить' : 'Refresh';
-
-  static String clear(Locale? locale) =>
-      _isRu(locale) ? 'Сбросить' : 'Clear pairing';
-
-  static String registered(Locale? locale) =>
-      _isRu(locale) ? 'Устройство зарегистрировано' : 'Device registered';
-
-  static String registerFailed(Locale? locale) =>
-      _isRu(locale) ? 'Ошибка регистрации' : 'Registration failed';
-}
 
 class PanelSettingsSection extends ConsumerStatefulWidget {
   const PanelSettingsSection({super.key});
@@ -73,7 +36,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
   Widget build(BuildContext context) {
     ref.watch(panelBootstrapProvider);
     final panel = ref.watch(panelStateProvider);
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context);
     final settings = panel.settings;
 
     if (_urlController.text.isEmpty && (settings.panelUrl?.isNotEmpty ?? false)) {
@@ -81,15 +44,15 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
     }
 
     return _SectionCard(
-      title: PanelSettingsStrings.sectionTitle(locale),
-      subtitle: PanelSettingsStrings.sectionSubtitle(locale),
+      title: l10n.panelSectionTitle,
+      subtitle: l10n.panelSectionSubtitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SwitchListTile(
             key: const ValueKey('panel_enable_toggle'),
             contentPadding: EdgeInsets.zero,
-            title: Text(PanelSettingsStrings.enable(locale)),
+            title: Text(l10n.panelEnable),
             value: settings.enabled,
             onChanged: panel.busy
                 ? null
@@ -105,7 +68,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
               key: const ValueKey('panel_url_field'),
               controller: _urlController,
               decoration: InputDecoration(
-                labelText: PanelSettingsStrings.panelUrl(locale),
+                labelText: l10n.panelUrl,
                 hintText: 'https://panel.example.com',
               ),
               keyboardType: TextInputType.url,
@@ -117,7 +80,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
               key: const ValueKey('panel_pairing_token_field'),
               controller: _tokenController,
               decoration: InputDecoration(
-                labelText: PanelSettingsStrings.pairingToken(locale),
+                labelText: l10n.panelPairingToken,
               ),
               obscureText: true,
               textInputAction: TextInputAction.done,
@@ -137,20 +100,20 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.link),
-                  label: Text(PanelSettingsStrings.register(locale)),
+                  label: Text(l10n.panelRegister),
                 ),
                 if (settings.isConfigured)
                   OutlinedButton.icon(
                     key: const ValueKey('panel_refresh_button'),
                     onPressed: panel.busy ? null : _refresh,
                     icon: const Icon(Icons.refresh),
-                    label: Text(PanelSettingsStrings.refresh(locale)),
+                    label: Text(l10n.panelRefresh),
                   ),
                 if (settings.deviceToken != null)
                   TextButton(
                     key: const ValueKey('panel_clear_button'),
                     onPressed: panel.busy ? null : _clear,
-                    child: Text(PanelSettingsStrings.clear(locale)),
+                    child: Text(l10n.panelClear),
                   ),
               ],
             ),
@@ -169,7 +132,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
   }
 
   Future<void> _register() async {
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context);
     await _saveUrl();
     try {
       await ref
@@ -180,7 +143,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(PanelSettingsStrings.registered(locale))),
+        SnackBar(content: Text(l10n.panelRegistered)),
       );
     } on PanelApiException catch (error) {
       if (!mounted) {
@@ -188,7 +151,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${PanelSettingsStrings.registerFailed(locale)}: '
+          content: Text('${l10n.panelRegisterFailed}: '
               '${error.message}'),
         ),
       );

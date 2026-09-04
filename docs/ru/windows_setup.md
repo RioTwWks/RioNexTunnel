@@ -91,9 +91,9 @@ build\windows\x64\runner\Debug\
 
 Логин и пароль генерируются на каждое подключение, отображаются на **Home** и в **Settings → System proxy (this session)**, стираются при disconnect. Это **локальные учётные данные прокси**, не логин VPN-сервера.
 
-### Авторизация прокси в браузере (планируется)
+### Авторизация прокси в браузере (расширение)
 
-Chromium на Windows может игнорировать сохранённые пароли прокси. Планируется расширение браузера и native messaging host (как на Linux); до реализации — ручной ввод учётных данных с Home/Settings.
+Используйте расширение `extensions/secure-vpn-proxy-auth/` с native messaging host (автоустановка при `setup()`). См. [browser_extension.md](browser_extension.md).
 
 ## Рабочие директории (планируется)
 

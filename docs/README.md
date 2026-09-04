@@ -34,6 +34,8 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Browser extension | [en/browser_extension.md](en/browser_extension.md) | [ru/browser_extension.md](ru/browser_extension.md) |
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
 | Advanced DNS | [en/dns.md](en/dns.md) | [ru/dns.md](ru/dns.md) |
+| Privacy | [en/privacy.md](en/privacy.md) | [ru/privacy.md](ru/privacy.md) |
+| Work modes | [en/work_modes.md](en/work_modes.md) | [ru/work_modes.md](ru/work_modes.md) |
 | Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
 | Advanced DNS | [en/dns.md](en/dns.md) | [ru/dns.md](ru/dns.md) |
 | RioNexGate testing | [en/rionexgate_testing.md](en/rionexgate_testing.md) | [ru/rionexgate_testing.md](ru/rionexgate_testing.md) |

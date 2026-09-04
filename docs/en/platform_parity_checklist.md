@@ -27,7 +27,7 @@ Use this checklist after `scripts/fetch_cores.sh` (desktop) or plugin-native set
 | System proxy | HTTP proxy `127.0.0.1:1081` (WinINet / registry) |
 | `netstat -ano \| findstr 1080` | `127.0.0.1:1080` LISTENING |
 | Disconnect | System proxy disabled; config wiped |
-| Browser helper | **Not yet on Windows** — UI shows all `false` (see P3 backlog) |
+| Browser helper | Native host + Chrome/Edge registry + Firefox manifest; Settings card shows status |
 
 ## macOS
 

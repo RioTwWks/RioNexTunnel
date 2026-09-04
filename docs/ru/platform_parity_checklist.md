@@ -27,7 +27,7 @@
 | Системный прокси | HTTP `127.0.0.1:1081` |
 | `netstat -ano \| findstr 1080` | `127.0.0.1:1080` LISTENING |
 | Disconnect | Прокси выключен; конфиг удалён |
-| Browser helper | **Пока нет на Windows** — в UI все `false` (см. P3) |
+| Browser helper | Native host + реестр Chrome/Edge + manifest Firefox; карточка в Settings |
 
 ## macOS
 
