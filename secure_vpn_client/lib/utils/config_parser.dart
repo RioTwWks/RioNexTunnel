@@ -9,6 +9,7 @@ import '../models/pinning_config.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/vpn_engine.dart';
+import 'amnezia_wg_config.dart';
 import 'dns_config_builder.dart';
 import 'subscription_http_client.dart';
 import 'transport_presets.dart';
@@ -283,6 +284,7 @@ class ConfigParser {
         lower.startsWith('tuic://') ||
         lower.startsWith('wg://') ||
         lower.startsWith('wireguard://') ||
+        lower.startsWith('awg://') ||
         lower.startsWith('ssh://');
   }
 
@@ -371,6 +373,7 @@ class ConfigParser {
     if (engine == VpnEngine.singbox) {
       _migrateSingboxLegacyDns(config);
       _normalizeSingboxXhttpTransport(config);
+      _normalizeSingboxAwgOutbounds(config);
       DnsConfigBuilder.ensureSingboxRemoteDns(config, settings: dnsSettings);
       _ensureSingboxClashApi(config);
     } else if (dnsSettings != null && !proxyOnly) {
@@ -574,6 +577,20 @@ class ConfigParser {
         continue;
       }
       _normalizeSingboxOutboundXhttp(outbound);
+      outbounds[i] = outbound;
+    }
+    config['outbounds'] = outbounds;
+  }
+
+  static void _normalizeSingboxAwgOutbounds(Map<String, dynamic> config) {
+    final outbounds = config['outbounds'];
+    if (outbounds is! List) return;
+    for (var i = 0; i < outbounds.length; i++) {
+      final raw = outbounds[i];
+      if (raw is! Map) continue;
+      final outbound = Map<String, dynamic>.from(raw);
+      if (outbound['type']?.toString().toLowerCase() != 'wireguard') continue;
+      AmneziaWgConfig.normalizeSingboxOutbound(outbound);
       outbounds[i] = outbound;
     }
     config['outbounds'] = outbounds;

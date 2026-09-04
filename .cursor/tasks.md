@@ -360,6 +360,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 7 — Testing & docs (client)
 
 - [x] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [x] AmneziaWG — `awg://` parse, sing-box outbound JSON, fallback tests, docs (official cores only; connect fail-closed)
 - [x] No live DPI test in CI — validate JSON shape and parser resilience only
 - [x] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
 - [x] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
@@ -488,7 +489,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | mux toggle (mobile) | ✅ Profile wizard | **P1** |
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
 | Protocol auto-fallback chain | ✅ Stack probe + reconnect fallback | **P1** |
-| AmneziaWG | ❌ Missing | P1/P2 |
+| AmneziaWG | ✅ Link parse + outbound JSON; connect blocked until official sing-box AWG | P1/P2 |
 | Double VPN / Multihop | ✅ Done (#75) | **P2** |
 | DNS leak protection, DoH/DoT | ✅ Done (#74) | **P2** |
 | Custom routing UI | ✅ Done (#73) | **P2** |
@@ -515,4 +516,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P3 UX, transparency & competitive edge complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
+*Last updated: 2026-09-04 — P4 Agent C AmneziaWG protocol (awg:// parse, outbound JSON, tests, docs). Prior: P3 UX complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*

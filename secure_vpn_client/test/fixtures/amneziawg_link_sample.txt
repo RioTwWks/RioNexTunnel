@@ -1,0 +1,1 @@
+awg://CLIENT@vpn.example:51820?publickey=SERVER&address=10.8.1.2/32&jc=4&jmin=40&jmax=70#AWG
