@@ -477,6 +477,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get panelSyncError => 'Error';
 
   @override
+  String get panelSyncInterval => 'Config sync interval';
+
+  @override
   String get pinningTitle => 'Certificate pinning';
 
   @override

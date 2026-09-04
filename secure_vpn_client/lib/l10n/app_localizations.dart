@@ -980,6 +980,12 @@ abstract class AppLocalizations {
   /// **'Error'**
   String get panelSyncError;
 
+  /// No description provided for @panelSyncInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Config sync interval'**
+  String get panelSyncInterval;
+
   /// No description provided for @pinningTitle.
   ///
   /// In en, this message translates to:

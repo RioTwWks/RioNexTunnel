@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../constants/panel_constants.dart';
 import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
@@ -382,6 +383,13 @@ class VpnService {
       return _resolveMultihopProfileConfig(profile);
     }
 
+    if (contentOverride == null && profile.name == kPanelProfileName) {
+      final panelJson = await _resolvePanelCachedConfigJson();
+      if (panelJson != null) {
+        return _rawContentToJsonConfig(profile, panelJson);
+      }
+    }
+
     var linkForBuild = profile.configLink.trim();
     if (profile.type == ProfileType.link &&
         profile.censorshipModeEnabled &&
@@ -405,6 +413,33 @@ class VpnService {
             : linkForBuild);
 
     return _rawContentToJsonConfig(profile, raw);
+  }
+
+  Future<String?> _resolvePanelCachedConfigJson() async {
+    final manager = _panelManager;
+    if (manager == null || !manager.isActive) {
+      return null;
+    }
+
+    var cached = await manager.loadCachedConfig();
+    if (cached != null) {
+      return jsonEncode(cached);
+    }
+
+    try {
+      final synced = await manager.syncConfig();
+      cached = synced?.configJson ?? await manager.loadCachedConfig();
+      if (cached != null) {
+        return jsonEncode(cached);
+      }
+    } catch (_) {
+      cached = await manager.loadCachedConfig();
+      if (cached != null) {
+        return jsonEncode(cached);
+      }
+    }
+
+    return null;
   }
 
   Future<String> _resolveMultihopProfileConfig(Profile profile) async {

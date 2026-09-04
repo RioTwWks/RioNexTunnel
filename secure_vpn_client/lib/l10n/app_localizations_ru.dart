@@ -477,6 +477,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get panelSyncError => 'Ошибка';
 
   @override
+  String get panelSyncInterval => 'Интервал синхронизации';
+
+  @override
   String get pinningTitle => 'Закрепление сертификата';
 
   @override
