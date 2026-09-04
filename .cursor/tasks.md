@@ -59,6 +59,18 @@
 - [x] **Custom routing UI** — rule editor, presets, import/export, merge with subscription (#73)
 - [x] **Certificate pinning** — opt-in SPKI for subscription fetch (#72)
 
+## Completed — P3 UX, transparency & competitive edge
+
+> Agent split: [p3-agent-distribution.md](p3-agent-distribution.md) (#78)
+
+- [x] **Minimal UI** — Home quick-picker (≤2 taps to connect), Advanced settings screen, system theme (#79)
+- [x] **Full localization (RU/EN)** — `flutter gen-l10n`, locale selector; *secondary screens from Agents A/C/D may need ARB follow-up after merge* (#83)
+- [x] **Profile management** — clipboard/QR import, subscription auto-refresh, tags/favorites (#81)
+- [x] **Transparency** — privacy policy, credential-safe log viewer (#80)
+- [x] **Work modes** — VPN/Proxy auto-detect + user override, docs (#80)
+- [x] **Windows browser helper** — native messaging host parity with Linux (#82)
+- [x] **Extension store prep** — submission package in `extensions/secure-vpn-proxy-auth/store/` (manual publish) (#82)
+
 ## Security checklist (never break)
 
 - [x] No hardcoded credentials
@@ -79,10 +91,7 @@ Code-complete across targets; device E2E steps: [docs/en/platform_parity_checkli
 - [x] iOS app: PacketTunnel target + Runner entitlements (`scripts/setup_ios_packet_tunnel.py`)
 - [x] Dart: `engine_auto_selector` iOS → sing-box heuristic
 - [x] E2E smoke tests documented per platform (manual on device)
-
-Deferred to P3:
-
-- [ ] Windows browser helper (native messaging + extension) — Linux has full implementation; Windows returns `false` in `get_browser_helper_status`
+- [x] Windows browser helper (native messaging + extension) — registry manifests for Chrome/Edge, file manifest for Firefox (#82)
 
 ---
 
@@ -409,37 +418,39 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ## P3 — UX, transparency & competitive edge
 
+> Agent split: [p3-agent-distribution.md](p3-agent-distribution.md) (#78) — Minimal UI → **Agent A** (#79) · Localization → **Agent B** (#83) · Profiles → **Agent C** (#81) · Transparency & modes → **Agent D** (#80) · Windows browser + store → **Agent E** (#82)
+
 Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 ### Minimal UI
 
-- [ ] Connect in 1–2 taps — Home: profile + prominent Connect button
-- [ ] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately
-- [ ] Full app localization (RU/EN) beyond proxy/browser helper strings
-- [ ] Dark/light theme aligned with system preference
+- [x] Connect in 1–2 taps — Home: profile + prominent Connect button (#79)
+- [x] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately (#79)
+- [x] Full app localization (RU/EN) beyond proxy/browser helper strings (#83) — *follow-up: ARB keys for Advanced, Log viewer, Privacy, profile import screens added by Agents A/C/D*
+- [x] Dark/light theme aligned with system preference (#79)
 
 ### Profile management
 
-- [ ] Profile import from clipboard / QR (`vless://`, `trojan://`, etc.)
-- [ ] Scheduled subscription auto-refresh + manual refresh
-- [ ] Server groups — tags, favorites, last used
+- [x] Profile import from clipboard / QR (`vless://`, `trojan://`, etc.) (#81)
+- [x] Scheduled subscription auto-refresh + manual refresh (#81)
+- [x] Server groups — tags, favorites, last used (#81)
 
 ### Transparency
 
-- [ ] Privacy policy doc — zero telemetry, what is stored locally
-- [ ] User-facing log viewer (no credentials); Info / Debug levels
-- [ ] Keep this file synced with releases / GitHub Issues
+- [x] Privacy policy doc — zero telemetry, what is stored locally (#80)
+- [x] User-facing log viewer (no credentials); Info / Debug levels (#80)
+- [x] Keep this file synced with releases / GitHub Issues (#78–#83, this consolidation)
 
 ### Work modes (document & unify)
 
-- [ ] VPN Mode (TUN) — mobile: full tunnel, kill switch, split tunnel
-- [ ] Proxy Mode — desktop: system proxy + browser extension; document kill switch limits
-- [ ] Unified mode switch — auto-detect per platform with power-user override
+- [x] VPN Mode (TUN) — mobile: full tunnel, kill switch, split tunnel (#80)
+- [x] Proxy Mode — desktop: system proxy + browser extension; document kill switch limits (#80)
+- [x] Unified mode switch — auto-detect per platform with power-user override (#80)
 
 ### Other UX
 
-- [ ] Windows browser helper (native messaging host; Linux reference in `packages/v2ray_box/linux/`)
-- [ ] Publish browser extension to Chrome Web Store / Firefox AMO
+- [x] Windows browser helper (native messaging host; Linux reference in `packages/v2ray_box/linux/`) (#82)
+- [x] Publish browser extension to Chrome Web Store / Firefox AMO — submission package in `extensions/secure-vpn-proxy-auth/store/` (manual publish) (#82)
 
 ---
 
@@ -481,7 +492,12 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Custom routing UI | ✅ Done (#73) | **P2** |
 | Subscription cert pinning (opt-in) | ✅ Done (#72) | **P2** |
 | Auto-reconnect | ✅ Done | — |
-| Minimalist UI | ⚠️ Partial | P3 |
+| Minimalist UI | ✅ Done (#79) | — |
+| Full RU/EN localization | ✅ Done (#83); secondary screens follow-up | — |
+| Profile import / refresh / tags | ✅ Done (#81) | — |
+| Privacy policy / log viewer | ✅ Done (#80) | — |
+| Work mode switch (VPN/Proxy) | ✅ Done (#80) | — |
+| Windows browser helper | ✅ Done (#82) | — |
 | Connection stats | ✅ Done | — |
 | RioNexGate panel API (optional) | ⚠️ MVP (register, sync, stats queue, Settings UI) | **P1** |
 
@@ -497,4 +513,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P2 advanced security & routing complete (v0.8.0: multihop #75, DNS #74, routing UI #73, cert pinning #72; release notes #76; agent plan #71). Prior: P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
+*Last updated: 2026-09-04 — P3 UX, transparency & competitive edge complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
