@@ -10,12 +10,14 @@ import 'package:v2ray_box/v2ray_box.dart';
 import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
+import '../models/multihop_chain.dart';
 import '../models/panel_socks_inbound.dart';
 import '../models/profile.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
 import '../models/transport_stack.dart';
 import '../models/vpn_engine.dart';
+import '../providers/dns_settings_provider.dart';
 import '../utils/config_enhancer.dart';
 import '../utils/config_parser.dart';
 import '../utils/core_version_gate.dart';
@@ -339,6 +341,10 @@ class VpnService {
     Profile profile, {
     String? contentOverride,
   }) async {
+    if (profile.multihopEnabled && profile.type == ProfileType.subscription && contentOverride == null) {
+      return _resolveMultihopProfileConfig(profile);
+    }
+
     var linkForBuild = profile.configLink.trim();
     if (profile.type == ProfileType.link &&
         profile.censorshipModeEnabled &&
@@ -363,35 +369,38 @@ class VpnService {
     return _rawContentToJsonConfig(profile, raw);
   }
 
-  Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
+  Future<String> _resolveMultihopProfileConfig(Profile profile) async {
+    final servers = await ConfigParser.listServersFromUrl(profile.configLink, engine: _engine);
+    MultihopChain.validateProfile(profile, serverCount: servers.length);
+    final chain = MultihopChain.fromProfile(profile);
+    final hopConfigs = <Map<String, dynamic>>[];
+    for (final index in chain.serverIndices) {
+      hopConfigs.add(await _contentToJsonMap(profile.copyWith(multihopEnabled: false), servers[index].content));
+    }
+    return ConfigEnhancer.applyProfileSettings(jsonEncode(hopConfigs.last), profile, _engine, multihopHopConfigs: hopConfigs);
+  }
+
+  Future<Map<String, dynamic>> _contentToJsonMap(Profile profile, String raw) async {
     String jsonConfig;
-    if (raw.startsWith('{')) {
-      jsonConfig = raw;
-    } else if (raw.startsWith('[')) {
+    if (raw.startsWith('{')) { jsonConfig = raw; }
+    else if (raw.startsWith('[')) {
       final decoded = jsonDecode(raw) as List<dynamic>;
-      if (decoded.isEmpty || decoded.first is! Map) {
-        throw StateError('Subscription JSON array is empty');
-      }
+      if (decoded.isEmpty || decoded.first is! Map) throw StateError('Subscription JSON array is empty');
       jsonConfig = jsonEncode(decoded.first);
     } else if (LinkConfigBuilder.isConfigLink(raw)) {
-      jsonConfig = LinkConfigBuilder.buildFromLink(
-        raw,
-        _engine,
-        options: LinkBuildOptions.fromProfile(profile),
-      );
+      jsonConfig = LinkConfigBuilder.buildFromLink(raw, _engine, options: LinkBuildOptions.fromProfile(profile));
     } else {
-      try {
-        jsonConfig = await _v2rayBox.generateConfig(raw);
-      } on PlatformException {
-        jsonConfig = LinkConfigBuilder.buildFromLink(
-          raw,
-          _engine,
-          options: LinkBuildOptions.fromProfile(profile),
-        );
-      }
+      try { jsonConfig = await _v2rayBox.generateConfig(raw); }
+      on PlatformException { jsonConfig = LinkConfigBuilder.buildFromLink(raw, _engine, options: LinkBuildOptions.fromProfile(profile)); }
     }
+    final decoded = jsonDecode(jsonConfig);
+    if (decoded is! Map<String, dynamic>) throw StateError('Resolved config must be a JSON object');
+    return decoded;
+  }
 
-    return ConfigEnhancer.applyProfileSettings(jsonConfig, profile, _engine);
+  Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
+    final config = await _contentToJsonMap(profile, raw);
+    return ConfigEnhancer.applyProfileSettings(jsonEncode(config), profile, _engine);
   }
 
   Future<List<SubscriptionServer>> listSubscriptionServers(
@@ -654,6 +663,7 @@ class VpnService {
     final effectiveSocksPort = panelSocks?.isValid == true
         ? panelSocks!.port
         : socksPort;
+    final dnsSettings = await DnsSettingsStore.load();
     final secureConfig = ConfigParser.injectSecureSocksInbound(
       rawConfig,
       credentials,
@@ -662,6 +672,7 @@ class VpnService {
       proxyOnly: desktopProxy,
       authMode: authMode,
       panelSocks: panelSocks,
+      dnsSettings: dnsSettings,
     );
     AppLog.info(
       'Secure config ready proxyOnly=$desktopProxy '
