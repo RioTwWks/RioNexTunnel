@@ -58,9 +58,9 @@ For iOS, use **routing rules inside the core config** (domain/IP lists) — see 
 
 Documented limits: [iOS setup](ios_setup.md#split-tunneling).
 
-## Linux TUN (future)
+## Linux TUN (future — not implemented)
 
-If full TUN mode is added on Linux, per-app routing would require **policy routing / cgroups** and must block bypass via unauthenticated localhost listeners. Desktop proxy mode does not use TUN today.
+**Status:** deferred. Desktop Linux uses **proxy mode only** today. Per-app TUN routing requires a future workstream (policy routing / cgroups) and must block localhost bypass.
 
 ## Related code
 

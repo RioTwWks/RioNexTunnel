@@ -1,6 +1,6 @@
 # Browser extension (proxy auth)
 
-One-time setup for Chromium and Firefox on **Linux and Windows desktop**.
+One-time setup for Chromium and Firefox on **Linux, Windows, and macOS desktop**.
 
 Extension path: `extensions/secure-vpn-proxy-auth/`
 
@@ -28,5 +28,17 @@ Host name: `com.secure.vpn.proxy_auth` — installed on first `setup()`.
 | Chrome registry | `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.secure.vpn.proxy_auth` |
 | Edge registry | `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\com.secure.vpn.proxy_auth` |
 | Firefox manifest | `%APPDATA%\Mozilla\NativeMessagingHosts\com.secure.vpn.proxy_auth.json` |
+
+### macOS
+
+| Component | Path |
+|-----------|------|
+| Binary (installed) | `~/Library/Application Support/V2rayBox/working/native_host/secure_vpn_native_host` |
+| Chrome manifest | `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Chromium manifest | `~/Library/Application Support/Chromium/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Edge manifest | `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Firefox manifest | `~/Library/Application Support/Mozilla/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+
+The host binary is bundled in the app / plugin resources and copied on `setup()`. Credentials are written to `session.json` only while connected; never logged.
 
 Store submission: `extensions/secure-vpn-proxy-auth/store/SUBMISSION_CHECKLIST.md`.
