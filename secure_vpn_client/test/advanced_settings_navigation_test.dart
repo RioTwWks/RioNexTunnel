@@ -6,7 +6,7 @@ import 'package:secure_vpn_client/screens/advanced_settings_screen.dart';
 import 'package:secure_vpn_client/screens/settings_screen.dart';
 
 void main() {
-  testWidgets('settings navigates to advanced settings screen', (tester) async {
+  Future<void> pumpSettings(WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(
@@ -14,13 +14,19 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  testWidgets('settings navigates to advanced settings screen', (tester) async {
+    await pumpSettings(tester);
 
     expect(find.byKey(const ValueKey('advanced_settings_tile')), findsOneWidget);
     expect(find.byKey(const ValueKey('kill_switch_mode_selector')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('advanced_settings_tile')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(AdvancedSettingsScreen), findsOneWidget);
     expect(find.text('Advanced'), findsOneWidget);
@@ -30,14 +36,7 @@ void main() {
   });
 
   testWidgets('theme mode defaults to system', (tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: SettingsScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await pumpSettings(tester);
 
     final segmentedButton = tester.widget<SegmentedButton<ThemeMode>>(
       find.byKey(const ValueKey('theme_mode_selector')),
