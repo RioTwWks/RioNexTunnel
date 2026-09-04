@@ -18,12 +18,6 @@ import '../providers/routing_rules_provider.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/routing_editor_screen.dart';
 import '../screens/per_app_proxy_screen.dart';
-import '../models/app_log_level.dart';
-import '../models/service_mode_preference.dart';
-import '../providers/app_log_level_provider.dart';
-import '../providers/service_mode_provider.dart';
-import '../screens/log_viewer_screen.dart';
-import '../screens/privacy_policy_screen.dart';
 import '../services/app_log.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
@@ -116,9 +110,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final customRouting = ref.watch(routingRulesProvider);
     final socksAuthMode = ref.watch(socksAuthModeProvider);
     final panelState = ref.watch(panelStateProvider);
-    final serviceMode = ref.watch(serviceModePreferenceProvider);
-    final logLevel = ref.watch(appLogLevelProvider);
-    final showsVpnWarning = serviceMode.showsDesktopVpnWarning(isDesktop: desktopProxy);
     final androidVpn = !kIsWeb && Platform.isAndroid;
     final scheme = Theme.of(context).colorScheme;
     final locale = Localizations.localeOf(context);
@@ -164,22 +155,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         ),
         const SizedBox(height: 14),
-        FadeSlideIn(
-          delay: const Duration(milliseconds: 105),
-          child: _SectionCard(
-            title: locale.languageCode == 'ru' ? 'Режим работы' : 'Work mode',
-            child: SegmentedButton<ServiceModePreference>(
-              segments: const [
-                ButtonSegment(value: ServiceModePreference.auto, label: Text('Auto')),
-                ButtonSegment(value: ServiceModePreference.proxy, label: Text('Proxy')),
-                ButtonSegment(value: ServiceModePreference.vpn, label: Text('VPN')),
-              ],
-              selected: {serviceMode},
-              onSelectionChanged: status == VpnStatus.started ? null : (s) => ref.read(serviceModePreferenceProvider.notifier).setPreference(s.first),
-            ),
-          ),
-        ),
-                const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 70),
           child: _SectionCard(
@@ -437,10 +412,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           delay: const Duration(milliseconds: 210),
           child: _SectionCard(
           title: 'Diagnostics',
-          child: Column(children:[
-            SegmentedButton<AppLogLevel>(segments:const[ButtonSegment(value:AppLogLevel.info,label:Text('Info')),ButtonSegment(value:AppLogLevel.debug,label:Text('Debug'))],selected:{logLevel},onSelectionChanged:(s)=>ref.read(appLogLevelProvider.notifier).setLevel(s.first)),
-            ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.article_outlined,color:scheme.primary),title:const Text('View logs'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const LogViewerScreen()))),
-            ListTile(contentPadding: EdgeInsets.zero,
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.article_outlined, color: scheme.primary),
             title: const Text('Log files'),
             subtitle: Text(
@@ -466,11 +439,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: const Icon(Icons.copy),
             ),
           ),
-        ],
         ),
         ),
-        const SizedBox(height: 14),
-        FadeSlideIn(delay:const Duration(milliseconds:230),child:_SectionCard(title:locale.languageCode=='ru'?'Конфиденциальность':'Privacy',child:ListTile(contentPadding:EdgeInsets.zero,leading:Icon(Icons.privacy_tip_outlined,color:scheme.primary),title:Text(locale.languageCode=='ru'?'Политика конфиденциальности':'Privacy policy'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>const PrivacyPolicyScreen()))))),
         const SizedBox(height: 14),
         const FadeSlideIn(
           delay: Duration(milliseconds: 245),

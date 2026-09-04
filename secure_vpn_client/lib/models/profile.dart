@@ -24,7 +24,7 @@ class Profile {
     this.tags = const [],
     this.isFavorite = false,
     this.lastUsedAt,
-    this.subscriptionRefreshInterval = SubscriptionRefreshInterval.defaultForSubscription,
+    this.subscriptionRefreshInterval = SubscriptionRefreshInterval.hours6,
     this.lastSubscriptionFetchAt,
   });
 

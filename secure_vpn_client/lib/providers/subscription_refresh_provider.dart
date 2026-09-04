@@ -15,7 +15,7 @@ class _SubscriptionRefreshLifecycle with WidgetsBindingObserver {
   @override void didChangeAppLifecycleState(AppLifecycleState state) { if (state == AppLifecycleState.resumed) unawaited(_run()); }
   Future<void> _run() async { if (_busy) return; _busy = true; try { final s = _ref.read(subscriptionRefreshServiceProvider); for (final p in s.dueProfiles(_ref.read(profilesProvider))) await refreshSubscriptionProfile(_ref, p); } finally { _busy = false; } }
 }
-Future<SubscriptionRefreshResult> refreshSubscriptionProfile(Ref ref, Profile profile) async {
+Future<SubscriptionRefreshResult> refreshSubscriptionProfile(WidgetRef ref, Profile profile) async {
   final result = await ref.read(subscriptionRefreshServiceProvider).refreshProfile(profile);
   if (result.success) { await ref.read(profilesProvider.notifier).recordSubscriptionFetch(profile.id); AppLog.info('Subscription refreshed profile=${profile.name} servers=${result.serverCount}'); }
   else { AppLog.error('Subscription refresh failed profile=${profile.name}: ${result.errorMessage}'); }

@@ -340,7 +340,7 @@ class ProfilesNotifier extends StateNotifier<List<Profile>> {
       ruDirectRouting: ruDirectRouting,
       tags: tags,
       isFavorite: isFavorite,
-      subscriptionRefreshInterval: type == ProfileType.subscription ? (subscriptionRefreshInterval ?? SubscriptionRefreshInterval.defaultForSubscription) : SubscriptionRefreshInterval.off,
+      subscriptionRefreshInterval: type == ProfileType.subscription ? (subscriptionRefreshInterval ?? SubscriptionRefreshInterval.hours6) : SubscriptionRefreshInterval.off,
     );
     state = [...state, profile];
     await _persist();
