@@ -13,7 +13,7 @@ void main() {
     test('favorites and last used ordering', () {
       final sorted = sortProfiles([
         Profile(id: 'a', name: 'A', configLink: 'vless://a', lastUsedAt: DateTime(2026, 1, 1)),
-        Profile(id: 'b', name: 'B', configLink: 'vless://b', isFavorite: true),
+        const Profile(id: 'b', name: 'B', configLink: 'vless://b', isFavorite: true),
         Profile(id: 'c', name: 'C', configLink: 'vless://c', lastUsedAt: DateTime(2026, 1, 3)),
       ]);
       expect(sorted.map((p) => p.id).toList(), ['b', 'c', 'a']);

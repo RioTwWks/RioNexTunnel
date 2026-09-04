@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../models/transport_preset.dart';
 import '../providers/vpn_providers.dart';
@@ -38,7 +39,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final link = _linkController.text.trim();
     if (name.isEmpty || link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name and config link are required')),
+        SnackBar(content: Text(AppLocalizations.of(context).configNameLinkRequired)),
       );
       return;
     }
@@ -46,7 +47,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (_type == ProfileType.link && !V2rayBox().isValidConfigLink(link)) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid VPN config link')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).configInvalidLink)));
       return;
     }
 
@@ -78,29 +79,42 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Profile added')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).configProfileAdded)));
     }
   }
 
   Future<void> _importFromClipboard() async {
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text?.trim() ?? '';
-    if (text.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clipboard is empty'))); return; }
+    if (!mounted) return;
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Clipboard is empty')),
+      );
+      return;
+    }
     await _importFromText(text);
   }
+
   Future<void> _importFromQr() async {
     final text = await collectQrOrPasteText(context);
     if (text == null || text.trim().isEmpty) return;
     await _importFromText(text.trim());
   }
+
   Future<void> _importFromText(String text) async {
     final candidates = _importService.parseText(text);
+    if (!mounted) return;
     if (candidates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No valid config links or subscriptions found')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No valid config links or subscriptions found')),
+      );
       return;
     }
     final imported = await showProfileImportSheet(context, candidates);
     if (!mounted || imported == null || imported == 0) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$imported profile(s) imported')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$imported profile(s) imported')),
+    );
   }
 
   Future<void> _editCensorship(Profile profile) async {
@@ -134,7 +148,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Censorship settings updated')),
+      SnackBar(content: Text(AppLocalizations.of(context).configCensorshipUpdated)),
     );
   }
 
@@ -152,6 +166,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final profiles = ref.watch(sortedProfilesProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -164,29 +179,43 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Add profile',
+                    l10n.configAddProfile,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Paste a share link or subscription URL',
+                    l10n.configAddProfileSubtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    OutlinedButton.icon(key: const ValueKey('import_clipboard_button'), onPressed: _importFromClipboard, icon: const Icon(Icons.content_paste_rounded), label: const Text('From clipboard')),
-                    OutlinedButton.icon(key: const ValueKey('import_qr_button'), onPressed: _importFromQr, icon: const Icon(Icons.qr_code_scanner_rounded), label: Text(qrScannerSupported() ? 'Scan QR' : 'Paste QR text')),
-                  ]),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        key: const ValueKey('import_clipboard_button'),
+                        onPressed: _importFromClipboard,
+                        icon: const Icon(Icons.content_paste_rounded),
+                        label: const Text('From clipboard'),
+                      ),
+                      OutlinedButton.icon(
+                        key: const ValueKey('import_qr_button'),
+                        onPressed: _importFromQr,
+                        icon: const Icon(Icons.qr_code_scanner_rounded),
+                        label: Text(qrScannerSupported() ? 'Scan QR' : 'Paste QR text'),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     key: const ValueKey('profile_name_field'),
                     controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Profile name',
+                    decoration: InputDecoration(
+                      labelText: l10n.configProfileName,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -195,23 +224,23 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     controller: _linkController,
                     decoration: InputDecoration(
                       labelText: _type == ProfileType.link
-                          ? 'Config link (vless://, hy2://, tuic://, …)'
-                          : 'Subscription URL',
+                          ? l10n.configLinkLabel
+                          : l10n.configSubscriptionUrl,
                     ),
                     maxLines: 3,
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<ProfileType>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: ProfileType.link,
-                        label: Text('Link'),
-                        icon: Icon(Icons.link),
+                        label: Text(l10n.configLink),
+                        icon: const Icon(Icons.link),
                       ),
                       ButtonSegment(
                         value: ProfileType.subscription,
-                        label: Text('Subscription'),
-                        icon: Icon(Icons.rss_feed_outlined),
+                        label: Text(l10n.configSubscription),
+                        icon: const Icon(Icons.rss_feed_outlined),
                       ),
                     ],
                     selected: {_type},
@@ -224,7 +253,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     key: const ValueKey('add_profile_button'),
                     onPressed: _addProfile,
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add profile'),
+                    label: Text(l10n.configAddProfile),
                   ),
                 ],
               ),
@@ -235,7 +264,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 80),
           child: Text(
-            'Saved profiles',
+            l10n.configSavedProfiles,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -257,12 +286,12 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'No profiles yet',
+                      l10n.configNoProfiles,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Add a link, subscription, or import from clipboard/QR',
+                      l10n.configNoProfilesHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -286,16 +315,25 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                   profile: profile,
                   selected: selected,
                   onSelect: () => ref.read(selectedProfileProvider.notifier).select(
-                        ref.read(profilesProvider).firstWhere((p) => p.id == profile.id, orElse: () => profile),
+                        ref.read(profilesProvider).firstWhere(
+                              (p) => p.id == profile.id,
+                              orElse: () => profile,
+                            ),
                       ),
                   onDelete: () {
                     ref.read(profilesProvider.notifier).removeProfile(profile.id);
-                    if (selectedProfile?.id == profile.id) ref.read(selectedProfileProvider.notifier).clear();
+                    if (selectedProfile?.id == profile.id) {
+                      ref.read(selectedProfileProvider.notifier).clear();
+                    }
                   },
                   onEditCensorship: () => _editCensorship(profile),
-                  onToggleSocksInjection: profile.type == ProfileType.link ? () => _toggleDisableSocksInjection(profile) : null,
+                  onToggleSocksInjection: profile.type == ProfileType.link
+                      ? () => _toggleDisableSocksInjection(profile)
+                      : null,
                   onEditTags: () => showProfileTagsEditor(context, ref, profile),
-                  onRefreshSubscription: profile.type == ProfileType.subscription ? () => refreshProfileSubscription(context, ref, profile) : null,
+                  onRefreshSubscription: profile.type == ProfileType.subscription
+                      ? () => refreshProfileSubscription(context, ref, profile)
+                      : null,
                 ),
               ),
             );

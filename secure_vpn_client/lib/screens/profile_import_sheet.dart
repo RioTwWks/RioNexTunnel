@@ -55,6 +55,9 @@ class _ProfileImportSheetState extends ConsumerState<ProfileImportSheet> {
         if (name.isEmpty) continue;
         CensorshipWizardResult? wizardResult;
         if (item.candidate.type == ProfileType.link) {
+          if (!mounted) {
+            return;
+          }
           wizardResult = await Navigator.of(context).push<CensorshipWizardResult>(
             MaterialPageRoute(
               builder: (_) => CensorshipWizardScreen(

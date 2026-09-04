@@ -5,6 +5,7 @@ import '../models/profile.dart';
 import '../models/subscription_refresh_interval.dart';
 import '../providers/subscription_refresh_provider.dart';
 import '../providers/vpn_providers.dart';
+import '../services/app_log.dart';
 import '../widgets/socks_auth_mode_strings.dart';
 import '../widgets/transport_stack_chip.dart';
 
@@ -174,7 +175,17 @@ Future<void> showSubscriptionRefreshPicker(BuildContext context, WidgetRef ref, 
 Future<void> refreshProfileSubscription(BuildContext context, WidgetRef ref, Profile profile) async {
   final messenger = ScaffoldMessenger.of(context);
   messenger.showSnackBar(SnackBar(content: Text('Refreshing ${profile.name}…')));
-  final result = await refreshSubscriptionProfile(ref, profile);
+  final result = await ref.read(subscriptionRefreshServiceProvider).refreshProfile(profile);
+  if (result.success) {
+    await ref.read(profilesProvider.notifier).recordSubscriptionFetch(profile.id);
+    AppLog.info(
+      'Subscription refreshed profile=${profile.name} servers=${result.serverCount}',
+    );
+  } else {
+    AppLog.error(
+      'Subscription refresh failed profile=${profile.name}: ${result.errorMessage}',
+    );
+  }
   if (!context.mounted) return;
   messenger.showSnackBar(SnackBar(
     content: Text(result.success

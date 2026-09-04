@@ -35,8 +35,16 @@ List<Profile> sortProfiles(List<Profile> profiles) {
   sorted.sort((a, b) {
     if (a.isFavorite != b.isFavorite) return a.isFavorite ? -1 : 1;
     final au = a.lastUsedAt, bu = b.lastUsedAt;
-    if (au != null && bu != null) { final c = bu.compareTo(au); if (c != 0) return c; }
-    else if (au != null) return -1; else if (bu != null) return 1;
+    if (au != null && bu != null) {
+      final c = bu.compareTo(au);
+      if (c != 0) {
+        return c;
+      }
+    } else if (au != null) {
+      return -1;
+    } else if (bu != null) {
+      return 1;
+    }
     return a.name.toLowerCase().compareTo(b.name.toLowerCase());
   });
   return sorted;
