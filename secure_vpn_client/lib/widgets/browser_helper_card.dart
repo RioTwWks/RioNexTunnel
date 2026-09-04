@@ -27,7 +27,7 @@ class BrowserHelperCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final statusAsync = ref.watch(browserHelperStatusProvider);
 
     return Card(

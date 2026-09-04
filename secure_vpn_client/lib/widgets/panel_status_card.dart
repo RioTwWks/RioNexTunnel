@@ -14,7 +14,7 @@ class PanelStatusCard extends ConsumerWidget {
     ref.watch(panelBootstrapProvider);
     final panel = ref.watch(panelStateProvider);
     final manager = ref.watch(panelManagerProvider);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final settings = panel.settings;
 

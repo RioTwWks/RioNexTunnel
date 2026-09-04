@@ -69,7 +69,7 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final titles = [l10n.navHome, l10n.navProfiles, l10n.navSettings];
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;

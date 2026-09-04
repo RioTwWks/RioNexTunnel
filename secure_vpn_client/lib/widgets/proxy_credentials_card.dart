@@ -36,21 +36,21 @@ class ProxyCredentialsCard extends StatelessWidget {
     if (!context.mounted) {
       return;
     }
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.proxyCopied(label))),
     );
   }
 
   Future<void> _copyBoth(BuildContext context) async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final text = '${credentials.username}\n${credentials.password}';
     await _copy(context, l10n.proxyCopyBoth, text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     if (compact) {

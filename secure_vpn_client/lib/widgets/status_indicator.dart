@@ -84,7 +84,7 @@ class _StatusIndicatorState extends State<StatusIndicator>
   }
 
   String _label(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     if (widget.detail != null) return connectionPhaseLabel(l10n, widget.detail!);
     return connectionPhaseLabelFromStatus(l10n, ConnectionDetail.fromVpnStatus(widget.status).phase);
   }

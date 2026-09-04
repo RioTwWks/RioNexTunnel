@@ -617,6 +617,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get advancedTitle => 'Advanced';
 
   @override
+  String get advancedSettingsSubtitle =>
+      'Kill switch, DNS, routing, split tunnel, censorship';
+
+  @override
   String get censorshipWizardTitle => 'Censorship mode';
 
   @override

@@ -36,7 +36,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
   Widget build(BuildContext context) {
     ref.watch(panelBootstrapProvider);
     final panel = ref.watch(panelStateProvider);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final settings = panel.settings;
 
     if (_urlController.text.isEmpty && (settings.panelUrl?.isNotEmpty ?? false)) {
@@ -132,7 +132,7 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
   }
 
   Future<void> _register() async {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     await _saveUrl();
     try {
       await ref

@@ -35,9 +35,9 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  intl: any
   flutter_riverpod: ^2.6.1
   http: ^1.2.2
+  intl: any
   path_provider: ^2.1.5
   shared_preferences: ^2.3.3
   uuid: ^4.5.1

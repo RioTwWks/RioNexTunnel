@@ -192,6 +192,7 @@
   "transportMux": "mux",
   "transportRuDirect": "RU напрямую",
   "advancedTitle": "Расширенные",
+  "advancedSettingsSubtitle": "Kill switch, DNS, маршрутизация, split tunnel, обход цензуры",
   "censorshipWizardTitle": "Режим обхода цензуры",
   "censorshipSkip": "Пропустить",
   "censorshipEnable": "Включить режим обхода цензуры",

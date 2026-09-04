@@ -192,6 +192,7 @@
   "transportMux": "mux",
   "transportRuDirect": "RU direct",
   "advancedTitle": "Advanced",
+  "advancedSettingsSubtitle": "Kill switch, DNS, routing, split tunnel, censorship",
   "censorshipWizardTitle": "Censorship mode",
   "censorshipSkip": "Skip",
   "censorshipEnable": "Enable censorship mode",

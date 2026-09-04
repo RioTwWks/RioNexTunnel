@@ -34,7 +34,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final link = _linkController.text.trim();
     if (name.isEmpty || link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.configNameLinkRequired)),
+        SnackBar(content: Text(AppLocalizations.of(context).configNameLinkRequired)),
       );
       return;
     }
@@ -42,7 +42,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (_type == ProfileType.link && !V2rayBox().isValidConfigLink(link)) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.configInvalidLink)));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).configInvalidLink)));
       return;
     }
 
@@ -74,7 +74,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.configProfileAdded)));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).configProfileAdded)));
     }
   }
 
@@ -109,7 +109,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(AppLocalizations.of(context)!.configCensorshipUpdated)),
+      SnackBar(content: Text(AppLocalizations.of(context).configCensorshipUpdated)),
     );
   }
 
@@ -127,7 +127,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final profiles = ref.watch(profilesProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final scheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -172,13 +172,16 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<ProfileType>(
-                    segments: [ButtonSegment(value: ProfileType.link, label: Text(l10n.configLink),
-                        icon: Icon(Icons.link),
+                    segments: [
+                      ButtonSegment(
+                        value: ProfileType.link,
+                        label: Text(l10n.configLink),
+                        icon: const Icon(Icons.link),
                       ),
                       ButtonSegment(
                         value: ProfileType.subscription,
                         label: Text(l10n.configSubscription),
-                        icon: Icon(Icons.rss_feed_outlined),
+                        icon: const Icon(Icons.rss_feed_outlined),
                       ),
                     ],
                     selected: {_type},

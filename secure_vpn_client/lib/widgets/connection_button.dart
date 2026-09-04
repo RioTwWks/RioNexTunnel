@@ -131,7 +131,7 @@ class _ConnectionButtonState extends State<ConnectionButton>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final disabled = widget.busy || _isTransition;
     final label = _isTransition

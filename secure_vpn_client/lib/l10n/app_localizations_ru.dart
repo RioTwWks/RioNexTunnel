@@ -616,6 +616,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get advancedTitle => 'Расширенные';
 
   @override
+  String get advancedSettingsSubtitle =>
+      'Kill switch, DNS, маршрутизация, split tunnel, обход цензуры';
+
+  @override
   String get censorshipWizardTitle => 'Режим обхода цензуры';
 
   @override

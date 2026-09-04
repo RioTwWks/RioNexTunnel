@@ -1250,6 +1250,12 @@ abstract class AppLocalizations {
   /// **'Advanced'**
   String get advancedTitle;
 
+  /// No description provided for @advancedSettingsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kill switch, DNS, routing, split tunnel, censorship'**
+  String get advancedSettingsSubtitle;
+
   /// No description provided for @censorshipWizardTitle.
   ///
   /// In en, this message translates to:

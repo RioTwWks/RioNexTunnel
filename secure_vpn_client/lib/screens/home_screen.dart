@@ -12,6 +12,7 @@ import '../providers/vpn_providers.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/connection_button.dart';
 import '../widgets/multihop_picker_tile.dart';
+import '../widgets/profile_quick_picker.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/server_picker_tile.dart';
 import '../widgets/status_indicator.dart';
@@ -31,7 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _connect() async {
     final profile = ref.read(selectedProfileProvider);
     if (profile == null) {
-      setState(() => _error = AppLocalizations.of(context)!.errorSelectProfileFirst);
+      setState(() => _error = AppLocalizations.of(context).errorSelectProfileFirst);
       return;
     }
 
@@ -40,7 +41,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _error = null;
       _connectStatus = profile.type == ProfileType.subscription &&
               profile.autoSelectBestServer
-          ? AppLocalizations.of(context)!.statusTestingServers
+          ? AppLocalizations.of(context).statusTestingServers
           : null;
     });
 
@@ -93,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
     final status = ref.watch(vpnStatusProvider).value ?? VpnStatus.stopped;
     final connectionDetail = ref.watch(connectionDetailProvider).value;
     final stats = ref.watch(vpnStatsProvider).value;
@@ -264,26 +265,7 @@ class _StatusCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              Text(
-                selectedProfile == null
-                    ? l10n.statusNoProfileSelected
-                    : selectedProfile!.name,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                selectedProfile == null
-                    ? l10n.statusAddProfileHint
-                    : selectedProfile!.type == ProfileType.subscription
-                        ? l10n.statusSubscriptionProfile
-                        : l10n.statusDirectConfigLink,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
+              ProfileQuickPicker(selectedProfile: selectedProfile),
               if (selectedProfile != null &&
                   selectedProfile!.type == ProfileType.subscription) ...[
                 const SizedBox(height: 14),

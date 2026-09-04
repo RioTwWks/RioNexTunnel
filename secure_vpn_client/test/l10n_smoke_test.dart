@@ -10,7 +10,7 @@ void main() {
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Builder(builder: (context) {
-          final l10n = AppLocalizations.of(context)!;
+          final l10n = AppLocalizations.of(context);
           return Text(l10n.navHome);
         }),
       ));
