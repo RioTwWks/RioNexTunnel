@@ -409,6 +409,8 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 ## P3 — UX, transparency & competitive edge
 
+> Agent split: [p3-agent-distribution.md](p3-agent-distribution.md) — Minimal UI → **Agent A** · Localization → **Agent B** · Profiles → **Agent C** · Transparency & modes → **Agent D** · Windows browser + store → **Agent E**
+
 Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 ### Minimal UI
