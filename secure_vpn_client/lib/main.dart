@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'constants/app_branding.dart';
 import 'providers/panel_providers.dart';
+import 'providers/subscription_refresh_provider.dart';
 import 'providers/vpn_providers.dart';
 import 'screens/config_screen.dart';
 import 'screens/home_screen.dart';
@@ -24,6 +25,7 @@ class SecureVpnApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(panelStatsLifecycleProvider);
     ref.watch(panelCommandsLifecycleProvider);
+    ref.watch(subscriptionRefreshLifecycleProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp(
