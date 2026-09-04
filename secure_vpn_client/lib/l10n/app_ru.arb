@@ -147,6 +147,7 @@
   "panelSyncStale": "Кэш (панель недоступна)",
   "panelSyncOffline": "Нет сети",
   "panelSyncError": "Ошибка",
+  "panelSyncInterval": "Интервал синхронизации",
   "pinningTitle": "Закрепление сертификата",
   "pinningNoSavedPins": "Нет сохранённых pin.",
   "pinningAddPin": "Добавить pin",

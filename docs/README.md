@@ -39,6 +39,7 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
 | Advanced DNS | [en/dns.md](en/dns.md) | [ru/dns.md](ru/dns.md) |
 | RioNexGate testing | [en/rionexgate_testing.md](en/rionexgate_testing.md) | [ru/rionexgate_testing.md](ru/rionexgate_testing.md) |
+| RioNexGate pairing | [en/panel_pairing.md](en/panel_pairing.md) | [ru/panel_pairing.md](ru/panel_pairing.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
 
 For AI agents and contributors, see also [.cursor/AGENTS.md](../.cursor/AGENTS.md) (English).

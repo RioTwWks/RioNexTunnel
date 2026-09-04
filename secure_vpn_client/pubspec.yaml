@@ -36,6 +36,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.6.1
+  flutter_secure_storage: ^11.0.0
   http: ^1.2.2
   intl: any
   mobile_scanner: ^7.0.1

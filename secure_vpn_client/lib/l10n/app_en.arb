@@ -147,6 +147,7 @@
   "panelSyncStale": "Cached (panel offline)",
   "panelSyncOffline": "Offline",
   "panelSyncError": "Error",
+  "panelSyncInterval": "Config sync interval",
   "pinningTitle": "Certificate pinning",
   "pinningNoSavedPins": "No saved pins yet.",
   "pinningAddPin": "Add pin",

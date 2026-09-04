@@ -186,7 +186,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 2.1 — `PanelManager` module
 
 - [x] New service: `lib/services/panel_manager.dart` (or `lib/services/panel/`)
-- [x] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials) — SharedPreferences MVP; migrate to secure storage later
+- [x] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials) — `device_token` in `flutter_secure_storage`; panel metadata in SharedPreferences
 - [x] REST client with timeouts, exponential backoff (max 3–5 retries), `X-API-Version: v1` header
 - [x] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
 - [x] Riverpod provider wiring; Settings screen for panel URL + login/register (`PanelSettingsSection`, `PanelStatusCard`)
@@ -204,16 +204,16 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 2.2 — Registration & config sync
 
 - [x] On first setup with `panel_url` + credentials → `POST /api/client/register`; store `device_token`
-- [x] Manual **Refresh** → `GET /api/client/config` (periodic sync — **partial**, not yet scheduled)
+- [x] Manual **Refresh** → `GET /api/client/config`; scheduled sync (default 15 min, configurable in Settings)
 - [x] Compare `config_hash` from server with local hash; skip rewrite if unchanged
-- [x] Apply config: subscription URL → `Profile` named RioNexGate + `ConfigParser` pipeline (**partial** — full JSON config apply pending)
+- [x] Apply config: subscription URL → `Profile` named RioNexGate + `ConfigParser` pipeline; full JSON config used on connect when panel provides `config` object
 - [x] Cache last good config on disk (SharedPreferences); use when offline (**stale** status)
 - [x] Invalid JSON from panel → log error, keep previous config, show non-blocking warning (no crash)
 
 ### 2.3 — Stats upload
 
 - [x] Collect bytes in/out from core counters on disconnect (`VpnStats` uplink/downlink totals)
-- [ ] Background flush every ~60s and on disconnect → `POST /api/client/stats` (**partial** — disconnect flush only)
+- [x] Background flush every ~60s and on disconnect → `POST /api/client/stats`
 - [x] Local queue when panel unreachable; batch replay when back online
 - [x] `session_id` per connect session for server-side deduplication
 - [x] Never include SOCKS passwords or transport secrets in stats payload
@@ -245,7 +245,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [x] No changes to `vless://` / `vmess://` / `trojan://` import parsers
 - [x] Panel-managed profiles and manual profiles coexist in same profile list
 - [x] Engine auto-select and server picker unchanged for non-panel subscriptions
-- [ ] Document: panel integration is additive; uninstalling panel config does not remove manual profiles
+- [x] Document: panel integration is additive; uninstalling panel config does not remove manual profiles (`docs/en|ru/panel_pairing.md`)
 
 ### 3 — Client testing & observability (with RioNexGate)
 
@@ -262,9 +262,9 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 | Phase | RioNexTunnel tasks |
 |-------|-------------------|
 | **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` — **done (MVP)** |
-| **2** | Stats collector + offline queue + `session_id` — **partial** (disconnect flush; no 60s timer) |
+| **2** | Stats collector + offline queue + `session_id` + 60s background flush — **done** |
 | **3** | WebSocket / long-poll commands; reconnect on `refresh_config` — **done (§2.4)** |
-| **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing |
+| **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing — **done** (`panel_pairing.md`) |
 
 ### Expected outcomes
 
@@ -358,6 +358,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 7 — Testing & docs (client)
 
 - [x] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [x] AmneziaWG — `awg://` parse, sing-box outbound JSON, fallback tests, docs (official cores only; connect fail-closed)
 - [x] No live DPI test in CI — validate JSON shape and parser resilience only
 - [x] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
 - [x] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
@@ -486,7 +487,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | mux toggle (mobile) | ✅ Profile wizard | **P1** |
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
 | Protocol auto-fallback chain | ✅ Stack probe + reconnect fallback | **P1** |
-| AmneziaWG | ❌ Missing | P1/P2 |
+| AmneziaWG | ✅ Link parse + outbound JSON; connect blocked until official sing-box AWG | P1/P2 |
 | Double VPN / Multihop | ✅ Done (#75) | **P2** |
 | DNS leak protection, DoH/DoT | ✅ Done (#74) | **P2** |
 | Custom routing UI | ✅ Done (#73) | **P2** |
@@ -499,7 +500,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Work mode switch (VPN/Proxy) | ✅ Done (#80) | — |
 | Windows browser helper | ✅ Done (#82) | — |
 | Connection stats | ✅ Done | — |
-| RioNexGate panel API (optional) | ⚠️ MVP (register, sync, stats queue, Settings UI) | **P1** |
+| RioNexGate panel API (optional) | ✅ Done (register, sync, stats, scheduled sync, secure token, pairing docs) | **P1** |
 
 ---
 
@@ -513,4 +514,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P3 UX, transparency & competitive edge complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
+*Last updated: 2026-09-04 — P4 Agent A RioNexGate panel completion (60s stats flush, scheduled sync, full JSON connect, secure token, pairing docs).*
