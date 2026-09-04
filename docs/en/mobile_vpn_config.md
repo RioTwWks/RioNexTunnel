@@ -29,6 +29,10 @@ Subscriptions and share links may contain legacy DNS blocks (`dns.servers` as st
 
 If sing-box still logs `legacy DNS servers is deprecated`, the subscription body needs a newer DNS schema; see [Troubleshooting](troubleshooting.md).
 
+## Advanced DNS (P2)
+
+See [dns.md](dns.md).
+
 ## Xray `geosite:` / `geoip:` rules
 
 When a config uses Xray-style `geosite:` or `geoip:` routing and **geo assets are missing**, connect **fails closed** with a clear error (run `scripts/fetch_cores.sh` or use sing-box). Auto engine also demotes xray when geo is required but assets are absent.
