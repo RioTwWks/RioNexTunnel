@@ -216,6 +216,10 @@ class TunnelPlatformInterface: NSObject, LibboxPlatformInterfaceProtocol, Libbox
             settings.mtu = NSNumber(value: options.getMTU())
             
             var dnsServers = ["8.8.8.8", "8.8.4.4"]
+            if let customDns = UserDefaults.standard.stringArray(forKey: "flutter.dns_system_servers"),
+               !customDns.isEmpty {
+                dnsServers = customDns
+            }
             if let dnsMode = options.getDNSMode(), dnsMode.value != LibboxDNSModeDisabled {
                 let dnsIterator = try options.getDNSServerAddress()
                 var parsed: [String] = []

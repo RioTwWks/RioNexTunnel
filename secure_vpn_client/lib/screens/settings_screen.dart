@@ -14,16 +14,20 @@ import '../providers/panel_providers.dart';
 import '../providers/per_app_proxy_provider.dart';
 import '../providers/socks_auth_mode_provider.dart';
 import '../providers/profile_advanced_provider.dart';
+import '../providers/routing_rules_provider.dart';
 import '../providers/vpn_providers.dart';
+import '../screens/routing_editor_screen.dart';
 import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/browser_helper_card.dart';
+import '../widgets/dns_settings_card.dart';
 import '../widgets/kill_switch_card.dart';
 import '../widgets/panel_settings_section.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/socks_auth_mode_strings.dart';
 import '../widgets/split_tunnel_desktop_banner.dart';
+import '../widgets/subscription_pinning_card.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -103,6 +107,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final perAppProxy = ref.watch(perAppProxyProvider);
     final ruDirectDefault = ref.watch(ruDirectRoutingDefaultProvider);
+    final customRouting = ref.watch(routingRulesProvider);
     final socksAuthMode = ref.watch(socksAuthModeProvider);
     final panelState = ref.watch(panelStateProvider);
     final androidVpn = !kIsWeb && Platform.isAndroid;
@@ -310,6 +315,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 14),
         const KillSwitchCard(),
         const SizedBox(height: 14),
+        DnsSettingsCard(desktopProxy: desktopProxy),
+        const SizedBox(height: 14),
+        const FadeSlideIn(
+          delay: Duration(milliseconds: 175),
+          child: _SectionCard(
+            title: 'Advanced security',
+            subtitle: 'Optional hardening for subscription fetch',
+            child: SubscriptionPinningCard(),
+          ),
+        ),
+        const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 175),
           child: _SectionCard(
@@ -329,6 +345,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (enabled) => ref
                       .read(ruDirectRoutingDefaultProvider.notifier)
                       .setEnabled(enabled),
+                ),
+                ListTile(
+                  key: const ValueKey('custom_routing_editor_tile'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.alt_route_outlined, color: scheme.primary),
+                  title: const Text('Custom routing rules'),
+                  subtitle: Text(
+                    customRouting.rules.isEmpty
+                        ? 'Domain, IP, geosite/geoip — import/export JSON'
+                        : '${customRouting.enabledRules.length} active rule(s)',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const RoutingEditorScreen(),
+                      ),
+                    );
+                  },
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,

@@ -29,6 +29,10 @@
 
 См. [Troubleshooting](troubleshooting.md) при сообщении `legacy DNS servers is deprecated`.
 
+## Расширенный DNS (P2)
+
+См. [dns.md](dns.md).
+
 ## Правила Xray `geosite:` / `geoip:`
 
 Если в конфиге есть `geosite:` / `geoip:` и **нет geo-файлов**, подключение **блокируется** с понятной ошибкой (`fetch_cores.sh` или sing-box). Auto engine понижает приоритет xray без geo.

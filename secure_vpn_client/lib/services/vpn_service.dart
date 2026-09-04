@@ -12,6 +12,7 @@ import '../models/credentials.dart';
 import '../models/engine_preference.dart';
 import '../models/multihop_chain.dart';
 import '../models/panel_socks_inbound.dart';
+import '../models/pinning_config.dart';
 import '../models/profile.dart';
 import '../models/socks_auth_mode.dart';
 import '../models/subscription_server.dart';
@@ -31,6 +32,7 @@ import 'app_log.dart';
 import 'credential_service.dart';
 import 'kill_switch_service.dart';
 import 'panel_manager.dart';
+import 'routing_rules_service.dart';
 import 'subscription_manager.dart';
 import 'transport_stack_store.dart';
 
@@ -47,6 +49,7 @@ class VpnService {
     CredentialService? credentialService,
     KillSwitchService? killSwitchService,
     PanelManager? panelManager,
+    RoutingRulesService? routingRulesService,
     SubscriptionManager? subscriptionManager,
     TransportStackStore? transportStackStore,
     this.applicationId = 'com.example.secure_vpn_client',
@@ -55,6 +58,7 @@ class VpnService {
        _credentialService = credentialService ?? CredentialService(),
        _killSwitchService = killSwitchService,
        _panelManager = panelManager,
+       _routingRulesService = routingRulesService ?? RoutingRulesService(),
        _subscriptionManager = subscriptionManager ??
            SubscriptionManager(store: transportStackStore);
 
@@ -62,6 +66,7 @@ class VpnService {
   final CredentialService _credentialService;
   final KillSwitchService? _killSwitchService;
   final PanelManager? _panelManager;
+  final RoutingRulesService _routingRulesService;
   final SubscriptionManager _subscriptionManager;
   final String applicationId;
   final int socksPort;
@@ -76,6 +81,7 @@ class VpnService {
   VpnEngine _engine = VpnEngine.xray;
   EnginePreference _enginePreference = EnginePreference.auto;
   SocksAuthMode _socksAuthMode = SocksAuthMode.randomPerSession;
+  PinningConfig _pinningConfig = PinningConfig.disabled;
   VpnStatus _currentStatus = VpnStatus.stopped;
   ConnectionDetail _connectionDetail = ConnectionDetail.disconnected();
   Profile? _activeProfile;
@@ -318,6 +324,12 @@ class VpnService {
     _socksAuthMode = mode;
   }
 
+  void setPinningConfig(PinningConfig config) {
+    _pinningConfig = config;
+  }
+
+  PinningConfig get pinningConfig => _pinningConfig;
+
   Future<void> setEngine(
     VpnEngine engine, {
     bool disconnectIfNeeded = true,
@@ -362,6 +374,7 @@ class VpnService {
                 profile.configLink,
                 engine: _engine,
                 serverIndex: profile.selectedServerIndex,
+                pinning: _pinningConfig,
               )
             : linkForBuild);
 
@@ -376,7 +389,14 @@ class VpnService {
     for (final index in chain.serverIndices) {
       hopConfigs.add(await _contentToJsonMap(profile.copyWith(multihopEnabled: false), servers[index].content));
     }
-    return ConfigEnhancer.applyProfileSettings(jsonEncode(hopConfigs.last), profile, _engine, multihopHopConfigs: hopConfigs);
+    final customRules = (await _routingRulesService.load()).enabledRules;
+    return ConfigEnhancer.applyProfileSettings(
+      jsonEncode(hopConfigs.last),
+      profile,
+      _engine,
+      multihopHopConfigs: hopConfigs,
+      customRules: customRules,
+    );
   }
 
   Future<Map<String, dynamic>> _contentToJsonMap(Profile profile, String raw) async {
@@ -399,7 +419,13 @@ class VpnService {
 
   Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
     final config = await _contentToJsonMap(profile, raw);
-    return ConfigEnhancer.applyProfileSettings(jsonEncode(config), profile, _engine);
+    final customRules = (await _routingRulesService.load()).enabledRules;
+    return ConfigEnhancer.applyProfileSettings(
+      jsonEncode(config),
+      profile,
+      _engine,
+      customRules: customRules,
+    );
   }
 
   Future<List<SubscriptionServer>> listSubscriptionServers(
@@ -412,6 +438,7 @@ class VpnService {
     final servers = await ConfigParser.listServersFromUrl(
       profile.configLink,
       engine: _engine,
+      pinning: _pinningConfig,
     );
     if (!logicalServers) {
       return servers;
@@ -498,6 +525,7 @@ class VpnService {
       profile: profile,
       box: _v2rayBox,
       preference: _enginePreference,
+      pinning: _pinningConfig,
     );
     AppLog.info(resolution.reason);
 
@@ -611,6 +639,7 @@ class VpnService {
     final servers = await ConfigParser.listServersFromUrl(
       profile.configLink,
       engine: _engine,
+      pinning: _pinningConfig,
     );
     return _subscriptionManager.orderedProbeList(
       profileId: profile.id,

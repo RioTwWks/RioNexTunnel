@@ -4,6 +4,7 @@ import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
 import 'config_enhancer.dart';
 import 'config_parser.dart';
+import 'dns_config_builder.dart';
 import 'transport_presets.dart';
 
 class LinkConfigBuilder {
@@ -99,14 +100,7 @@ class LinkConfigBuilder {
       'log': {'level': 'warn'},
       // Never use type:local on Android VPN — system resolver hits [::1]:53
       // and fails while TUN is up. Bootstrap with IP DNS via direct.
-      'dns': {
-        'servers': [
-          {'type': 'udp', 'tag': 'dns-direct', 'server': '8.8.8.8'},
-          {'type': 'udp', 'tag': 'dns-backup', 'server': '1.1.1.1'},
-        ],
-        'final': 'dns-direct',
-        'strategy': 'prefer_ipv4',
-      },
+      'dns': DnsConfigBuilder.defaultSingboxDnsBlock(),
       'inbounds': <dynamic>[],
       'outbounds': [
         outbound,
