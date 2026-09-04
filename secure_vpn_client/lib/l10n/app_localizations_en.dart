@@ -207,7 +207,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get killSwitchAdaptiveSubtitle =>
-      'Requires split tunneling — available after Agent B merges';
+      'Configure which apps use the VPN in Split tunneling below.';
+
+  @override
+  String get killSwitchAdaptiveDesc =>
+      'When the tunnel or core drops, only VPN-routed apps lose network access. Other apps keep working.';
+
+  @override
+  String get killSwitchAdaptiveDesktopNote =>
+      'Per-app blocking is only available in VPN (TUN) mode on Android. On desktop proxy mode, use Strict for OS-level blocking.';
+
+  @override
+  String get killSwitchAdaptiveIosNote =>
+      'iOS does not support per-app split tunneling; Adaptive behaves like Strict on iOS.';
+
+  @override
+  String get killSwitchAdaptiveNoApps =>
+      'No apps selected in Split tunneling — Adaptive falls back to full-tunnel blocking.';
+
+  @override
+  String get killSwitchAdaptiveSplitTunnelLink =>
+      'Uses Split tunneling app list';
 
   @override
   String get dnsAdvancedTitle => 'Advanced DNS';
@@ -475,6 +495,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get panelSyncError => 'Error';
+
+  @override
+  String get panelSyncInterval => 'Config sync interval';
 
   @override
   String get pinningTitle => 'Certificate pinning';

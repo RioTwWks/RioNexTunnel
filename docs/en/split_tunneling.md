@@ -58,9 +58,20 @@ For iOS, use **routing rules inside the core config** (domain/IP lists) — see 
 
 Documented limits: [iOS setup](ios_setup.md#split-tunneling).
 
-## Linux TUN (future)
+## Linux TUN (future — not implemented)
 
-If full TUN mode is added on Linux, per-app routing would require **policy routing / cgroups** and must block bypass via unauthenticated localhost listeners. Desktop proxy mode does not use TUN today.
+**Status:** deferred. Desktop Linux today uses **proxy mode only** (`VpnMode.proxy`). There is no TUN interface, no `VpnService`-style tunnel, and no per-app routing at the OS level on Linux desktop.
+
+If a future **Linux TUN mode** workstream is added, per-app split tunneling would require:
+
+| Requirement | Rationale |
+|-------------|-----------|
+| Policy routing (`ip rule` / `nftables`) or cgroups v2 egress | Route only selected apps through the tunnel |
+| Block bypass via localhost scanning | Apps must not reach an unauthenticated SOCKS on `127.0.0.1` |
+| Kill switch integration | Tunnel drop must not leak excluded apps incorrectly |
+| Separate from proxy mode | Proxy mode split tunnel remains OS/app-level only |
+
+Until TUN mode ships, the unchecked `tasks.md` item **Linux TUN split tunnel** is documentation-only — do not expect per-app toggles on Linux desktop.
 
 ## Related code
 

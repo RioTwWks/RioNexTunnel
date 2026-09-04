@@ -29,9 +29,24 @@ flutter config --enable-macos-desktop
 | System proxy integration | HTTP/HTTPS via `networksetup` on `127.0.0.1:1081` when `set-system-proxy` is enabled |
 | Session credentials | `secure_vpn/credentials` channel; SOCKS `1080`, HTTP system proxy `1081` |
 | E2E connect verification | **Pending** — smoke test on physical Mac |
-| Browser extension / proxy auth helper | **Linux only today** — macOS has no native messaging host yet |
+| Browser extension / proxy auth helper | **Implemented** — native messaging host (Chrome, Chromium, Edge, Firefox); installed on first `setup()` |
 
 macOS desktop uses **proxy mode** (`VpnMode.proxy`), not a system TUN VPN. **Connected** starts xray/sing-box with authenticated inbounds on `127.0.0.1:1080` (SOCKS) and `127.0.0.1:1081` (HTTP), and sets system HTTP proxy to `1081` when enabled in config options.
+
+## Browser extension (proxy auth)
+
+Chromium and Firefox on macOS need the RioNexTunnel browser helper for automatic HTTP proxy authentication (same extension as Linux/Windows).
+
+1. **First app launch** — `setup()` copies `secure_vpn_native_host` into `~/Library/Application Support/V2rayBox/working/native_host/` and writes native messaging manifests (see [platform parity checklist](platform_parity_checklist.md#macos-browser-helper-paths)).
+2. **Install extension** — development: load unpacked from `extensions/secure-vpn-proxy-auth/` in Chrome → Extensions → Developer mode → Load unpacked. Production: Chrome Web Store / Firefox AMO (manual submit; see `extensions/secure-vpn-proxy-auth/store/SUBMISSION_CHECKLIST.md`).
+3. **Connect VPN** — Settings → **Browser helper** card should show host + manifest installed; after connect, extension connected + session active → **Ready**.
+4. **Verify** — browse with system proxy enabled; no repeated `407` login dialogs.
+
+Credentials travel **only** via native messaging to `127.0.0.1` — the extension does not persist passwords. See [browser_extension.md](browser_extension.md#macos).
+
+### Manual proxy login (fallback)
+
+Without the extension, copy username/password from Home or Settings into the browser dialog when prompted. Credentials change on each reconnect.
 
 ## Core binaries
 
@@ -147,17 +162,16 @@ Unauthenticated probe must fail. See [security.md](security.md).
 | **Connected** but browser has no VPN | System proxy port mismatch | Set HTTP proxy manually to `127.0.0.1:1081` with session creds from Settings |
 | `networksetup` has no effect | No admin rights or no active interface | Connect Wi‑Fi/Ethernet; check **System Settings → Network → Proxies** |
 | `geosite.dat: no such file` | v2rayNG subscription uses geo rules | Run `fetch_cores.sh`; keep geo files next to `xray` in `Resources/` |
+| Browser helper not ready | Extension not loaded or app not connected | Install extension; connect VPN; check Settings → Browser helper card |
 | Hot reload after Swift changes | Native code not reloaded | Stop app; `flutter run -d macos` again |
 
 See also [troubleshooting.md](troubleshooting.md) for subscription and config issues shared across platforms.
 
 ## Contributing (macOS native)
 
-Priority items for parity with Linux:
+Remaining parity work:
 
-1. Align `getProxyPort()` / `enableSystemProxy()` with Dart secure ports (`1081` HTTP with auth).
-2. Port Linux credential channel + browser native messaging for Chromium proxy auth.
-3. E2E smoke test: all four engine × profile combinations.
-4. Wipe `active_config.json` and proxy settings on disconnect (mirror Linux `wipe_sensitive_files`).
+1. E2E smoke test on physical Mac: all four engine × profile combinations.
+2. Device sign-off in [platform parity checklist](platform_parity_checklist.md).
 
 See [contributing.md](contributing.md).

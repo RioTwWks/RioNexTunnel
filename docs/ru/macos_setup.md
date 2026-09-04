@@ -29,9 +29,24 @@ flutter config --enable-macos-desktop
 | Системный прокси | HTTP/HTTPS через `networksetup` на `127.0.0.1:1081` при включённом `set-system-proxy` |
 | Учётные данные сессии | Канал `secure_vpn/credentials`; SOCKS `1080`, системный HTTP `1081` |
 | E2E-проверка Connect | **В процессе** — smoke test на физическом Mac |
-| Расширение браузера / proxy auth | **Только Linux** — native messaging host для macOS пока нет |
+| Расширение браузера / proxy auth | **Реализовано** — native messaging host (Chrome, Chromium, Edge, Firefox); устанавливается при первом `setup()` |
 
 На macOS desktop используется **proxy mode** (`VpnMode.proxy`), не системный TUN VPN. **Connected** запускает xray/sing-box с аутентифицированными inbound на `127.0.0.1:1080` (SOCKS) и `127.0.0.1:1081` (HTTP) и выставляет системный HTTP-прокси на `1081`, если это включено в config options.
+
+## Расширение браузера (proxy auth)
+
+Chromium и Firefox на macOS используют browser helper RioNexTunnel для автоматической HTTP proxy auth (то же расширение, что на Linux/Windows).
+
+1. **Первый запуск** — `setup()` копирует `secure_vpn_native_host` в `~/Library/Application Support/V2rayBox/working/native_host/` и создаёт manifests (см. [platform parity checklist](platform_parity_checklist.md)).
+2. **Установка расширения** — dev: Load unpacked из `extensions/secure-vpn-proxy-auth/`. Production: Chrome Web Store / Firefox AMO (ручная публикация; `extensions/secure-vpn-proxy-auth/store/SUBMISSION_CHECKLIST.md`).
+3. **Connect** — Settings → карточка **Browser helper** → **Ready** при подключении.
+4. **Проверка** — браузер без повторных диалогов `407`.
+
+Учётные данные передаются **только** через native messaging на `127.0.0.1`. См. [browser_extension.md](browser_extension.md).
+
+### Ручной ввод прокси (fallback)
+
+Без расширения скопируйте user/pass с Home или Settings в диалог браузера.
 
 ## Бинарники ядер
 

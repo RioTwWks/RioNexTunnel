@@ -90,8 +90,9 @@ Code-complete across targets; device E2E steps: [docs/en/platform_parity_checkli
 - [x] iOS plugin: credentials channel, `get_core_info`, config persist/wipe, sing-box only
 - [x] iOS app: PacketTunnel target + Runner entitlements (`scripts/setup_ios_packet_tunnel.py`)
 - [x] Dart: `engine_auto_selector` iOS → sing-box heuristic
-- [x] E2E smoke tests documented per platform (manual on device)
+- [x] E2E smoke tests documented per platform (manual on device); status table in `docs/en/README.md`
 - [x] Windows browser helper (native messaging + extension) — registry manifests for Chrome/Edge, file manifest for Firefox (#82)
+- [x] macOS browser helper — native messaging host + Chrome/Chromium/Edge/Firefox manifests (P4 Agent E)
 
 ---
 
@@ -102,6 +103,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### Engineering base
 
 - [x] CI: `flutter analyze`, `flutter test` on push (`.github/workflows/ci.yml`)
+- [x] Windows desktop: `flutter build windows` job on `windows-latest` (PR + main)
 - [x] Auto-run `security_probe.sh` in CI when Linux integration test connects (`linux-security-probe` job + `scripts/ci_security_probe_linux.sh`)
 - [x] Fail closed if geo assets missing and config contains geosite/geoip rules (`VpnService` + `ConfigParser.configRequiresXrayGeoRules`)
 - [x] Audit sing-box `mixed` / deprecated DNS paths on mobile VPN mode (`docs/en/mobile_vpn_config.md`)
@@ -128,7 +130,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [x] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
 - [x] Strict mode — block all outbound internet when core/tunnel is down
-- [ ] Adaptive mode — block only selected apps (per-app) — deferred for Agent B split tunneling
+- [x] Adaptive mode — block only selected apps (per-app) via split tunnel list (Android TUN)
 - [x] Linux — iptables/nftables or NetworkManager firewall rules; remove on clean disconnect
 - [x] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
 - [x] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
@@ -146,7 +148,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [x] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
 - [x] iOS — document NE limitations; per-app split tunneling is limited on iOS
 - [x] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
-- [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan
+- [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan — **deferred** (documented in `docs/en/split_tunneling.md`; desktop uses proxy mode only)
 - [x] UI — installed app list with toggles (mobile) or desktop warning
 - [x] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
 - [x] Tests — unit + platform smoke for whitelist/blacklist
@@ -358,6 +360,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 7 — Testing & docs (client)
 
 - [x] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [x] AmneziaWG — `awg://` parse, sing-box outbound JSON, fallback tests, docs (official cores only; connect fail-closed)
 - [x] No live DPI test in CI — validate JSON shape and parser resilience only
 - [x] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
 - [x] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
@@ -478,7 +481,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
-| Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
+| Kill Switch | ✅ Strict + Adaptive (Android) | **P1** |
 | Split Tunneling | ✅ Android + docs | **P1** |
 | Obfuscation / DPI (UX) | ✅ Wizard + presets | **P1** |
 | XHTTP + stream-one | ✅ Link builder + ConfigParser | **P1** |
@@ -486,7 +489,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | mux toggle (mobile) | ✅ Profile wizard | **P1** |
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
 | Protocol auto-fallback chain | ✅ Stack probe + reconnect fallback | **P1** |
-| AmneziaWG | ❌ Missing | P1/P2 |
+| AmneziaWG | ✅ Link parse + outbound JSON; connect blocked until official sing-box AWG | P1/P2 |
 | Double VPN / Multihop | ✅ Done (#75) | **P2** |
 | DNS leak protection, DoH/DoT | ✅ Done (#74) | **P2** |
 | Custom routing UI | ✅ Done (#73) | **P2** |
@@ -513,4 +516,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P3 UX, transparency & competitive edge complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
+*Last updated: 2026-09-04 — P4 Agent C AmneziaWG protocol (awg:// parse, outbound JSON, tests, docs). Prior: P3 UX complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
