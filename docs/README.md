@@ -40,6 +40,5 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Advanced DNS | [en/dns.md](en/dns.md) | [ru/dns.md](ru/dns.md) |
 | RioNexGate testing | [en/rionexgate_testing.md](en/rionexgate_testing.md) | [ru/rionexgate_testing.md](ru/rionexgate_testing.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
-| Release notes v0.9.0 | [en/release_notes/v0.9.0.md](en/release_notes/v0.9.0.md) | [ru/release_notes/v0.9.0.md](ru/release_notes/v0.9.0.md) |
 
 For AI agents and contributors, see also [.cursor/AGENTS.md](../.cursor/AGENTS.md) (English).
