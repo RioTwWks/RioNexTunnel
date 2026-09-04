@@ -20,6 +20,7 @@ import '../models/subscription_server.dart';
 import '../models/transport_stack.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
+import '../utils/amnezia_wg_config.dart';
 import '../utils/config_parser.dart';
 import '../utils/core_version_gate.dart';
 import '../utils/engine_auto_selector.dart';
@@ -693,6 +694,8 @@ class VpnService {
       await _warnIfXrayTooOldForXhttp(rawConfig);
     }
 
+    _assertOfficialCoreSupportsAwg(rawConfig);
+
     if (_engine == VpnEngine.xray &&
         ConfigParser.configRequiresXrayGeoRules(rawConfig) &&
         !await EngineAutoSelector.xrayGeoAssetsPresent()) {
@@ -992,6 +995,11 @@ class VpnService {
       return _credentialService.generate();
     }
     return _credentialService.generate();
+  }
+
+  void _assertOfficialCoreSupportsAwg(String configOrContent) {
+    if (!AmneziaWgConfig.contentUsesAwg(configOrContent)) return;
+    throw StateError(AmneziaWgConfig.unsupportedCoreMessage());
   }
 
   Future<void> _warnIfXrayTooOldForXhttp(String configOrContent) async {

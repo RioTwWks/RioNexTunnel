@@ -271,7 +271,9 @@ class ServerLatencyProbe {
     if (lower.startsWith('ss://')) {
       return 8388;
     }
-    if (lower.startsWith('wg://') || lower.startsWith('wireguard://')) {
+    if (lower.startsWith('wg://') ||
+        lower.startsWith('wireguard://') ||
+        lower.startsWith('awg://')) {
       return 51820;
     }
     if (lower.startsWith('ssh://')) {

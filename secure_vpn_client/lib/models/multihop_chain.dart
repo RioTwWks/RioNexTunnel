@@ -65,7 +65,7 @@ class MultihopChain {
   static const _utilityProtocols = {'direct', 'freedom', 'block', 'blackhole', 'dns'};
   static const _chainableProtocols = {
     'vless', 'vmess', 'trojan', 'shadowsocks', 'ss', 'socks', 'http',
-    'hysteria', 'hysteria2', 'hy2', 'tuic', 'wireguard', 'wg', 'ssh',
+    'hysteria', 'hysteria2', 'hy2', 'tuic', 'wireguard', 'wg', 'awg', 'ssh',
   };
-  static const _singboxOnlyProtocols = {'hysteria', 'hysteria2', 'hy2', 'tuic', 'wireguard', 'wg', 'ssh'};
+  static const _singboxOnlyProtocols = {'hysteria', 'hysteria2', 'hy2', 'tuic', 'wireguard', 'wg', 'awg', 'ssh'};
 }

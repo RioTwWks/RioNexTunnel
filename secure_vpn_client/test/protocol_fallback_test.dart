@@ -19,6 +19,9 @@ void main() {
       'vless://$uuid@example.com:443?security=reality&type=xhttp&mode=stream-one&pbk=a&sid=b&sni=cdn.example.com#XHTTP';
   const tlsMux =
       'vless://$uuid@example.com:443?security=tls&type=tcp#TLS-mux';
+  const awg =
+      'awg://CLIENT@vpn.example:51820?publickey=SERVER&address=10.8.1.2/32'
+      '&jc=4&jmin=40&jmax=70#AWG';
 
   test('mock failure on first outbound falls back to second profile fragment', () async {
     SharedPreferences.setMockInitialValues({});
@@ -67,5 +70,25 @@ void main() {
     expect(connected, isNotNull);
     expect(connected!.kind, TransportStackKind.tlsMux);
     expect(connected.content, tlsMux);
+  });
+
+  test('fallback chain includes AmneziaWG when present in subscription', () async {
+    SharedPreferences.setMockInitialValues({});
+    final manager = SubscriptionManager(store: TransportStackStore());
+    final stacks = await manager.orderedProbeList(
+      profileId: 'p1',
+      servers: [
+        const SubscriptionServer(index: 0, name: 'XHTTP', content: xhttp),
+        const SubscriptionServer(index: 1, name: 'TLS mux', content: tlsMux),
+        const SubscriptionServer(index: 2, name: 'AWG', content: awg),
+      ],
+      selectedIndex: 0,
+    );
+
+    expect(stacks.map((s) => s.kind).toList(), contains(TransportStackKind.amneziaWg));
+    final awgStack = stacks.firstWhere((s) => s.kind == TransportStackKind.amneziaWg);
+    final json = LinkConfigBuilder.buildFromLink(awgStack.content, VpnEngine.singbox);
+    final outbound = (jsonDecode(json) as Map)['outbounds'].first as Map;
+    expect(outbound['jc'], 4);
   });
 }
