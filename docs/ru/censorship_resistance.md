@@ -48,6 +48,17 @@ RioNexTunnel поддерживает обычные ссылки VLESS/VMess/Tr
 - Секреты транспорта и пароли **не логируются**
 - RU direct не открывает неаутентифицированный localhost
 
+## Подписка JSON (XHTTP)
+
+Полные JSON-подписки (массив v2rayNG или один объект) используют разные поля в зависимости от движка. `ConfigParser.injectSecureSocksInbound` нормализует XHTTP при подключении:
+
+| Движок | Где транспорт | Поле mode |
+|--------|---------------|-----------|
+| Xray | `outbounds[].streamSettings.network: "xhttp"` + `xhttpSettings` | `xhttpSettings.mode` |
+| sing-box | `outbounds[].transport.type: "xhttp"` | `transport.mode` |
+
+`path`, `host` и прочие ключи XHTTP из подписки сохраняются. Отсутствующий или `auto` mode приводится к **`stream-one`** (как у `vless://` через `LinkConfigBuilder`).
+
 ## Устранение неполадок
 
 | Симптом | Что попробовать |

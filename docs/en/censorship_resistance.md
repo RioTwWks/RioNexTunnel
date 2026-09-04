@@ -48,6 +48,17 @@ Routes `geosite:ru` and `geoip:ru` to **direct** outbound (Russian sites without
 - Transport secrets and credentials are **never logged**
 - RU direct routing does not expose unauthenticated localhost
 
+## Subscription JSON (XHTTP)
+
+Full JSON subscriptions (v2rayNG array or single-object configs) use different field names per engine. `ConfigParser.injectSecureSocksInbound` normalizes XHTTP on connect:
+
+| Engine | Transport location | Mode field |
+|--------|-------------------|------------|
+| Xray | `outbounds[].streamSettings.network: "xhttp"` + `xhttpSettings` | `xhttpSettings.mode` |
+| sing-box | `outbounds[].transport.type: "xhttp"` | `transport.mode` |
+
+`path`, `host`, and other XHTTP keys from the subscription are preserved. Missing or `auto` mode is coerced to **`stream-one`** (same default as `vless://` links via `LinkConfigBuilder`).
+
 ## Troubleshooting
 
 | Symptom | Try |

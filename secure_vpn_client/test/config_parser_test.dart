@@ -6,6 +6,7 @@ import 'package:secure_vpn_client/models/socks_auth_mode.dart';
 import 'package:secure_vpn_client/models/vpn_engine.dart';
 import 'package:secure_vpn_client/services/credential_service.dart';
 import 'package:secure_vpn_client/utils/config_parser.dart';
+import 'package:secure_vpn_client/utils/transport_presets.dart';
 
 void main() {
   final credentials = CredentialService().generate();
@@ -404,6 +405,133 @@ vless://11111111-2222-3333-4444-555555555555@example.com:443?security=tls
       final inbounds = (jsonDecode(result) as Map)['inbounds'] as List;
       expect(inbounds.length, 1);
       expect(inbounds.first['tag'], 'custom-socks');
+    });
+
+    test('preserves xray XHTTP fields and coerces mode auto to stream-one', () {
+      const subscription = '''
+{
+  "outbounds": [{
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+      "network": "xhttp",
+      "security": "reality",
+      "xhttpSettings": {
+        "path": "/cdn",
+        "host": "cdn.example.com",
+        "mode": "auto"
+      }
+    }
+  }],
+  "inbounds": []
+}
+''';
+      expect(ConfigParser.configHasXhttpAutoMode(subscription), isTrue);
+
+      final result = ConfigParser.injectSecureSocksInbound(
+        subscription,
+        credentials,
+        VpnEngine.xray,
+        proxyOnly: true,
+      );
+      final outbound =
+          (jsonDecode(result) as Map)['outbounds'].first as Map<String, dynamic>;
+      final stream = outbound['streamSettings'] as Map<String, dynamic>;
+      expect(stream['network'], 'xhttp');
+      final xhttp = stream['xhttpSettings'] as Map<String, dynamic>;
+      expect(xhttp['path'], '/cdn');
+      expect(xhttp['host'], 'cdn.example.com');
+      expect(xhttp['mode'], TransportPresets.defaultXhttpMode);
+      expect(stream['security'], 'reality');
+    });
+
+    test('defaults missing xray XHTTP mode to stream-one', () {
+      const subscription = '''
+{
+  "outbounds": [{
+    "protocol": "vless",
+    "tag": "proxy",
+    "streamSettings": {
+      "network": "xhttp",
+      "xhttpSettings": {"path": "/"}
+    }
+  }],
+  "inbounds": []
+}
+''';
+      final result = ConfigParser.injectSecureSocksInbound(
+        subscription,
+        credentials,
+        VpnEngine.xray,
+        proxyOnly: true,
+      );
+      final xhttp = (((jsonDecode(result) as Map)['outbounds'].first
+              as Map)['streamSettings'] as Map)['xhttpSettings']
+          as Map;
+      expect(xhttp['mode'], 'stream-one');
+    });
+
+    test('preserves sing-box XHTTP transport and coerces mode auto', () {
+      const subscription = '''
+{
+  "outbounds": [{
+    "type": "vless",
+    "tag": "proxy",
+    "transport": {
+      "type": "xhttp",
+      "path": "/tunnel",
+      "host": "edge.example.com",
+      "mode": "auto"
+    }
+  }],
+  "inbounds": []
+}
+''';
+      expect(ConfigParser.configHasXhttpAutoMode(subscription), isTrue);
+
+      final result = ConfigParser.injectSecureSocksInbound(
+        subscription,
+        credentials,
+        VpnEngine.singbox,
+        proxyOnly: true,
+      );
+      final transport =
+          ((jsonDecode(result) as Map)['outbounds'].first as Map)['transport']
+              as Map;
+      expect(transport['type'], 'xhttp');
+      expect(transport['path'], '/tunnel');
+      expect(transport['host'], 'edge.example.com');
+      expect(transport['mode'], 'stream-one');
+    });
+
+    test('v2rayNG array subscription keeps XHTTP outbound after injection', () {
+      const body = '''
+[
+  {
+    "remarks": "XHTTP node",
+    "outbounds": [{
+      "protocol": "vless",
+      "tag": "proxy",
+      "streamSettings": {
+        "network": "xhttp",
+        "xhttpSettings": {"path": "/ws", "mode": "auto"}
+      }
+    }]
+  }
+]
+''';
+      final normalized = ConfigParser.normalizeSubscriptionContent(body);
+      final result = ConfigParser.injectSecureSocksInbound(
+        normalized,
+        credentials,
+        VpnEngine.xray,
+        proxyOnly: true,
+      );
+      final xhttp = (((jsonDecode(result) as Map)['outbounds'].first
+              as Map)['streamSettings'] as Map)['xhttpSettings']
+          as Map;
+      expect(xhttp['path'], '/ws');
+      expect(xhttp['mode'], 'stream-one');
     });
   });
 }

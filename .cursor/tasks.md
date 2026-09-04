@@ -287,7 +287,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [x] `LinkConfigBuilder` — parse `vless://` / subscription params: `type=xhttp`, `path`, `host`, `mode`
 - [x] Default generated XHTTP outbound: `"mode": "stream-one"` when mode omitted
-- [ ] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
+- [x] `ConfigParser` — preserve XHTTP fields from full JSON subscriptions (xray + sing-box mapping)
 - [x] Validation warning if `mode: auto` detected in imported config
 - [x] Tests — round-trip XHTTP link → JSON → required fields present (`stream-one`)
 - [x] Docs — XHTTP+Reality as 2026 default; link param reference in `docs/`
