@@ -789,4 +789,169 @@ class AppLocalizationsEn extends AppLocalizations {
   String uptimeSeconds(int seconds) {
     return '${seconds}s';
   }
+
+  @override
+  String get configClipboardEmpty => 'Clipboard is empty';
+
+  @override
+  String get configImportNoValidLinks =>
+      'No valid config links or subscriptions found';
+
+  @override
+  String configProfilesImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count profiles imported',
+      one: '1 profile imported',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get configFromClipboard => 'From clipboard';
+
+  @override
+  String get configScanQr => 'Scan QR';
+
+  @override
+  String get configPasteQrText => 'Paste QR text';
+
+  @override
+  String get importProfilesTitle => 'Import profiles';
+
+  @override
+  String get importSelectAtLeastOne => 'Select at least one profile to import';
+
+  @override
+  String get importImporting => 'Importing…';
+
+  @override
+  String get importSelected => 'Import selected';
+
+  @override
+  String get qrScanTitle => 'Scan QR code';
+
+  @override
+  String get qrPasteConfigLink => 'Paste config link';
+
+  @override
+  String get qrImport => 'Import';
+
+  @override
+  String censorshipDetected(String summary) {
+    return 'Detected: $summary';
+  }
+
+  @override
+  String get censorshipXhttpAutoWarning =>
+      'Warning: XHTTP mode \"auto\" is unreliable — wizard uses stream-one.';
+
+  @override
+  String get censorshipTlsFingerprintUtls => 'TLS fingerprint (uTLS)';
+
+  @override
+  String get perAppProxyTitleOff => 'Split tunnel apps';
+
+  @override
+  String get perAppProxySelectedForVpn => 'selected for VPN';
+
+  @override
+  String get perAppProxyBypassingVpnLabel => 'bypassing VPN';
+
+  @override
+  String get perAppProxySelectedLabel => 'selected';
+
+  @override
+  String perAppProxySelectionSummary(
+    int selectedCount,
+    String selectionLabel,
+    int shownCount,
+  ) {
+    return '$selectedCount $selectionLabel · $shownCount shown';
+  }
+
+  @override
+  String get perAppProxyNoAppsFound => 'No apps found';
+
+  @override
+  String perAppProxyNoAppsMatching(String query) {
+    return 'No apps matching \"$query\"';
+  }
+
+  @override
+  String get perAppProxyClearSearch => 'Clear search';
+
+  @override
+  String profileLastUsed(String date) {
+    return 'Last used $date';
+  }
+
+  @override
+  String get profileSubscriptionStale =>
+      'Subscription stale — refresh recommended';
+
+  @override
+  String get actionRefresh => 'Refresh';
+
+  @override
+  String get profileTagsTitle => 'Profile tags';
+
+  @override
+  String get profileTagsHint => 'Comma-separated tags';
+
+  @override
+  String profileRefreshing(String name) {
+    return 'Refreshing $name…';
+  }
+
+  @override
+  String profileSubscriptionUpdated(int count) {
+    return 'Subscription updated ($count servers)';
+  }
+
+  @override
+  String get profileSubscriptionRefreshFailed => 'Subscription refresh failed';
+
+  @override
+  String get profileTapToChoose => 'Tap to choose a profile';
+
+  @override
+  String get profileActiveTitle => 'Active profile';
+
+  @override
+  String get profileSelectFromHome => 'Select a profile to connect from Home';
+
+  @override
+  String get profileNoProfilesAddBelow =>
+      'No profiles yet. Add a config link or subscription below.';
+
+  @override
+  String get profileTypeConfigLink => 'Config link';
+
+  @override
+  String get profileTypeSubscription => 'Subscription';
+
+  @override
+  String get serverLatencyTimeout => 'timeout';
+
+  @override
+  String get pinningFormatHint =>
+      'Pin format: sha256/<base64 SHA-256 SPKI>. Update pins when the panel rotates certificates.';
+
+  @override
+  String get pinningSpkiBytesRequired =>
+      'Expected base64 SHA-256 SPKI (32 bytes)';
+
+  @override
+  String get dnsDoh => 'DoH';
+
+  @override
+  String get dnsDot => 'DoT';
+
+  @override
+  String get dnsCustomLabel => 'Custom';
+
+  @override
+  String get routingDomainHint => 'example.com';
 }

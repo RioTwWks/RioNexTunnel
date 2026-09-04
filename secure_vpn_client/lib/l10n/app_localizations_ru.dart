@@ -789,4 +789,172 @@ class AppLocalizationsRu extends AppLocalizations {
   String uptimeSeconds(int seconds) {
     return '$secondsс';
   }
+
+  @override
+  String get configClipboardEmpty => 'Буфер обмена пуст';
+
+  @override
+  String get configImportNoValidLinks =>
+      'Не найдено действительных ссылок или подписок';
+
+  @override
+  String configProfilesImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count профилей импортировано',
+      many: '$count профилей импортировано',
+      few: '$count профиля импортировано',
+      one: '$count профиль импортирован',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get configFromClipboard => 'Из буфера';
+
+  @override
+  String get configScanQr => 'Сканировать QR';
+
+  @override
+  String get configPasteQrText => 'Вставить текст QR';
+
+  @override
+  String get importProfilesTitle => 'Импорт профилей';
+
+  @override
+  String get importSelectAtLeastOne =>
+      'Выберите хотя бы один профиль для импорта';
+
+  @override
+  String get importImporting => 'Импорт…';
+
+  @override
+  String get importSelected => 'Импортировать выбранные';
+
+  @override
+  String get qrScanTitle => 'Сканирование QR-кода';
+
+  @override
+  String get qrPasteConfigLink => 'Вставьте ссылку конфигурации';
+
+  @override
+  String get qrImport => 'Импорт';
+
+  @override
+  String censorshipDetected(String summary) {
+    return 'Обнаружено: $summary';
+  }
+
+  @override
+  String get censorshipXhttpAutoWarning =>
+      'Предупреждение: режим XHTTP «auto» ненадёжен — мастер использует stream-one.';
+
+  @override
+  String get censorshipTlsFingerprintUtls => 'TLS fingerprint (uTLS)';
+
+  @override
+  String get perAppProxyTitleOff => 'Приложения split tunnel';
+
+  @override
+  String get perAppProxySelectedForVpn => 'выбрано для VPN';
+
+  @override
+  String get perAppProxyBypassingVpnLabel => 'в обход VPN';
+
+  @override
+  String get perAppProxySelectedLabel => 'выбрано';
+
+  @override
+  String perAppProxySelectionSummary(
+    int selectedCount,
+    String selectionLabel,
+    int shownCount,
+  ) {
+    return '$selectedCount $selectionLabel · показано $shownCount';
+  }
+
+  @override
+  String get perAppProxyNoAppsFound => 'Приложения не найдены';
+
+  @override
+  String perAppProxyNoAppsMatching(String query) {
+    return 'Нет приложений по запросу «$query»';
+  }
+
+  @override
+  String get perAppProxyClearSearch => 'Очистить поиск';
+
+  @override
+  String profileLastUsed(String date) {
+    return 'Последнее использование $date';
+  }
+
+  @override
+  String get profileSubscriptionStale =>
+      'Подписка устарела — рекомендуется обновить';
+
+  @override
+  String get actionRefresh => 'Обновить';
+
+  @override
+  String get profileTagsTitle => 'Теги профиля';
+
+  @override
+  String get profileTagsHint => 'Теги через запятую';
+
+  @override
+  String profileRefreshing(String name) {
+    return 'Обновление $name…';
+  }
+
+  @override
+  String profileSubscriptionUpdated(int count) {
+    return 'Подписка обновлена ($count серверов)';
+  }
+
+  @override
+  String get profileSubscriptionRefreshFailed => 'Не удалось обновить подписку';
+
+  @override
+  String get profileTapToChoose => 'Нажмите, чтобы выбрать профиль';
+
+  @override
+  String get profileActiveTitle => 'Активный профиль';
+
+  @override
+  String get profileSelectFromHome =>
+      'Выберите профиль для подключения с главного экрана';
+
+  @override
+  String get profileNoProfilesAddBelow =>
+      'Профилей пока нет. Добавьте ссылку или подписку ниже.';
+
+  @override
+  String get profileTypeConfigLink => 'Ссылка конфигурации';
+
+  @override
+  String get profileTypeSubscription => 'Подписка';
+
+  @override
+  String get serverLatencyTimeout => 'таймаут';
+
+  @override
+  String get pinningFormatHint =>
+      'Формат pin: sha256/<base64 SHA-256 SPKI>. Обновите pin при смене сертификата панели.';
+
+  @override
+  String get pinningSpkiBytesRequired => 'Нужен base64 SHA-256 SPKI (32 байта)';
+
+  @override
+  String get dnsDoh => 'DoH';
+
+  @override
+  String get dnsDot => 'DoT';
+
+  @override
+  String get dnsCustomLabel => 'Свой';
+
+  @override
+  String get routingDomainHint => 'example.com';
 }

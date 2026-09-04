@@ -31,7 +31,7 @@ class KillSwitchCard extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Block internet when VPN or core stops unexpectedly',
+                l10n.killSwitchSubtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
@@ -39,21 +39,21 @@ class KillSwitchCard extends ConsumerWidget {
               const SizedBox(height: 14),
               SegmentedButton<KillSwitchMode>(
                 key: const ValueKey('kill_switch_mode_selector'),
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: KillSwitchMode.off,
-                    label: Text('Off'),
-                    icon: Icon(Icons.public_outlined, size: 18),
+                    label: Text(l10n.actionOff),
+                    icon: const Icon(Icons.public_outlined, size: 18),
                   ),
                   ButtonSegment(
                     value: KillSwitchMode.strict,
-                    label: Text('Strict'),
-                    icon: Icon(Icons.block_outlined, size: 18),
+                    label: Text(l10n.killSwitchStrict),
+                    icon: const Icon(Icons.block_outlined, size: 18),
                   ),
                   ButtonSegment(
                     value: KillSwitchMode.adaptive,
-                    label: Text('Adaptive'),
-                    icon: Icon(Icons.apps_outlined, size: 18),
+                    label: Text(l10n.killSwitchAdaptive),
+                    icon: const Icon(Icons.apps_outlined, size: 18),
                     enabled: false,
                   ),
                 ],
@@ -69,7 +69,7 @@ class KillSwitchCard extends ConsumerWidget {
               const SizedBox(height: 10),
               if (mode == KillSwitchMode.strict)
                 Text(
-                  'Strict blocks all outbound traffic when the tunnel or core drops.',
+                  l10n.killSwitchStrictDesc,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -77,10 +77,8 @@ class KillSwitchCard extends ConsumerWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.info_outline, color: scheme.primary),
-                title: const Text('Adaptive (per-app)'),
-                subtitle: const Text(
-                  'Requires split tunneling — available after Agent B merges',
-                ),
+                title: Text(l10n.killSwitchAdaptiveTitle),
+                subtitle: Text(l10n.killSwitchAdaptiveSubtitle),
                 dense: true,
               ),
             ],

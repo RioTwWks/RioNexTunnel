@@ -376,5 +376,105 @@
         "type": "int"
       }
     }
-  }
+  },
+  "configClipboardEmpty": "Clipboard is empty",
+  "configImportNoValidLinks": "No valid config links or subscriptions found",
+  "configProfilesImported": "{count, plural, =1{1 profile imported} other{{count} profiles imported}}",
+  "@configProfilesImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "configFromClipboard": "From clipboard",
+  "configScanQr": "Scan QR",
+  "configPasteQrText": "Paste QR text",
+  "importProfilesTitle": "Import profiles",
+  "importSelectAtLeastOne": "Select at least one profile to import",
+  "importImporting": "Importing…",
+  "importSelected": "Import selected",
+  "qrScanTitle": "Scan QR code",
+  "qrPasteConfigLink": "Paste config link",
+  "qrImport": "Import",
+  "censorshipDetected": "Detected: {summary}",
+  "@censorshipDetected": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "censorshipXhttpAutoWarning": "Warning: XHTTP mode \"auto\" is unreliable — wizard uses stream-one.",
+  "censorshipTlsFingerprintUtls": "TLS fingerprint (uTLS)",
+  "perAppProxyTitleOff": "Split tunnel apps",
+  "perAppProxySelectedForVpn": "selected for VPN",
+  "perAppProxyBypassingVpnLabel": "bypassing VPN",
+  "perAppProxySelectedLabel": "selected",
+  "perAppProxySelectionSummary": "{selectedCount} {selectionLabel} · {shownCount} shown",
+  "@perAppProxySelectionSummary": {
+    "placeholders": {
+      "selectedCount": {
+        "type": "int"
+      },
+      "selectionLabel": {
+        "type": "String"
+      },
+      "shownCount": {
+        "type": "int"
+      }
+    }
+  },
+  "perAppProxyNoAppsFound": "No apps found",
+  "perAppProxyNoAppsMatching": "No apps matching \"{query}\"",
+  "@perAppProxyNoAppsMatching": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "perAppProxyClearSearch": "Clear search",
+  "profileLastUsed": "Last used {date}",
+  "@profileLastUsed": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "profileSubscriptionStale": "Subscription stale — refresh recommended",
+  "actionRefresh": "Refresh",
+  "profileTagsTitle": "Profile tags",
+  "profileTagsHint": "Comma-separated tags",
+  "profileRefreshing": "Refreshing {name}…",
+  "@profileRefreshing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "profileSubscriptionUpdated": "Subscription updated ({count} servers)",
+  "@profileSubscriptionUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileSubscriptionRefreshFailed": "Subscription refresh failed",
+  "profileTapToChoose": "Tap to choose a profile",
+  "profileActiveTitle": "Active profile",
+  "profileSelectFromHome": "Select a profile to connect from Home",
+  "profileNoProfilesAddBelow": "No profiles yet. Add a config link or subscription below.",
+  "profileTypeConfigLink": "Config link",
+  "profileTypeSubscription": "Subscription",
+  "serverLatencyTimeout": "timeout",
+  "pinningFormatHint": "Pin format: sha256/<base64 SHA-256 SPKI>. Update pins when the panel rotates certificates.",
+  "pinningSpkiBytesRequired": "Expected base64 SHA-256 SPKI (32 bytes)",
+  "dnsDoh": "DoH",
+  "dnsDot": "DoT",
+  "dnsCustomLabel": "Custom",
+  "routingDomainHint": "example.com"
 }

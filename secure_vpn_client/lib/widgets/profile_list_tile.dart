@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../models/subscription_refresh_interval.dart';
 import '../providers/subscription_refresh_provider.dart';
@@ -33,6 +34,7 @@ class ProfileListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final locale = Localizations.localeOf(context);
     final stale = isSubscriptionStale(profile);
@@ -50,32 +52,51 @@ class ProfileListTile extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(profile.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    child: Text(
+                      profile.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
                   IconButton(
-                    icon: Icon(profile.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                        color: profile.isFavorite ? scheme.tertiary : null),
-                    onPressed: () => ref.read(profilesProvider.notifier).toggleFavorite(profile.id),
+                    icon: Icon(
+                      profile.isFavorite
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: profile.isFavorite ? scheme.tertiary : null,
+                    ),
+                    onPressed: () =>
+                        ref.read(profilesProvider.notifier).toggleFavorite(profile.id),
                   ),
                   if (selected) Icon(Icons.check_circle, color: scheme.primary),
                 ],
               ),
-              Text(_subtitle(profile)),
+              Text(_subtitle(l10n, profile)),
               if (profile.lastUsedAt != null)
-                Text('Last used ${_formatWhen(profile.lastUsedAt!)}',
-                    style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  l10n.profileLastUsed(_formatWhen(profile.lastUsedAt!)),
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               if (stale)
-                Text('Subscription stale — refresh recommended',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.error)),
+                Text(
+                  l10n.profileSubscriptionStale,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.error,
+                      ),
+                ),
               if (profile.tags.isNotEmpty)
                 Wrap(
                   spacing: 6,
                   children: profile.tags.map((t) => Chip(label: Text(t))).toList(),
                 ),
-              if (profile.censorshipModeEnabled) TransportStackChip(profile: profile, compact: true),
+              if (profile.censorshipModeEnabled)
+                TransportStackChip(profile: profile, compact: true),
               if (profile.type == ProfileType.link && profile.disableSocksInjection)
-                Text(SocksAuthModeStrings.disableInjectionTitle(locale),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.tertiary)),
+                Text(
+                  SocksAuthModeStrings.disableInjectionTitle(locale),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.tertiary,
+                      ),
+                ),
               if (profile.type == ProfileType.subscription)
                 Row(
                   children: [
@@ -89,18 +110,30 @@ class ProfileListTile extends ConsumerWidget {
                       TextButton.icon(
                         onPressed: onRefreshSubscription,
                         icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Refresh'),
+                        label: Text(l10n.actionRefresh),
                       ),
                   ],
                 ),
               Row(
                 children: [
-                  IconButton(icon: const Icon(Icons.shield_outlined), onPressed: onEditCensorship),
+                  IconButton(
+                    icon: const Icon(Icons.shield_outlined),
+                    onPressed: onEditCensorship,
+                  ),
                   if (onEditTags != null)
-                    IconButton(icon: const Icon(Icons.label_outline_rounded), onPressed: onEditTags),
+                    IconButton(
+                      icon: const Icon(Icons.label_outline_rounded),
+                      onPressed: onEditTags,
+                    ),
                   if (onToggleSocksInjection != null)
-                    IconButton(icon: const Icon(Icons.build_circle_outlined), onPressed: onToggleSocksInjection),
-                  IconButton(icon: const Icon(Icons.delete_outline), onPressed: onDelete),
+                    IconButton(
+                      icon: const Icon(Icons.build_circle_outlined),
+                      onPressed: onToggleSocksInjection,
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: onDelete,
+                  ),
                 ],
               ),
             ],
@@ -110,47 +143,71 @@ class ProfileListTile extends ConsumerWidget {
     );
   }
 
-  static String _subtitle(Profile profile) {
-    if (profile.type == ProfileType.link) return 'Direct link';
+  static String _subtitle(AppLocalizations l10n, Profile profile) {
+    if (profile.type == ProfileType.link) {
+      return l10n.configDirectLink;
+    }
     if (profile.autoSelectBestServer) {
       return profile.selectedServerName != null
-          ? 'Automatic · ${profile.selectedServerName}'
-          : 'Subscription · Automatic';
+          ? l10n.configAutomaticWithServer(profile.selectedServerName!)
+          : l10n.configSubscriptionAutomatic;
     }
     return profile.selectedServerName != null
-        ? 'Subscription · ${profile.selectedServerName}'
-        : 'Subscription';
+        ? l10n.configSubscriptionWithServer(profile.selectedServerName!)
+        : l10n.configSubscription;
   }
 
   static String _formatWhen(DateTime when) {
-    final l = when.toLocal();
-    return '${l.year}-${l.month.toString().padLeft(2, '0')}-${l.day.toString().padLeft(2, '0')}';
+    final local = when.toLocal();
+    return '${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}';
   }
 }
 
-Future<void> showProfileTagsEditor(BuildContext context, WidgetRef ref, Profile profile) async {
+Future<void> showProfileTagsEditor(
+  BuildContext context,
+  WidgetRef ref,
+  Profile profile,
+) async {
+  final l10n = AppLocalizations.of(context);
   final controller = TextEditingController(text: profile.tags.join(', '));
   final saved = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Profile tags'),
-      content: TextField(controller: controller, decoration: const InputDecoration(labelText: 'Comma-separated tags')),
+      title: Text(l10n.profileTagsTitle),
+      content: TextField(
+        controller: controller,
+        decoration: InputDecoration(labelText: l10n.profileTagsHint),
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: Text(l10n.actionSave),
+        ),
       ],
     ),
   );
   if (saved == true) {
     await ref.read(profilesProvider.notifier).setTags(
           profile.id,
-          controller.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
+          controller.text
+              .split(',')
+              .map((t) => t.trim())
+              .where((t) => t.isNotEmpty)
+              .toList(),
         );
   }
   controller.dispose();
 }
 
-Future<void> showSubscriptionRefreshPicker(BuildContext context, WidgetRef ref, Profile profile) async {
+Future<void> showSubscriptionRefreshPicker(
+  BuildContext context,
+  WidgetRef ref,
+  Profile profile,
+) async {
   final picked = await showModalBottomSheet<SubscriptionRefreshInterval>(
     context: context,
     showDragHandle: true,
@@ -158,23 +215,36 @@ Future<void> showSubscriptionRefreshPicker(BuildContext context, WidgetRef ref, 
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: SubscriptionRefreshInterval.values
-            .map((i) => ListTile(
-                  title: Text(i.label),
-                  trailing: profile.subscriptionRefreshInterval == i ? const Icon(Icons.check) : null,
-                  onTap: () => Navigator.pop(ctx, i),
-                ))
+            .map(
+              (interval) => ListTile(
+                title: Text(interval.label),
+                trailing: profile.subscriptionRefreshInterval == interval
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () => Navigator.pop(ctx, interval),
+              ),
+            )
             .toList(),
       ),
     ),
   );
   if (picked != null) {
-    await ref.read(profilesProvider.notifier).setSubscriptionRefreshInterval(profile.id, picked);
+    await ref
+        .read(profilesProvider.notifier)
+        .setSubscriptionRefreshInterval(profile.id, picked);
   }
 }
 
-Future<void> refreshProfileSubscription(BuildContext context, WidgetRef ref, Profile profile) async {
+Future<void> refreshProfileSubscription(
+  BuildContext context,
+  WidgetRef ref,
+  Profile profile,
+) async {
+  final l10n = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  messenger.showSnackBar(SnackBar(content: Text('Refreshing ${profile.name}…')));
+  messenger.showSnackBar(
+    SnackBar(content: Text(l10n.profileRefreshing(profile.name))),
+  );
   final result = await ref.read(subscriptionRefreshServiceProvider).refreshProfile(profile);
   if (result.success) {
     await ref.read(profilesProvider.notifier).recordSubscriptionFetch(profile.id);
@@ -187,9 +257,13 @@ Future<void> refreshProfileSubscription(BuildContext context, WidgetRef ref, Pro
     );
   }
   if (!context.mounted) return;
-  messenger.showSnackBar(SnackBar(
-    content: Text(result.success
-        ? 'Subscription updated (${result.serverCount ?? 0} servers)'
-        : result.errorMessage ?? 'Subscription refresh failed'),
-  ));
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        result.success
+            ? l10n.profileSubscriptionUpdated(result.serverCount ?? 0)
+            : result.errorMessage ?? l10n.profileSubscriptionRefreshFailed,
+      ),
+    ),
+  );
 }

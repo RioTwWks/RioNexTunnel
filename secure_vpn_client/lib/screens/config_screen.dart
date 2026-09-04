@@ -88,7 +88,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (!mounted) return;
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Clipboard is empty')),
+        SnackBar(content: Text(AppLocalizations.of(context).configClipboardEmpty)),
       );
       return;
     }
@@ -106,14 +106,14 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (!mounted) return;
     if (candidates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No valid config links or subscriptions found')),
+        SnackBar(content: Text(AppLocalizations.of(context).configImportNoValidLinks)),
       );
       return;
     }
     final imported = await showProfileImportSheet(context, candidates);
     if (!mounted || imported == null || imported == 0) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$imported profile(s) imported')),
+      SnackBar(content: Text(AppLocalizations.of(context).configProfilesImported(imported))),
     );
   }
 
@@ -200,13 +200,17 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                         key: const ValueKey('import_clipboard_button'),
                         onPressed: _importFromClipboard,
                         icon: const Icon(Icons.content_paste_rounded),
-                        label: const Text('From clipboard'),
+                        label: Text(l10n.configFromClipboard),
                       ),
                       OutlinedButton.icon(
                         key: const ValueKey('import_qr_button'),
                         onPressed: _importFromQr,
                         icon: const Icon(Icons.qr_code_scanner_rounded),
-                        label: Text(qrScannerSupported() ? 'Scan QR' : 'Paste QR text'),
+                        label: Text(
+                          qrScannerSupported()
+                              ? l10n.configScanQr
+                              : l10n.configPasteQrText,
+                        ),
                       ),
                     ],
                   ),

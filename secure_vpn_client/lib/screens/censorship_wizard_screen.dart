@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../models/transport_preset.dart';
 import '../providers/profile_advanced_provider.dart';
@@ -107,14 +108,15 @@ class _CensorshipWizardScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Censorship mode'),
+        title: Text(l10n.censorshipWizardTitle),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Skip'),
+            child: Text(l10n.censorshipSkip),
           ),
         ],
       ),
@@ -135,7 +137,7 @@ class _CensorshipWizardScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Detected: ${_detected.stackSummary}',
+                    l10n.censorshipDetected(_detected.stackSummary),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -143,7 +145,7 @@ class _CensorshipWizardScreenState
                   if (_detected.xhttpMode == 'auto') ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Warning: XHTTP mode "auto" is unreliable — wizard uses stream-one.',
+                      l10n.censorshipXhttpAutoWarning,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.error,
                           ),
@@ -160,17 +162,15 @@ class _CensorshipWizardScreenState
           ),
           const SizedBox(height: 16),
           SwitchListTile(
-            title: const Text('Enable censorship mode'),
-            subtitle: const Text(
-              'Transport presets, uTLS fingerprint, optional RU routing',
-            ),
+            title: Text(l10n.censorshipEnable),
+            subtitle: Text(l10n.censorshipEnableSubtitle),
             value: _enabled,
             onChanged: (v) => setState(() => _enabled = v),
           ),
           if (_enabled) ...[
             const SizedBox(height: 8),
             Text(
-              'Transport preset',
+              l10n.censorshipTransport,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -194,7 +194,7 @@ class _CensorshipWizardScreenState
             ),
             const Divider(height: 24),
             Text(
-              'TLS fingerprint (uTLS)',
+              l10n.censorshipTlsFingerprintUtls,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -212,14 +212,14 @@ class _CensorshipWizardScreenState
               }).toList(),
             ),
             SwitchListTile(
-              title: const Text('Enable mux'),
-              subtitle: const Text('Mobile fallback — concurrency 8'),
+              title: Text(l10n.censorshipEnableMux),
+              subtitle: Text(l10n.censorshipEnableMuxSubtitle),
               value: _muxEnabled,
               onChanged: (v) => setState(() => _muxEnabled = v),
             ),
             SwitchListTile(
-              title: const Text('RU sites direct'),
-              subtitle: const Text('geosite:ru / geoip:ru → direct (needs geo)'),
+              title: Text(l10n.censorshipRuDirect),
+              subtitle: Text(l10n.censorshipRuDirectSubtitle),
               value: _ruDirectRouting,
               onChanged: (v) => setState(() => _ruDirectRouting = v),
             ),
@@ -228,7 +228,7 @@ class _CensorshipWizardScreenState
           FilledButton.icon(
             onPressed: _finish,
             icon: const Icon(Icons.check_rounded),
-            label: const Text('Save profile'),
+            label: Text(l10n.censorshipSaveProfile),
           ),
         ],
       ),
