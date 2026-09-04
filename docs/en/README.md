@@ -67,6 +67,8 @@ The project is built from scratch on Flutter for five platforms: **Android, iOS,
 | [Contributing](contributing.md) | PR checklist and edit targets |
 | [v2ray_box fork](v2ray_box_fork.md) | Patch set vs upstream, example app rationale |
 | [Mobile VPN config](mobile_vpn_config.md) | sing-box `mixed` inbound and DNS migration audit |
+| [Censorship resistance](censorship_resistance.md) | Transport presets, XHTTP, mux, auto-fallback |
+| [Release notes v0.7.0](release_notes_v0.7.0.md) | Censorship resistance: XHTTP, fallback, platform |
 
 ---
 

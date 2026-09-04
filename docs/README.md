@@ -34,6 +34,7 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
 | Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
 | RioNexGate testing | [en/rionexgate_testing.md](en/rionexgate_testing.md) | [ru/rionexgate_testing.md](ru/rionexgate_testing.md) |
+| Release notes v0.7.0 | [en/release_notes_v0.7.0.md](en/release_notes_v0.7.0.md) | [ru/release_notes_v0.7.0.md](ru/release_notes_v0.7.0.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
 
 For AI agents and contributors, see also [.cursor/AGENTS.md](../.cursor/AGENTS.md) (English).

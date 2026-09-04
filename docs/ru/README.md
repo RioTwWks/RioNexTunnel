@@ -67,6 +67,8 @@
 | [Участие в разработке](contributing.md) | Чеклист PR и пути правок |
 | [Форк v2ray_box](v2ray_box_fork.md) | Патчи относительно upstream, зачем example |
 | [Мобильный VPN config](mobile_vpn_config.md) | Аудит sing-box `mixed` и DNS |
+| [Цензуроустойчивость](censorship_resistance.md) | Пресеты транспорта, XHTTP, mux, авто-fallback |
+| [Примечания v0.7.0](release_notes_v0.7.0.md) | Цензуроустойчивость: XHTTP, fallback, платформа |
 
 ---
 
