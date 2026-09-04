@@ -28,11 +28,13 @@ Repository root: [README.md](../README.md) (EN) · [README_RU.md](../README_RU.m
 | Security | [en/security.md](en/security.md) | [ru/security.md](ru/security.md) |
 | Split tunneling | [en/split_tunneling.md](en/split_tunneling.md) | [ru/split_tunneling.md](ru/split_tunneling.md) |
 | Censorship resistance | [en/censorship_resistance.md](en/censorship_resistance.md) | [ru/censorship_resistance.md](ru/censorship_resistance.md) |
+| Custom routing rules | [en/routing_rules.md](en/routing_rules.md) | [ru/routing_rules.md](ru/routing_rules.md) |
 | Platform parity checklist | [en/platform_parity_checklist.md](en/platform_parity_checklist.md) | [ru/platform_parity_checklist.md](ru/platform_parity_checklist.md) |
 | v2ray_box fork | [en/v2ray_box_fork.md](en/v2ray_box_fork.md) | [ru/v2ray_box_fork.md](ru/v2ray_box_fork.md) |
 | Browser extension | [en/browser_extension.md](en/browser_extension.md) | [ru/browser_extension.md](ru/browser_extension.md) |
 | Troubleshooting | [en/troubleshooting.md](en/troubleshooting.md) | [ru/troubleshooting.md](ru/troubleshooting.md) |
 | Kill switch | [en/kill_switch.md](en/kill_switch.md) | [ru/kill_switch.md](ru/kill_switch.md) |
+| Advanced DNS | [en/dns.md](en/dns.md) | [ru/dns.md](ru/dns.md) |
 | RioNexGate testing | [en/rionexgate_testing.md](en/rionexgate_testing.md) | [ru/rionexgate_testing.md](ru/rionexgate_testing.md) |
 | Contributing | [en/contributing.md](en/contributing.md) | [ru/contributing.md](ru/contributing.md) |
 

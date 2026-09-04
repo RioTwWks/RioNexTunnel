@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import '../models/profile.dart';
+import '../models/routing_rule.dart';
 import '../models/transport_preset.dart';
+import 'routing_config_builder.dart';
 import '../models/vpn_engine.dart';
 
 /// Options passed when building config from a share link.
@@ -32,11 +34,14 @@ class ConfigEnhancer {
   static String applyProfileSettings(
     String jsonConfig,
     Profile profile,
-    VpnEngine engine,
-  ) {
+    VpnEngine engine, {
+    List<RoutingRule> customRules = const [],
+  }) {
+    final hasCustomRules = customRules.any((rule) => rule.enabled);
     if (!profile.censorshipModeEnabled &&
         !profile.muxEnabled &&
-        !profile.ruDirectRouting) {
+        !profile.ruDirectRouting &&
+        !hasCustomRules) {
       return jsonConfig;
     }
 
@@ -49,9 +54,17 @@ class ConfigEnhancer {
     if (profile.censorshipModeEnabled || profile.muxEnabled) {
       _applyFingerprintAndMux(config, profile, engine);
     }
-    if (profile.ruDirectRouting) {
-      _applyRuDirectRouting(config, engine);
-    }
+
+    final routingRules = <RoutingRule>[
+      if (profile.ruDirectRouting)
+        ...RoutingPresetRegistry.rulesFor(RoutingPresetId.ruDirect),
+      ...customRules,
+    ];
+    RoutingConfigBuilder.mergeUserRulesIntoConfig(
+      config,
+      routingRules,
+      engine,
+    );
 
     return const JsonEncoder.withIndent('  ').convert(config);
   }
@@ -154,48 +167,4 @@ class ConfigEnhancer {
     outbound['tls'] = tlsMap;
   }
 
-  static void _applyRuDirectRouting(
-    Map<String, dynamic> config,
-    VpnEngine engine,
-  ) {
-    if (engine == VpnEngine.xray) {
-      final routing = config['routing'];
-      final routingMap = routing is Map
-          ? Map<String, dynamic>.from(routing)
-          : <String, dynamic>{'domainStrategy': 'AsIs'};
-      final rules = List<dynamic>.from(
-        routingMap['rules'] as List<dynamic>? ?? const [],
-      );
-      rules.insertAll(0, [
-        {
-          'type': 'field',
-          'domain': ['geosite:ru'],
-          'outboundTag': 'direct',
-        },
-        {
-          'type': 'field',
-          'ip': ['geoip:ru'],
-          'outboundTag': 'direct',
-        },
-      ]);
-      routingMap['rules'] = rules;
-      config['routing'] = routingMap;
-      return;
-    }
-
-    final route = config['route'];
-    final routeMap = route is Map
-        ? Map<String, dynamic>.from(route)
-        : <String, dynamic>{'final': 'proxy'};
-    final rules = List<dynamic>.from(
-      routeMap['rules'] as List<dynamic>? ?? const [],
-    );
-    rules.insertAll(0, [
-      {'geosite': ['ru'], 'outbound': 'direct'},
-      {'geoip': ['ru'], 'outbound': 'direct'},
-    ]);
-    routeMap['rules'] = rules;
-    routeMap.putIfAbsent('final', () => 'proxy');
-    config['route'] = routeMap;
-  }
 }

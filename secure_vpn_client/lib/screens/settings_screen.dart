@@ -14,7 +14,9 @@ import '../providers/panel_providers.dart';
 import '../providers/per_app_proxy_provider.dart';
 import '../providers/socks_auth_mode_provider.dart';
 import '../providers/profile_advanced_provider.dart';
+import '../providers/routing_rules_provider.dart';
 import '../providers/vpn_providers.dart';
+import '../screens/routing_editor_screen.dart';
 import '../screens/per_app_proxy_screen.dart';
 import '../services/app_log.dart';
 import '../widgets/animated_entrance.dart';
@@ -103,6 +105,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final perAppProxy = ref.watch(perAppProxyProvider);
     final ruDirectDefault = ref.watch(ruDirectRoutingDefaultProvider);
+    final customRouting = ref.watch(routingRulesProvider);
     final socksAuthMode = ref.watch(socksAuthModeProvider);
     final panelState = ref.watch(panelStateProvider);
     final androidVpn = !kIsWeb && Platform.isAndroid;
@@ -329,6 +332,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (enabled) => ref
                       .read(ruDirectRoutingDefaultProvider.notifier)
                       .setEnabled(enabled),
+                ),
+                ListTile(
+                  key: const ValueKey('custom_routing_editor_tile'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.alt_route_outlined, color: scheme.primary),
+                  title: const Text('Custom routing rules'),
+                  subtitle: Text(
+                    customRouting.rules.isEmpty
+                        ? 'Domain, IP, geosite/geoip — import/export JSON'
+                        : '${customRouting.enabledRules.length} active rule(s)',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const RoutingEditorScreen(),
+                      ),
+                    );
+                  },
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,

@@ -30,6 +30,7 @@ import 'app_log.dart';
 import 'credential_service.dart';
 import 'kill_switch_service.dart';
 import 'panel_manager.dart';
+import 'routing_rules_service.dart';
 import 'subscription_manager.dart';
 import 'transport_stack_store.dart';
 
@@ -46,6 +47,7 @@ class VpnService {
     CredentialService? credentialService,
     KillSwitchService? killSwitchService,
     PanelManager? panelManager,
+    RoutingRulesService? routingRulesService,
     SubscriptionManager? subscriptionManager,
     TransportStackStore? transportStackStore,
     this.applicationId = 'com.example.secure_vpn_client',
@@ -54,6 +56,7 @@ class VpnService {
        _credentialService = credentialService ?? CredentialService(),
        _killSwitchService = killSwitchService,
        _panelManager = panelManager,
+       _routingRulesService = routingRulesService ?? RoutingRulesService(),
        _subscriptionManager = subscriptionManager ??
            SubscriptionManager(store: transportStackStore);
 
@@ -61,6 +64,7 @@ class VpnService {
   final CredentialService _credentialService;
   final KillSwitchService? _killSwitchService;
   final PanelManager? _panelManager;
+  final RoutingRulesService _routingRulesService;
   final SubscriptionManager _subscriptionManager;
   final String applicationId;
   final int socksPort;
@@ -391,7 +395,13 @@ class VpnService {
       }
     }
 
-    return ConfigEnhancer.applyProfileSettings(jsonConfig, profile, _engine);
+    final customRules = (await _routingRulesService.load()).enabledRules;
+    return ConfigEnhancer.applyProfileSettings(
+      jsonConfig,
+      profile,
+      _engine,
+      customRules: customRules,
+    );
   }
 
   Future<List<SubscriptionServer>> listSubscriptionServers(
