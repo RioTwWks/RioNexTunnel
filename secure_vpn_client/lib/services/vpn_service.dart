@@ -299,17 +299,6 @@ class VpnService {
     }
   }
 
-  Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
-    await _v2rayBox.initialize(notificationStopButtonText: 'Stop');
-    await applyServiceMode();
-    await _v2rayBox.setCoreEngine(_engine.coreName);
-    _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
-    _initialized = true;
-  }
-
   bool get _isDesktopPlatform =>
       !kIsWeb &&
       (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
@@ -317,6 +306,15 @@ class VpnService {
   bool get _useProxyMode =>
       _serviceModePreference.resolveVpnMode(isDesktop: _isDesktopPlatform) ==
       VpnMode.proxy;
+
+  Future<void> initialize() async {
+    if (_initialized) return;
+    await _v2rayBox.initialize(notificationStopButtonText: 'Stop');
+    await applyServiceMode();
+    await _v2rayBox.setCoreEngine(_engine.coreName);
+    _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
+    _initialized = true;
+  }
 
   Future<void> applyServiceMode([ServiceModePreference? preference]) async {
     if (preference != null) {
@@ -709,7 +707,6 @@ class VpnService {
       profile: effectiveProfile,
       rawConfig: rawConfig,
     );
-    final desktopProxy = _useProxyMode;
     final authMode = _resolveSocksAuthMode(effectiveProfile);
     final panelSocks = authMode == SocksAuthMode.staticFromPanel
         ? await _loadPanelSocksAuth(_engine)
@@ -722,12 +719,12 @@ class VpnService {
       credentials,
       _engine,
       socksPort: effectiveSocksPort,
-      proxyOnly: desktopProxy,
+      proxyOnly: _useProxyMode,
       authMode: authMode,
       panelSocks: panelSocks,
     );
     AppLog.info(
-      'Secure config ready proxyOnly=$desktopProxy '
+      'Secure config ready proxyOnly=$_useProxyMode '
       'inbounds=${_inboundSummary(secureConfig)}',
     );
 
