@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'constants/app_branding.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/locale_provider.dart';
 import 'providers/panel_providers.dart';
 import 'providers/vpn_providers.dart';
 import 'screens/config_screen.dart';
@@ -25,12 +28,16 @@ class SecureVpnApp extends ConsumerWidget {
     ref.watch(panelStatsLifecycleProvider);
     ref.watch(panelCommandsLifecycleProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final localePreference = ref.watch(localePreferenceProvider);
 
     return MaterialApp(
       title: kAppName,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
+      locale: localePreference.locale,
+      localizationsDelegates: const [AppLocalizations.delegate, GlobalMaterialLocalizations.delegate, GlobalWidgetsLocalizations.delegate, GlobalCupertinoLocalizations.delegate],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: const MainShell(),
     );
   }
@@ -60,10 +67,10 @@ class _MainShellState extends ConsumerState<MainShell> {
     SettingsScreen(),
   ];
 
-  static const _titles = ['Home', 'Profiles', 'Settings'];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final titles = [l10n.navHome, l10n.navProfiles, l10n.navSettings];
     final scheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -116,8 +123,8 @@ class _MainShellState extends ConsumerState<MainShell> {
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     child: Text(
-                      _titles[_index],
-                      key: ValueKey(_titles[_index]),
+                      titles[_index],
+                      key: ValueKey(titles[_index]),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -156,23 +163,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (index) => setState(() => _index = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.shield_outlined),
-            selectedIcon: Icon(Icons.shield),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.dns_outlined),
-            selectedIcon: Icon(Icons.dns),
-            label: 'Profiles',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.tune_outlined),
-            selectedIcon: Icon(Icons.tune),
-            label: 'Settings',
-          ),
-        ],
+        destinations: [NavigationDestination(icon: const Icon(Icons.shield_outlined), selectedIcon: const Icon(Icons.shield), label: l10n.navHome), NavigationDestination(icon: const Icon(Icons.dns_outlined), selectedIcon: const Icon(Icons.dns), label: l10n.navProfiles), NavigationDestination(icon: const Icon(Icons.tune_outlined), selectedIcon: const Icon(Icons.tune), label: l10n.navSettings)],
       ),
     );
   }

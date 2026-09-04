@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 class ConnectionButton extends StatefulWidget {
@@ -130,13 +131,14 @@ class _ConnectionButtonState extends State<ConnectionButton>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final disabled = widget.busy || _isTransition;
     final label = _isTransition
-        ? 'Please wait…'
+        ? l10n.pleaseWait
         : _isConnected
-            ? 'Disconnect'
-            : 'Connect';
+            ? l10n.disconnect
+            : l10n.connect;
 
     final Color ring;
     final Color fill;
@@ -304,10 +306,10 @@ class _ConnectionButtonState extends State<ConnectionButton>
           duration: const Duration(milliseconds: 280),
           child: Text(
             _isConnected
-                ? 'Tap to disconnect securely'
+                ? l10n.tapToDisconnectSecurely
                 : _isTransition
-                    ? 'Establishing secure tunnel…'
-                    : 'Tap to start protected session',
+                    ? l10n.establishingSecureTunnel
+                    : l10n.tapToConnect,
             key: ValueKey('$_isConnected-$_isTransition'),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,

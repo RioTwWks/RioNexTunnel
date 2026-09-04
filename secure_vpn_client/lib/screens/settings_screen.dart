@@ -25,7 +25,9 @@ import '../widgets/dns_settings_card.dart';
 import '../widgets/kill_switch_card.dart';
 import '../widgets/panel_settings_section.dart';
 import '../widgets/proxy_credentials_card.dart';
-import '../widgets/socks_auth_mode_strings.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
+import '../utils/l10n_helpers.dart';
 import '../widgets/split_tunnel_desktop_banner.dart';
 import '../widgets/subscription_pinning_card.dart';
 
@@ -34,17 +36,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-String _splitTunnelModeDescription(SplitTunnelMode mode) {
-  switch (mode) {
-    case SplitTunnelMode.off:
-      return 'All apps use the VPN tunnel.';
-    case SplitTunnelMode.include:
-      return 'Whitelist: only selected apps are routed through VPN.';
-    case SplitTunnelMode.exclude:
-      return 'Blacklist: selected apps connect directly without VPN.';
-  }
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
@@ -112,37 +103,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final panelState = ref.watch(panelStateProvider);
     final androidVpn = !kIsWeb && Platform.isAndroid;
     final scheme = Theme.of(context).colorScheme;
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context)!;
     final engineSubtitle = preference.isAuto
         ? (_coreVersion.isEmpty
-              ? 'Auto: pick by availability, subscription format, connect fallback'
-              : 'Auto · active: $_coreVersion')
-        : (_coreVersion.isEmpty ? null : 'Active: $_coreVersion');
+              ? l10n.coreEngineAutoSubtitle
+              : l10n.coreEngineActiveAuto(_coreVersion))
+        : (_coreVersion.isEmpty ? null : l10n.coreEngineActive(_coreVersion));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         FadeSlideIn(
           child: _SectionCard(
-          title: 'Appearance',
-          subtitle: 'Theme applies on all platforms',
-          child: SegmentedButton<ThemeMode>(
+          title: l10n.appearanceTitle,
+          subtitle: l10n.appearanceSubtitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SegmentedButton<ThemeMode>(
             key: const ValueKey('theme_mode_selector'),
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: ThemeMode.system,
-                label: Text('System'),
-                icon: Icon(Icons.brightness_auto_outlined),
+                label: Text(l10n.themeSystem),
+                icon: const Icon(Icons.brightness_auto_outlined),
               ),
               ButtonSegment(
                 value: ThemeMode.light,
-                label: Text('Light'),
-                icon: Icon(Icons.light_mode_outlined),
+                label: Text(l10n.themeLight),
+                icon: const Icon(Icons.light_mode_outlined),
               ),
               ButtonSegment(
                 value: ThemeMode.dark,
-                label: Text('Dark'),
-                icon: Icon(Icons.dark_mode_outlined),
+                label: Text(l10n.themeDark),
+                icon: const Icon(Icons.dark_mode_outlined),
               ),
             ],
             selected: {themeMode},
@@ -152,32 +146,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   .setThemeMode(selection.first);
             },
           ),
+          const SizedBox(height: 14),
+          Text(
+            l10n.languageTitle,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<AppLocalePreference>(
+            key: const ValueKey('locale_selector'),
+            segments: [
+              ButtonSegment(
+                value: AppLocalePreference.system,
+                label: Text(l10n.languageSystem),
+              ),
+              ButtonSegment(
+                value: AppLocalePreference.english,
+                label: Text(l10n.languageEnglish),
+              ),
+              ButtonSegment(
+                value: AppLocalePreference.russian,
+                label: Text(l10n.languageRussian),
+              ),
+            ],
+            selected: {ref.watch(localePreferenceProvider)},
+            onSelectionChanged: (selection) => ref
+                .read(localePreferenceProvider.notifier)
+                .setPreference(selection.first),
+          ),
+            ],
+          ),
         ),
         ),
         const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 70),
           child: _SectionCard(
-          title: 'Core engine',
+          title: l10n.coreEngineTitle,
           subtitle: engineSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SegmentedButton<EnginePreference>(
                 key: const ValueKey('engine_selector'),
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: EnginePreference.auto,
-                    label: Text('Auto'),
-                    icon: Icon(Icons.hdr_auto_outlined, size: 18),
+                    label: Text(l10n.engineAuto),
+                    icon: const Icon(Icons.hdr_auto_outlined, size: 18),
                   ),
                   ButtonSegment(
                     value: EnginePreference.xray,
-                    label: Text('Xray'),
+                    label: Text(l10n.engineXray),
                   ),
                   ButtonSegment(
                     value: EnginePreference.singbox,
-                    label: Text('sing-box'),
+                    label: Text(l10n.engineSingbox),
                   ),
                 ],
                 selected: {preference},
@@ -189,7 +214,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (preference.isAuto) ...[
                 const SizedBox(height: 10),
                 Text(
-                  'Uses ${engine.coreName} until the next Auto connect',
+                  l10n.coreEngineUsesUntilAuto(engine.coreName),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -198,7 +223,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (status == VpnStatus.started) ...[
                 const SizedBox(height: 10),
                 Text(
-                  'Disconnect VPN before switching engine',
+                  l10n.coreEngineDisconnectBeforeSwitch,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -227,8 +252,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           FadeSlideIn(
             delay: const Duration(milliseconds: 175),
             child: _SectionCard(
-              title: 'Split tunneling',
-              subtitle: 'Choose which apps use the VPN tunnel (Android)',
+              title: l10n.splitTunnelTitle,
+              subtitle: l10n.splitTunnelSubtitleAndroid,
               child: perAppProxy.loading
                   ? const Center(
                       child: Padding(
@@ -241,21 +266,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         SegmentedButton<SplitTunnelMode>(
                           key: const ValueKey('split_tunnel_mode_selector'),
-                          segments: const [
+                          segments: [
                             ButtonSegment(
                               value: SplitTunnelMode.off,
-                              label: Text('Off'),
-                              icon: Icon(Icons.public_outlined, size: 18),
+                              label: Text(l10n.actionOff),
+                              icon: const Icon(Icons.public_outlined, size: 18),
                             ),
                             ButtonSegment(
                               value: SplitTunnelMode.include,
-                              label: Text('VPN only'),
-                              icon: Icon(Icons.verified_user_outlined, size: 18),
+                              label: Text(l10n.splitTunnelVpnOnly),
+                              icon: const Icon(Icons.verified_user_outlined, size: 18),
                             ),
                             ButtonSegment(
                               value: SplitTunnelMode.exclude,
-                              label: Text('Bypass'),
-                              icon: Icon(Icons.open_in_browser_outlined, size: 18),
+                              label: Text(l10n.splitTunnelBypass),
+                              icon: const Icon(Icons.open_in_browser_outlined, size: 18),
                             ),
                           ],
                           selected: {perAppProxy.mode},
@@ -265,7 +290,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _splitTunnelModeDescription(perAppProxy.mode),
+                          splitTunnelModeDescription(l10n, perAppProxy.mode),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -281,13 +306,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                             title: Text(
                               perAppProxy.isIncludeMode
-                                  ? 'Apps using VPN'
-                                  : 'Apps bypassing VPN',
+                                  ? l10n.splitTunnelAppsUsingVpn
+                                  : l10n.splitTunnelAppsBypassingVpn,
                             ),
                             subtitle: Text(
                               perAppProxy.selectedPackages.isEmpty
-                                  ? 'No apps selected'
-                                  : '${perAppProxy.selectedPackages.length} app(s) selected',
+                                  ? l10n.splitTunnelNoAppsSelected
+                                  : l10n.splitTunnelAppsSelectedCount(perAppProxy.selectedPackages.length),
                             ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () {
@@ -302,7 +327,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                           if (status == VpnStatus.started)
                             Text(
-                              'Reconnect VPN after changing split tunnel apps.',
+                              l10n.splitTunnelReconnectAfterChange,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: scheme.onSurfaceVariant),
                             ),
@@ -317,30 +342,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 14),
         DnsSettingsCard(desktopProxy: desktopProxy),
         const SizedBox(height: 14),
-        const FadeSlideIn(
-          delay: Duration(milliseconds: 175),
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 175),
           child: _SectionCard(
-            title: 'Advanced security',
-            subtitle: 'Optional hardening for subscription fetch',
-            child: SubscriptionPinningCard(),
+            title: l10n.advancedSecurityTitle,
+            subtitle: l10n.advancedSecuritySubtitle,
+            child: const SubscriptionPinningCard(),
           ),
         ),
         const SizedBox(height: 14),
         FadeSlideIn(
           delay: const Duration(milliseconds: 175),
           child: _SectionCard(
-            title: 'Censorship resistance',
-            subtitle: 'Transport presets, uTLS fingerprint, RU routing',
+            title: l10n.censorshipResistanceTitle,
+            subtitle: l10n.censorshipResistanceSubtitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SwitchListTile(
                   key: const ValueKey('ru_direct_default_toggle'),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('RU sites direct (default for new profiles)'),
-                  subtitle: const Text(
-                    'When censorship wizard is enabled, route Russian sites/IP direct',
-                  ),
+                  title: Text(l10n.censorshipRuDirectDefault),
+                  subtitle: Text(l10n.censorshipRuDirectDefaultSubtitle),
                   value: ruDirectDefault,
                   onChanged: (enabled) => ref
                       .read(ruDirectRoutingDefaultProvider.notifier)
@@ -350,11 +373,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   key: const ValueKey('custom_routing_editor_tile'),
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.alt_route_outlined, color: scheme.primary),
-                  title: const Text('Custom routing rules'),
+                  title: Text(l10n.censorshipCustomRouting),
                   subtitle: Text(
                     customRouting.rules.isEmpty
-                        ? 'Domain, IP, geosite/geoip — import/export JSON'
-                        : '${customRouting.enabledRules.length} active rule(s)',
+                        ? l10n.censorshipCustomRoutingEmpty
+                        : l10n.censorshipCustomRoutingActiveCount(customRouting.enabledRules.length),
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
@@ -368,10 +391,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.menu_book_outlined, color: scheme.primary),
-                  title: const Text('When to use which stack'),
-                  subtitle: const Text(
-                    'docs/en/censorship_resistance.md — REALITY vs TLS, XHTTP, mux',
-                  ),
+                  title: Text(l10n.censorshipStackGuide),
+                  subtitle: Text(l10n.censorshipStackGuideSubtitle),
                 ),
               ],
             ),
@@ -381,28 +402,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 140),
           child: _SectionCard(
-          title: SocksAuthModeStrings.sectionTitle(locale),
-          subtitle: SocksAuthModeStrings.sectionSubtitle(locale),
+          title: l10n.socksAuthTitle,
+          subtitle: l10n.socksAuthSubtitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SegmentedButton<SocksAuthMode>(
                 key: const ValueKey('socks_auth_mode_selector'),
                 segments: [
-                  ButtonSegment(value: SocksAuthMode.randomPerSession, label: Text(SocksAuthModeStrings.randomPerSession(locale)), icon: const Icon(Icons.shuffle, size: 18)),
-                  ButtonSegment(value: SocksAuthMode.staticFromPanel, label: Text(SocksAuthModeStrings.staticFromPanel(locale)), icon: const Icon(Icons.cloud_sync_outlined, size: 18)),
+                  ButtonSegment(value: SocksAuthMode.randomPerSession, label: Text(l10n.socksRandomPerSession), icon: const Icon(Icons.shuffle, size: 18)),
+                  ButtonSegment(value: SocksAuthMode.staticFromPanel, label: Text(l10n.socksStaticFromPanel), icon: const Icon(Icons.cloud_sync_outlined, size: 18)),
                 ],
                 selected: {socksAuthMode.isDisableInjection ? SocksAuthMode.randomPerSession : socksAuthMode},
                 onSelectionChanged: (s) => ref.read(socksAuthModeProvider.notifier).setMode(s.first),
               ),
               const SizedBox(height: 8),
-              Text(socksAuthMode == SocksAuthMode.staticFromPanel ? SocksAuthModeStrings.staticDescription(locale) : SocksAuthModeStrings.randomDescription(locale), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              Text(socksAuthMode == SocksAuthMode.staticFromPanel ? l10n.socksStaticDesc : l10n.socksRandomDesc, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
               if (socksAuthMode == SocksAuthMode.staticFromPanel && !panelState.settings.isConfigured) ...[
                 const SizedBox(height: 8),
-                Text(SocksAuthModeStrings.staticUnavailable(locale), style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.error)),
+                Text(l10n.socksStaticUnavailable, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.error)),
               ],
               const SizedBox(height: 8),
-              ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.home_outlined, color: scheme.primary), title: Text(locale.languageCode == 'ru' ? 'Привязка' : 'Local bind'), subtitle: Text(locale.languageCode == 'ru' ? 'Только 127.0.0.1, пароль обязателен' : '127.0.0.1 only, password required')),
+              ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.home_outlined, color: scheme.primary), title: Text(l10n.localBindTitle), subtitle: Text(l10n.localBindSubtitle)),
             ],
           ),
         ),
@@ -411,20 +432,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 210),
           child: _SectionCard(
-          title: 'Diagnostics',
+          title: l10n.diagnosticsTitle,
           child: ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.article_outlined, color: scheme.primary),
-            title: const Text('Log files'),
+            title: Text(l10n.logFiles),
             subtitle: Text(
               _logPath.isEmpty
-                  ? 'Resolving…'
+                  ? l10n.logResolving
                   : '$_logPath\n'
-                        'Android also: Android/data/…/files/logs/',
+                        '${l10n.logAndroidHint}',
             ),
             isThreeLine: true,
             trailing: IconButton(
-              tooltip: 'Copy path',
+              tooltip: l10n.copyPath,
               onPressed: _logPath.isEmpty
                   ? null
                   : () async {
@@ -433,7 +454,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Log path copied')),
+                        SnackBar(content: Text(l10n.logPathCopied)),
                       );
                     },
               icon: const Icon(Icons.copy),

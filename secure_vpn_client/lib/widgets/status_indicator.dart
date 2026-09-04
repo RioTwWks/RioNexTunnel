@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/connection_detail.dart';
+import '../utils/l10n_helpers.dart';
 
 class StatusIndicator extends StatefulWidget {
   const StatusIndicator({
@@ -81,19 +83,10 @@ class _StatusIndicatorState extends State<StatusIndicator>
     }
   }
 
-  String get _label => widget.detail?.displayLabel ?? _fallbackLabel;
-
-  String get _fallbackLabel {
-    switch (widget.status) {
-      case VpnStatus.started:
-        return 'Connected';
-      case VpnStatus.starting:
-        return 'Connecting';
-      case VpnStatus.stopping:
-        return 'Disconnecting';
-      case VpnStatus.stopped:
-        return 'Disconnected';
-    }
+  String _label(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    if (widget.detail != null) return connectionPhaseLabel(l10n, widget.detail!);
+    return connectionPhaseLabelFromStatus(l10n, ConnectionDetail.fromVpnStatus(widget.status).phase);
   }
 
   IconData get _icon {
@@ -170,13 +163,13 @@ class _StatusIndicatorState extends State<StatusIndicator>
                   ),
                 ),
                 child: Row(
-                  key: ValueKey(_label),
+                  key: ValueKey(_label(context)),
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(_icon, size: 16, color: color),
                     const SizedBox(width: 6),
                     Text(
-                      _label,
+                      _label(context),
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                             color: color,
                             fontWeight: FontWeight.w600,

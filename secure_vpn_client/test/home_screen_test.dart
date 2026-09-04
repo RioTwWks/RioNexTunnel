@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:secure_vpn_client/l10n/app_localizations.dart';
 import 'package:secure_vpn_client/screens/home_screen.dart';
 
 void main() {
   testWidgets('home screen shows disconnected state', (tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
+      ProviderScope(
         child: MaterialApp(
-          home: HomeScreen(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const HomeScreen(),
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Disconnected'), findsOneWidget);
     expect(find.byKey(const ValueKey('connect_button')), findsOneWidget);

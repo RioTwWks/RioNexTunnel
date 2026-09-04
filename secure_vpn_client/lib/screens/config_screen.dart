@@ -7,7 +7,7 @@ import '../models/transport_preset.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/censorship_wizard_screen.dart';
 import '../widgets/animated_entrance.dart';
-import '../widgets/socks_auth_mode_strings.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/transport_stack_chip.dart';
 
 class ConfigScreen extends ConsumerStatefulWidget {
@@ -34,7 +34,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final link = _linkController.text.trim();
     if (name.isEmpty || link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name and config link are required')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.configNameLinkRequired)),
       );
       return;
     }
@@ -42,7 +42,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (_type == ProfileType.link && !V2rayBox().isValidConfigLink(link)) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid VPN config link')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.configInvalidLink)));
       return;
     }
 
@@ -74,7 +74,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     if (mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Profile added')));
+      ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.configProfileAdded)));
     }
   }
 
@@ -109,7 +109,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Censorship settings updated')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.configCensorshipUpdated)),
     );
   }
 
@@ -127,7 +127,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
     final profiles = ref.watch(profilesProvider);
     final selectedProfile = ref.watch(selectedProfileProvider);
     final scheme = Theme.of(context).colorScheme;
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -140,14 +140,14 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Add profile',
+                    l10n.configAddProfile,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Paste a share link or subscription URL',
+                    l10n.configAddProfileSubtitle,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -156,8 +156,8 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                   TextField(
                     key: const ValueKey('profile_name_field'),
                     controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Profile name',
+                    decoration: InputDecoration(
+                      labelText: l10n.configProfileName,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -166,22 +166,18 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     controller: _linkController,
                     decoration: InputDecoration(
                       labelText: _type == ProfileType.link
-                          ? 'Config link (vless://, hy2://, tuic://, …)'
-                          : 'Subscription URL',
+                          ? l10n.configLinkLabel : l10n.configSubscriptionUrl,
                     ),
                     maxLines: 3,
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<ProfileType>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ProfileType.link,
-                        label: Text('Link'),
+                    segments: [ButtonSegment(value: ProfileType.link, label: Text(l10n.configLink),
                         icon: Icon(Icons.link),
                       ),
                       ButtonSegment(
                         value: ProfileType.subscription,
-                        label: Text('Subscription'),
+                        label: Text(l10n.configSubscription),
                         icon: Icon(Icons.rss_feed_outlined),
                       ),
                     ],
@@ -195,7 +191,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     key: const ValueKey('add_profile_button'),
                     onPressed: _addProfile,
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Add profile'),
+                    label: Text(l10n.configAddProfile),
                   ),
                 ],
               ),
@@ -206,7 +202,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
         FadeSlideIn(
           delay: const Duration(milliseconds: 80),
           child: Text(
-            'Saved profiles',
+            l10n.configSavedProfiles,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -228,12 +224,12 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'No profiles yet',
+                      l10n.configNoProfiles,
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Add a link or subscription to get started',
+                      l10n.configNoProfilesHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -285,14 +281,14 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                       children: [
                         Text(
                           profile.type == ProfileType.link
-                              ? 'Direct link'
+                              ? l10n.configDirectLink
                               : profile.autoSelectBestServer
                                   ? (profile.selectedServerName != null
                                         ? 'Automatic · ${profile.selectedServerName}'
-                                        : 'Subscription · Automatic')
+                                        : l10n.configSubscriptionAutomatic)
                                   : profile.selectedServerName != null
                                       ? 'Subscription · ${profile.selectedServerName}'
-                                      : 'Subscription',
+                                      : l10n.configSubscription,
                         ),
                         if (profile.censorshipModeEnabled) ...[
                           const SizedBox(height: 6),
@@ -300,7 +296,7 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                         ],
                         if (profile.type == ProfileType.link && profile.disableSocksInjection) ...[
                           const SizedBox(height: 6),
-                          Text(SocksAuthModeStrings.disableInjectionTitle(locale), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.tertiary)),
+                          Text(l10n.socksDisableInjection, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: scheme.tertiary)),
                         ],
                       ],
                     ),
@@ -308,13 +304,13 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          tooltip: 'Censorship mode',
+                          tooltip: l10n.configCensorshipModeTooltip,
                           icon: const Icon(Icons.shield_outlined),
                           onPressed: () => _editCensorship(profile),
                         ),
                         if (profile.type == ProfileType.link)
                           IconButton(
-                            tooltip: SocksAuthModeStrings.disableInjectionTitle(locale),
+                            tooltip: l10n.socksDisableInjection,
                             icon: Icon(profile.disableSocksInjection ? Icons.lock_open_outlined : Icons.build_circle_outlined, color: profile.disableSocksInjection ? scheme.tertiary : null),
                             onPressed: () => _toggleDisableSocksInjection(profile),
                           ),

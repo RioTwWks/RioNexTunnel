@@ -2,32 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/panel_sync_status.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/panel_providers.dart';
-
-class PanelStatusStrings {
-  PanelStatusStrings._();
-
-  static bool _isRu(Locale? locale) =>
-      locale?.languageCode.toLowerCase() == 'ru';
-
-  static String deviceId(Locale? locale) =>
-      _isRu(locale) ? 'ID устройства' : 'Device ID';
-
-  static String lastSync(Locale? locale) =>
-      _isRu(locale) ? 'Последняя синхронизация' : 'Last sync';
-
-  static String subscription(Locale? locale) =>
-      _isRu(locale) ? 'Подписка' : 'Subscription';
-
-  static String configured(Locale? locale) =>
-      _isRu(locale) ? 'Настроено' : 'Configured';
-
-  static String notConfigured(Locale? locale) =>
-      _isRu(locale) ? 'Не настроено' : 'Not configured';
-
-  static String never(Locale? locale) =>
-      _isRu(locale) ? 'Никогда' : 'Never';
-}
+import '../utils/l10n_helpers.dart';
 
 class PanelStatusCard extends ConsumerWidget {
   const PanelStatusCard({super.key});
@@ -37,7 +14,7 @@ class PanelStatusCard extends ConsumerWidget {
     ref.watch(panelBootstrapProvider);
     final panel = ref.watch(panelStateProvider);
     final manager = ref.watch(panelManagerProvider);
-    final locale = Localizations.localeOf(context);
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final settings = panel.settings;
 
@@ -55,14 +32,14 @@ class PanelStatusCard extends ConsumerWidget {
     }
 
     final lastSync = settings.lastSyncAt == null
-        ? PanelStatusStrings.never(locale)
+        ? l10n.panelNever
         : settings.lastSyncAt!.toLocal().toString().substring(0, 19);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          panel.syncStatus.label(ru: _isRu(locale)),
+          panelSyncStatusLabel(l10n, panel.syncStatus),
           style: TextStyle(
             color: statusColor,
             fontWeight: FontWeight.w600,
@@ -79,25 +56,24 @@ class PanelStatusCard extends ConsumerWidget {
         ],
         const SizedBox(height: 8),
         _StatusRow(
-          label: PanelStatusStrings.deviceId(locale),
+          label: l10n.panelDeviceId,
           value: manager.deviceIdHash,
         ),
         _StatusRow(
-          label: PanelStatusStrings.lastSync(locale),
+          label: l10n.panelLastSync,
           value: lastSync,
         ),
         _StatusRow(
-          label: PanelStatusStrings.subscription(locale),
+          label: l10n.panelSubscription,
           value: settings.subscriptionUrl == null ||
                   settings.subscriptionUrl!.isEmpty
-              ? PanelStatusStrings.notConfigured(locale)
-              : PanelStatusStrings.configured(locale),
+              ? l10n.panelNotConfigured
+              : l10n.panelConfigured,
         ),
       ],
     );
   }
 
-  static bool _isRu(Locale locale) => locale.languageCode.toLowerCase() == 'ru';
 }
 
 class _StatusRow extends StatelessWidget {

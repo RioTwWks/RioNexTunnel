@@ -4,6 +4,11 @@ import '../models/panel_sync_status.dart';
 import '../models/split_tunnel_settings.dart';
 import '../models/transport_preset.dart';
 
+String connectionPhaseLabelFromStatus(
+  AppLocalizations l10n, ConnectionPhase phase, {int reconnectAttempt=0, int maxReconnectAttempts=0}) {
+  return connectionPhaseLabel(l10n, ConnectionDetail(phase: phase, reconnectAttempt: reconnectAttempt, maxReconnectAttempts: maxReconnectAttempts));
+}
+
 String connectionPhaseLabel(AppLocalizations l10n, ConnectionDetail detail) {
   switch (detail.phase) {
     case ConnectionPhase.disconnected:
