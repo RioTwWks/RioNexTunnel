@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
 import '../models/engine_preference.dart';
+import '../models/pinning_config.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
 import 'config_parser.dart';
@@ -142,6 +143,7 @@ class EngineAutoSelector {
     required Profile profile,
     required V2rayBox box,
     required EnginePreference preference,
+    PinningConfig? pinning,
   }) async {
     final available = await availableEngines(box);
     if (available.isEmpty) {
@@ -166,7 +168,7 @@ class EngineAutoSelector {
     }
 
     // Auto: availability → format → geo demotion → default order + fallback.
-    final order = await _autoOrder(profile, available);
+    final order = await _autoOrder(profile, available, pinning: pinning);
     return EngineResolution(
       attemptOrder: order,
       reason: 'Auto: try ${order.map((e) => e.coreName).join(' → ')}',
@@ -175,8 +177,9 @@ class EngineAutoSelector {
 
   static Future<List<VpnEngine>> _autoOrder(
     Profile profile,
-    Set<VpnEngine> available,
-  ) async {
+    Set<VpnEngine> available, {
+    PinningConfig? pinning,
+  }) async {
     final base = defaultOrder.where(available.contains).toList();
     if (base.isEmpty) {
       return available.toList();
@@ -204,6 +207,7 @@ class EngineAutoSelector {
         final body = await ConfigParser.fetchSubscriptionBody(
           profile.configLink,
           engine: engine,
+          pinning: pinning,
         );
         if (engine == VpnEngine.xray) {
           xrayBody = body;

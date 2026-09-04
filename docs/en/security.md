@@ -88,6 +88,34 @@ Tests assert:
 
 Chromium ignores GSettings proxy passwords. Use the [browser extension](browser_extension.md) or copy credentials from the app UI.
 
+## Subscription certificate pinning (optional)
+
+By default, subscription fetch uses normal TLS certificate validation (system CAs). You can opt in to **SPKI certificate pinning** in **Settings → Advanced security**.
+
+| Behavior | Detail |
+|----------|--------|
+| Default | Pinning **off** — third-party subscriptions keep working |
+| Scope | Subscription HTTP fetch only (`ConfigParser.fetchSubscriptionBody`) |
+| Pin format | `sha256/<base64 SHA-256 of SubjectPublicKeyInfo>` |
+| Host matching | Pins are stored per subscription hostname (case-insensitive) |
+| Enforcement | When enabled, only hosts with saved pins are checked; other hosts still use normal TLS |
+| Panel API | RioNexGate panel HTTP is **not** pinned (separate code path) |
+
+### Limitations
+
+- When a panel rotates TLS certificates (for example Let's Encrypt renewal), you must **update the pin** or subscription refresh will fail with a pin mismatch error.
+- When pinning is enabled for a host, CA trust is replaced by the saved SPKI pin for that host.
+- Certificate pinning is **not supported on web** builds.
+- Pins and credentials are **never written to logs**.
+
+### Verify
+
+```bash
+cd secure_vpn_client
+flutter test test/subscription_pinning_test.dart
+```
+
+
 ## Reporting security issues
 
 Do not open public issues for undisclosed vulnerabilities. Contact repository maintainers privately.
