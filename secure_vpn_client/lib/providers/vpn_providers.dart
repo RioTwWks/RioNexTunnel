@@ -14,8 +14,10 @@ import '../models/profile.dart';
 import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
 import '../models/kill_switch_mode.dart';
+import '../models/pinning_config.dart';
 import '../models/socks_auth_mode.dart';
 import '../providers/panel_manager_provider.dart';
+import '../providers/pinning_provider.dart';
 import '../providers/socks_auth_mode_provider.dart';
 import '../providers/kill_switch_provider.dart';
 import '../services/vpn_service.dart';
@@ -37,6 +39,9 @@ final vpnServiceProvider = Provider<VpnService>((ref) {
   }, fireImmediately: true);
   ref.listen<SocksAuthMode>(socksAuthModeProvider, (previous, next) {
     service.setSocksAuthMode(next);
+  }, fireImmediately: true);
+  ref.listen<PinningConfig>(pinningProvider, (previous, next) {
+    service.setPinningConfig(next);
   }, fireImmediately: true);
   ref.onDispose(() {
     service.disconnect();
