@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "desktop_core.h"
+#include "native_messaging.h"
 #include "system_proxy.h"
 
 namespace v2ray_box {
@@ -253,6 +254,7 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
 V2rayBoxPlugin::V2rayBoxPlugin() = default;
 
 V2rayBoxPlugin::~V2rayBoxPlugin() {
+  NativeMessaging::ClearCredentials();
   SystemProxy::Disable();
   DesktopCore::Instance().Stop();
   ClearSessionCredentials();
@@ -314,6 +316,8 @@ void V2rayBoxPlugin::HandleMethodCall(
     if (!xray_binary.empty()) {
       EnsureXrayGeoAssets(work_dir, xray_binary);
     }
+    NativeMessaging::InstallHost("");
+    NativeMessaging::InstallManifests();
     SuccessStringResult(std::move(result), "");
     return;
   }
@@ -457,6 +461,7 @@ void V2rayBoxPlugin::HandleMethodCall(
       if (ConfigOptionsSetSystemProxy(g_config_options) && !g_socks_user.empty()) {
         const int http_port = g_socks_port + 1;
         SystemProxy::Enable("127.0.0.1", http_port, g_socks_user, g_socks_pass);
+        NativeMessaging::PublishCredentials("127.0.0.1", http_port, g_socks_user, g_socks_pass);
       }
       EmitStatus("Started");
       SuccessBoolResult(std::move(result), true);
@@ -471,13 +476,12 @@ void V2rayBoxPlugin::HandleMethodCall(
   }
 
   if (method == "get_browser_helper_status") {
+    const auto status = NativeMessaging::GetBrowserHelperStatus();
     flutter::EncodableMap map;
-    map[flutter::EncodableValue("native_host_installed")] =
-        flutter::EncodableValue(false);
-    map[flutter::EncodableValue("chrome_manifest_installed")] =
-        flutter::EncodableValue(false);
-    map[flutter::EncodableValue("firefox_manifest_installed")] =
-        flutter::EncodableValue(false);
+    for (const auto& entry : status) {
+      map[flutter::EncodableValue(entry.first)] =
+          flutter::EncodableValue(entry.second);
+    }
     result->Success(flutter::EncodableValue(map));
     return;
   }
@@ -499,6 +503,7 @@ void V2rayBoxPlugin::HandleMethodCall(
   }
 
   if (method == "engage_kill_switch") {
+    NativeMessaging::ClearCredentials();
     SystemProxy::Disable();
     DesktopCore::Instance().Stop();
     is_running_ = false;
@@ -544,6 +549,7 @@ void V2rayBoxPlugin::HandleMethodCall(
 
   if (method == "stop") {
     EmitStatus("Stopping");
+    NativeMessaging::ClearCredentials();
     SystemProxy::Disable();
     DesktopCore::Instance().Stop();
     is_running_ = false;

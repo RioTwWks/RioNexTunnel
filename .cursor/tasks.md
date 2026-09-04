@@ -82,7 +82,7 @@ Code-complete across targets; device E2E steps: [docs/en/platform_parity_checkli
 
 Deferred to P3:
 
-- [ ] Windows browser helper (native messaging + extension) — Linux has full implementation; Windows returns `false` in `get_browser_helper_status`
+- [x] Windows browser helper (native messaging + extension) — registry manifests for Chrome/Edge, file manifest for Firefox
 
 ---
 
@@ -438,8 +438,8 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 ### Other UX
 
-- [ ] Windows browser helper (native messaging host; Linux reference in `packages/v2ray_box/linux/`)
-- [ ] Publish browser extension to Chrome Web Store / Firefox AMO
+- [x] Windows browser helper (native messaging host; Linux reference in `packages/v2ray_box/linux/`)
+- [x] Publish browser extension to Chrome Web Store / Firefox AMO — submission package in `extensions/secure-vpn-proxy-auth/store/` (manual publish)
 
 ---
 

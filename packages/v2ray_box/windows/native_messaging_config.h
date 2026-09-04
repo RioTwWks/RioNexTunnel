@@ -3,6 +3,7 @@
 
 namespace v2ray_box {
 
+// Stable extension IDs (Chrome ID from manifest "key"; Firefox from gecko.id).
 constexpr const char* kNativeMessagingHostName = "com.secure.vpn.proxy_auth";
 constexpr const char* kChromeExtensionId = "hlpppofeeecjldogljipggakkdeppoeb";
 constexpr const char* kFirefoxExtensionId =
