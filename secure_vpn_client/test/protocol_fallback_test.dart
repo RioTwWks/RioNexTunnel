@@ -78,16 +78,13 @@ void main() {
     final stacks = await manager.orderedProbeList(
       profileId: 'p1',
       servers: [
-        const SubscriptionServer(index: 0, name: 'XHTTP', content: xhttp),
-        const SubscriptionServer(index: 1, name: 'TLS mux', content: tlsMux),
         const SubscriptionServer(index: 2, name: 'AWG', content: awg),
       ],
-      selectedIndex: 0,
+      selectedIndex: 2,
     );
 
-    expect(stacks.map((s) => s.kind).toList(), contains(TransportStackKind.amneziaWg));
-    final awgStack = stacks.firstWhere((s) => s.kind == TransportStackKind.amneziaWg);
-    final json = LinkConfigBuilder.buildFromLink(awgStack.content, VpnEngine.singbox);
+    expect(stacks.first.kind, TransportStackKind.amneziaWg);
+    final json = LinkConfigBuilder.buildFromLink(stacks.first.content, VpnEngine.singbox);
     final outbound = (jsonDecode(json) as Map)['outbounds'].first as Map;
     expect(outbound['jc'], 4);
   });

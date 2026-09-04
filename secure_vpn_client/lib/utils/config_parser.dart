@@ -582,6 +582,20 @@ class ConfigParser {
     config['outbounds'] = outbounds;
   }
 
+  static void _normalizeSingboxAwgOutbounds(Map<String, dynamic> config) {
+    final outbounds = config['outbounds'];
+    if (outbounds is! List) return;
+    for (var i = 0; i < outbounds.length; i++) {
+      final raw = outbounds[i];
+      if (raw is! Map) continue;
+      final outbound = Map<String, dynamic>.from(raw);
+      if (outbound['type']?.toString().toLowerCase() != 'wireguard') continue;
+      AmneziaWgConfig.normalizeSingboxOutbound(outbound);
+      outbounds[i] = outbound;
+    }
+    config['outbounds'] = outbounds;
+  }
+
   static bool _isXrayProxyOutbound(Map<String, dynamic> outbound) {
     final protocol = outbound['protocol']?.toString();
     return protocol == 'vless' ||
