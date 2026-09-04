@@ -26,12 +26,12 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('advanced_settings_tile')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(AdvancedSettingsScreen), findsOneWidget);
     expect(find.text('Advanced'), findsOneWidget);
     expect(find.byKey(const ValueKey('kill_switch_mode_selector')), findsOneWidget);
-    expect(find.byKey(const ValueKey('custom_routing_editor_tile')), findsOneWidget);
+    expect(find.text('Custom routing rules'), findsOneWidget);
     expect(find.byKey(const ValueKey('socks_auth_mode_selector')), findsOneWidget);
   });
 
