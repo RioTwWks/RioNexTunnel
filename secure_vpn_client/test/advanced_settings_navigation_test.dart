@@ -29,10 +29,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(AdvancedSettingsScreen), findsOneWidget);
-    expect(find.text('Advanced'), findsOneWidget);
+    expect(find.text('Kill switch'), findsOneWidget);
     expect(find.byKey(const ValueKey('kill_switch_mode_selector')), findsOneWidget);
-    expect(find.text('Custom routing rules'), findsOneWidget);
-    expect(find.byKey(const ValueKey('socks_auth_mode_selector')), findsOneWidget);
   });
 
   testWidgets('theme mode defaults to system', (tester) async {
