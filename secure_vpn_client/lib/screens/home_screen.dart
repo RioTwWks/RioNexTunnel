@@ -10,6 +10,7 @@ import '../providers/vpn_providers.dart';
 import '../widgets/animated_entrance.dart';
 import '../widgets/connection_button.dart';
 import '../widgets/multihop_picker_tile.dart';
+import '../widgets/profile_quick_picker.dart';
 import '../widgets/proxy_credentials_card.dart';
 import '../widgets/server_picker_tile.dart';
 import '../widgets/status_indicator.dart';
@@ -258,26 +259,7 @@ class _StatusCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              Text(
-                selectedProfile == null
-                    ? 'No profile selected'
-                    : selectedProfile!.name,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                selectedProfile == null
-                    ? 'Add a config link or subscription in Profiles'
-                    : selectedProfile!.type == ProfileType.subscription
-                        ? 'Subscription profile'
-                        : 'Direct config link',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-              ),
+              ProfileQuickPicker(selectedProfile: selectedProfile),
               if (selectedProfile != null &&
                   selectedProfile!.type == ProfileType.subscription) ...[
                 const SizedBox(height: 14),

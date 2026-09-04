@@ -413,10 +413,10 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 
 ### Minimal UI
 
-- [ ] Connect in 1–2 taps — Home: profile + prominent Connect button
-- [ ] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately
+- [x] Connect in 1–2 taps — Home: profile + prominent Connect button
+- [x] Advanced settings screen — routing, DNS, kill switch, split tunnel grouped separately
 - [ ] Full app localization (RU/EN) beyond proxy/browser helper strings
-- [ ] Dark/light theme aligned with system preference
+- [x] Dark/light theme aligned with system preference
 
 ### Profile management
 
