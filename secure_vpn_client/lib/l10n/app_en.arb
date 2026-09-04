@@ -1,0 +1,379 @@
+{
+  "@@locale": "en",
+  "navHome": "Home",
+  "navProfiles": "Profiles",
+  "navSettings": "Settings",
+  "connect": "Connect",
+  "disconnect": "Disconnect",
+  "pleaseWait": "Please wait…",
+  "tapToDisconnectSecurely": "Tap to disconnect securely",
+  "tapToConnect": "Tap to start protected session",
+  "establishingSecureTunnel": "Establishing secure tunnel…",
+  "connectionDisconnected": "Disconnected",
+  "connectionConnecting": "Connecting",
+  "connectionConnected": "Connected",
+  "connectionReconnecting": "Reconnecting",
+  "connectionDisconnecting": "Disconnecting",
+  "connectionError": "Error",
+  "errorSelectProfileFirst": "Select or add a profile first",
+  "statusTestingServers": "Testing servers…",
+  "statusNoProfileSelected": "No profile selected",
+  "statusAddProfileHint": "Add a config link or subscription in Profiles",
+  "statusSubscriptionProfile": "Subscription profile",
+  "statusDirectConfigLink": "Direct config link",
+  "statsUpload": "Upload",
+  "statsDownload": "Download",
+  "statsUptime": "Uptime",
+  "appearanceTitle": "Appearance",
+  "appearanceSubtitle": "Theme applies on all platforms",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "languageTitle": "Language",
+  "languageSystem": "System",
+  "languageEnglish": "English",
+  "languageRussian": "Русский",
+  "workModeTitle": "Work mode",
+  "coreEngineTitle": "Core engine",
+  "coreEngineAutoSubtitle": "Auto: pick by availability, subscription format, connect fallback",
+  "coreEngineDisconnectBeforeSwitch": "Disconnect VPN before switching engine",
+  "engineAuto": "Auto",
+  "engineXray": "Xray",
+  "engineSingbox": "sing-box",
+  "actionOff": "Off",
+  "actionProxy": "Proxy",
+  "actionVpn": "VPN",
+  "splitTunnelTitle": "Split tunneling",
+  "splitTunnelSubtitleAndroid": "Choose which apps use the VPN tunnel (Android)",
+  "splitTunnelVpnOnly": "VPN only",
+  "splitTunnelBypass": "Bypass",
+  "splitTunnelModeOffDesc": "All apps use the VPN tunnel.",
+  "splitTunnelModeIncludeDesc": "Whitelist: only selected apps are routed through VPN.",
+  "splitTunnelModeExcludeDesc": "Blacklist: selected apps connect directly without VPN.",
+  "splitTunnelAppsUsingVpn": "Apps using VPN",
+  "splitTunnelAppsBypassingVpn": "Apps bypassing VPN",
+  "splitTunnelNoAppsSelected": "No apps selected",
+  "splitTunnelReconnectAfterChange": "Reconnect VPN after changing split tunnel apps.",
+  "splitTunnelDesktopBody": "Desktop uses proxy mode, not a system TUN VPN. Per-app routing is controlled by each application (browser proxy settings, per-app rules, or OS firewall) — not by this app.",
+  "splitTunnelDesktopSecurity": "Local SOCKS/HTTP proxies always require per-session authentication on 127.0.0.1 only. Split tunneling does not open unauthenticated ports.",
+  "killSwitchTitle": "Kill switch",
+  "killSwitchSubtitle": "Block internet when VPN or core stops unexpectedly",
+  "killSwitchStrict": "Strict",
+  "killSwitchAdaptive": "Adaptive",
+  "killSwitchStrictDesc": "Strict blocks all outbound traffic when the tunnel or core drops.",
+  "killSwitchAdaptiveTitle": "Adaptive (per-app)",
+  "killSwitchAdaptiveSubtitle": "Requires split tunneling — available after Agent B merges",
+  "dnsAdvancedTitle": "Advanced DNS",
+  "dnsDesktopSubtitle": "Desktop proxy mode does not intercept system DNS. See docs/en/dns.md",
+  "dnsVpnSubtitle": "DoH/DoT upstreams and leak protection for VPN/TUN mode",
+  "dnsDefault": "Default",
+  "dnsCustom": "Custom",
+  "dnsEncrypted": "Encrypted",
+  "dnsLeakProtection": "DNS leak protection",
+  "dnsLeakProtectionSubtitle": "Route DNS through the tunnel (TUN mode)",
+  "dnsAddResolver": "Add resolver",
+  "dnsLeakTest": "DNS leak test",
+  "dnsInvalidAddress": "Invalid address",
+  "dnsAddResolverTitle": "Add DNS resolver",
+  "dnsResolverLabel": "Label",
+  "dnsResolverAddress": "Address",
+  "actionCancel": "Cancel",
+  "actionAdd": "Add",
+  "actionSave": "Save",
+  "advancedSecurityTitle": "Advanced security",
+  "advancedSecuritySubtitle": "Optional hardening for subscription fetch",
+  "censorshipResistanceTitle": "Censorship resistance",
+  "censorshipResistanceSubtitle": "Transport presets, uTLS fingerprint, RU routing",
+  "censorshipRuDirectDefault": "RU sites direct (default for new profiles)",
+  "censorshipRuDirectDefaultSubtitle": "When censorship wizard is enabled, route Russian sites/IP direct",
+  "censorshipCustomRouting": "Custom routing rules",
+  "censorshipCustomRoutingEmpty": "Domain, IP, geosite/geoip — import/export JSON",
+  "censorshipStackGuide": "When to use which stack",
+  "censorshipStackGuideSubtitle": "docs/en/censorship_resistance.md — REALITY vs TLS, XHTTP, mux",
+  "socksAuthTitle": "SOCKS5 authentication",
+  "socksAuthSubtitle": "Local proxy is always on 127.0.0.1 with mandatory password auth.",
+  "socksRandomPerSession": "Random per session",
+  "socksStaticFromPanel": "Static from panel",
+  "socksRandomDesc": "New username and password on every connect (default).",
+  "socksStaticDesc": "Use SOCKS credentials from RioNexGate panel JSON when available.",
+  "socksStaticUnavailable": "Panel not configured or config lacks SOCKS — falls back to random.",
+  "socksDisableInjection": "Disable SOCKS injection (advanced)",
+  "localBindTitle": "Local bind",
+  "localBindSubtitle": "127.0.0.1 only, password required",
+  "diagnosticsTitle": "Diagnostics",
+  "logLevelInfo": "Info",
+  "logLevelDebug": "Debug",
+  "viewLogs": "View logs",
+  "logFiles": "Log files",
+  "logResolving": "Resolving…",
+  "logAndroidHint": "Android also: Android/data/…/files/logs/",
+  "copyPath": "Copy path",
+  "logPathCopied": "Log path copied",
+  "privacyTitle": "Privacy",
+  "privacyPolicy": "Privacy policy",
+  "logsTitle": "Logs",
+  "proxyCredsTitle": "Proxy credentials",
+  "proxyCredsExtensionHint": "Install the browser extension for automatic proxy authentication.",
+  "proxyUsername": "Proxy username",
+  "proxyPassword": "Proxy password",
+  "proxyCopyBoth": "Copy both",
+  "browserHelperTitle": "Browser helper",
+  "browserHelperReady": "Ready — no login dialog",
+  "browserHelperWaiting": "Waiting for VPN session credentials",
+  "browserHelperHostMissing": "Native messaging host not installed",
+  "browserHelperManifestMissing": "Browser manifest missing",
+  "browserHelperExtensionMissing": "Extension not detected in browser",
+  "browserHelperLabelHost": "Native host",
+  "browserHelperLabelManifest": "Manifest",
+  "browserHelperLabelExtension": "Extension",
+  "browserHelperLabelSession": "VPN session",
+  "panelSectionTitle": "RioNexGate (optional)",
+  "panelEnable": "Enable panel",
+  "panelUrl": "Panel URL",
+  "panelPairingToken": "Pairing token",
+  "panelRegister": "Register device",
+  "panelRefresh": "Refresh",
+  "panelClear": "Clear pairing",
+  "panelRegistered": "Device registered",
+  "panelRegisterFailed": "Registration failed",
+  "panelDeviceId": "Device ID",
+  "panelLastSync": "Last sync",
+  "panelSubscription": "Subscription",
+  "panelConfigured": "Configured",
+  "panelNotConfigured": "Not configured",
+  "panelNever": "Never",
+  "panelSyncDisabled": "Disabled",
+  "panelSyncSynced": "Synced",
+  "panelSyncStale": "Cached (panel offline)",
+  "panelSyncOffline": "Offline",
+  "panelSyncError": "Error",
+  "pinningTitle": "Certificate pinning",
+  "pinningNoSavedPins": "No saved pins yet.",
+  "pinningAddPin": "Add pin",
+  "pinningAddSpkiTitle": "Add SPKI pin",
+  "pinningHostRequired": "Enter a host",
+  "pinningRemoveHost": "Remove host",
+  "pinningRemovePin": "Remove pin",
+  "configAddProfile": "Add profile",
+  "configAddProfileSubtitle": "Paste a share link or subscription URL",
+  "configProfileName": "Profile name",
+  "configLinkLabel": "Config link (vless://, hy2://, tuic://, …)",
+  "configSubscriptionUrl": "Subscription URL",
+  "configLink": "Link",
+  "configSubscription": "Subscription",
+  "configSavedProfiles": "Saved profiles",
+  "configNoProfiles": "No profiles yet",
+  "configNoProfilesHint": "Add a link or subscription to get started",
+  "configNameLinkRequired": "Name and config link are required",
+  "configInvalidLink": "Invalid VPN config link",
+  "configProfileAdded": "Profile added",
+  "configCensorshipUpdated": "Censorship settings updated",
+  "configDirectLink": "Direct link",
+  "configSubscriptionAutomatic": "Subscription · Automatic",
+  "configCensorshipModeTooltip": "Censorship mode",
+  "serverPickerTitle": "Server",
+  "serverAutomatic": "Automatic (best latency)",
+  "serverSelectTitle": "Select server",
+  "serverProbeLatency": "Test latency (URL test)",
+  "serverRefreshList": "Refresh list",
+  "serverNoServers": "No servers found",
+  "serverAutoRetest": "Automatic: best server is re-tested on each Connect",
+  "serverAutoPickLatency": "Pick the lowest-latency server on Connect",
+  "serverAutomaticLabel": "Automatic",
+  "multihopTitle": "Multihop (Double VPN)",
+  "multihopRouteMultiple": "Route traffic through multiple servers",
+  "multihopSelectHops": "Select additional hop servers",
+  "multihopEditChain": "Edit hop chain",
+  "multihopChainTitle": "Multihop chain",
+  "multihopRequiresTwoServers": "Multihop requires at least 2 servers.",
+  "multihopSaveChain": "Save chain",
+  "transportCustom": "Custom",
+  "transportStandard": "Standard",
+  "transportMux": "mux",
+  "transportRuDirect": "RU direct",
+  "advancedTitle": "Advanced",
+  "censorshipWizardTitle": "Censorship mode",
+  "censorshipSkip": "Skip",
+  "censorshipEnable": "Enable censorship mode",
+  "censorshipTransport": "Transport preset",
+  "censorshipTlsFingerprint": "TLS fingerprint",
+  "censorshipEnableMux": "Enable mux",
+  "censorshipEnableMuxSubtitle": "Mobile fallback — concurrency 8",
+  "censorshipRuDirect": "RU sites direct",
+  "censorshipRuDirectSubtitle": "geosite:ru / geoip:ru → direct (needs geo)",
+  "censorshipSaveProfile": "Save profile",
+  "routingCustomTitle": "Custom routing",
+  "routingAddDomainRule": "Add domain rule",
+  "perAppProxyTitleInclude": "Apps using VPN",
+  "perAppProxyTitleExclude": "Apps bypassing VPN",
+  "perAppProxySearchHint": "Search apps",
+  "perAppProxyLoadError": "Could not load installed apps.",
+  "perAppProxyNoResults": "No matching apps",
+  "browserHelperDescription": "Native messaging host + extension auto-fill proxy credentials when Connected.",
+  "panelSectionSubtitle": "Pair with RioNexGate for subscriptions, stats, and remote commands.",
+  "pinningSubtitle": "Opt-in SPKI pins for subscription hosts (SHA-256).",
+  "pinningEnable": "Enable pinning",
+  "pinningHost": "Subscription host",
+  "pinningSpki": "SPKI pin",
+  "pinningSpkiRequired": "Enter a valid base64 SPKI pin",
+  "censorshipEnableSubtitle": "Apply transport presets, fingerprint, and routing helpers",
+  "connectionReconnectingAttempt": "Reconnecting ({current}/{max})",
+  "@connectionReconnectingAttempt": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "engineAutoLabel": "auto · {engine}",
+  "@engineAutoLabel": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "coreEngineActiveAuto": "Auto · active: {version}",
+  "@coreEngineActiveAuto": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "coreEngineActive": "Active: {version}",
+  "@coreEngineActive": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "coreEngineUsesUntilAuto": "Uses {engine} until the next Auto connect",
+  "@coreEngineUsesUntilAuto": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "splitTunnelAppsSelectedCount": "{count} app(s) selected",
+  "@splitTunnelAppsSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "censorshipCustomRoutingActiveCount": "{count} active rule(s)",
+  "@censorshipCustomRoutingActiveCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "proxyCredsDescription": "HTTP proxy on 127.0.0.1:{port} — use with browser extension or manual setup.",
+  "@proxyCredsDescription": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "proxyCopied": "Copied {label}",
+  "@proxyCopied": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "configSubscriptionWithServer": "Subscription · {server}",
+  "@configSubscriptionWithServer": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "configAutomaticWithServer": "Automatic · {server}",
+  "@configAutomaticWithServer": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "serverNumber": "Server {number}",
+  "@serverNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "serverOptionWithLatency": "Server {number} · {latency}",
+  "@serverOptionWithLatency": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "latency": {
+        "type": "String"
+      }
+    }
+  },
+  "serverAutoLastServer": "Last: {name} · re-tested on Connect",
+  "@serverAutoLastServer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "multihopEntryChain": "Entry: Server {entry} → {hops}",
+  "@multihopEntryChain": {
+    "placeholders": {
+      "entry": {
+        "type": "int"
+      },
+      "hops": {
+        "type": "String"
+      }
+    }
+  },
+  "uptimeHoursMinutes": "{hours}h {minutes}m",
+  "@uptimeHoursMinutes": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "uptimeMinutesSeconds": "{minutes}m {seconds}s",
+  "@uptimeMinutesSeconds": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "uptimeSeconds": "{seconds}s",
+  "@uptimeSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  }
+}
