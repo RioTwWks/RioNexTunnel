@@ -5,6 +5,7 @@ import 'package:secure_vpn_client/models/profile.dart';
 import 'package:secure_vpn_client/models/transport_preset.dart';
 import 'package:secure_vpn_client/models/vpn_engine.dart';
 import 'package:secure_vpn_client/services/credential_service.dart';
+import 'package:secure_vpn_client/utils/amnezia_wg_config.dart';
 import 'package:secure_vpn_client/utils/config_enhancer.dart';
 import 'package:secure_vpn_client/utils/config_parser.dart';
 import 'package:secure_vpn_client/utils/link_config_builder.dart';
@@ -85,6 +86,18 @@ void main() {
       final outbound =
           (jsonDecode(json) as Map)['outbounds'].first as Map<String, dynamic>;
       expect((outbound['mux'] as Map)['enabled'], isTrue);
+    });
+
+    test('builds AmneziaWG sing-box outbound from awg link', () {
+      const link =
+          'awg://CLIENT@vpn.example:51820?publickey=SERVER&address=10.8.1.2/32'
+          '&jc=4&jmin=40&jmax=70';
+      final json = LinkConfigBuilder.buildFromLink(link, VpnEngine.singbox);
+      final outbound =
+          (jsonDecode(json) as Map)['outbounds'].first as Map<String, dynamic>;
+      expect(outbound['type'], 'wireguard');
+      expect(outbound['jc'], 4);
+      expect(AmneziaWgConfig.contentUsesAwg(link), isTrue);
     });
   });
 

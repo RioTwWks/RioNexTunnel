@@ -64,3 +64,29 @@ jobs:
 
       - name: Run security_probe against authenticated SOCKS
         run: chmod +x scripts/ci_security_probe_linux.sh scripts/security_probe.sh && ./scripts/ci_security_probe_linux.sh
+
+  windows-build:
+    name: Windows desktop build (manual gate)
+    runs-on: windows-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: secure_vpn_client
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install app dependencies
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release

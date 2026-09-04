@@ -6,7 +6,19 @@ import 'package:http/testing.dart';
 import 'package:secure_vpn_client/models/panel_command.dart';
 import 'package:secure_vpn_client/services/panel_command_service.dart';
 import 'package:secure_vpn_client/services/panel_manager.dart';
+import 'package:secure_vpn_client/services/panel_token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+PanelManager _manager({
+  required SharedPreferences prefs,
+  http.Client? httpClient,
+  InMemoryPanelTokenStorage? tokenStorage,
+}) =>
+    PanelManager(
+      preferences: prefs,
+      httpClient: httpClient,
+      tokenStorage: tokenStorage ?? InMemoryPanelTokenStorage(),
+    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -108,12 +120,14 @@ void main() {
           'enabled': true,
         }),
       );
-      final manager = PanelManager(preferences: prefs);
-      return manager;
+      return _manager(
+        prefs: prefs,
+        tokenStorage: InMemoryPanelTokenStorage()..token = 'dev-token',
+      );
     }
 
     test('start is no-op when panel is not configured', () async {
-      final manager = PanelManager(preferences: prefs);
+      final manager = _manager(prefs: prefs);
       await manager.load();
       final service = PanelCommandService(panelManager: manager, preferences: prefs);
 

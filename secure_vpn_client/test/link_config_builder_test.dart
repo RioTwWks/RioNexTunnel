@@ -50,6 +50,12 @@ void main() {
         isTrue,
       );
       expect(
+        LinkConfigBuilder.isConfigLink(
+          'awg://key@w.example:51820?publickey=PUB&jc=4',
+        ),
+        isTrue,
+      );
+      expect(
         LinkConfigBuilder.isConfigLink('ssh://user:pass@s.example:22'),
         isTrue,
       );

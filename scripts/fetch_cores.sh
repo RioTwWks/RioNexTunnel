@@ -283,3 +283,4 @@ copy_if_exists "${GEO_DEST}/geosite.dat" "${ANDROID_XRAY_ASSETS}/geosite.dat"
 
 echo "Core binaries downloaded to ${DEST}"
 echo "Versions: Xray v${XRAY_VERSION}, sing-box v${SINGBOX_VERSION}"
+echo "Note: official sing-box does not yet support AmneziaWG obfuscation (awg:// links parse in the app; connect fails closed until upstream adds AWG)."

@@ -70,11 +70,28 @@ Full JSON subscriptions (v2rayNG array or single-object configs) use different f
 
 `path`, `host`, and other XHTTP keys from the subscription are preserved. Missing or `auto` mode is coerced to **`stream-one`** (same default as `vless://` links via `LinkConfigBuilder`).
 
+## AmneziaWG
+
+AmneziaWG (AWG) is WireGuard with DPI obfuscation parameters (`jc`, `jmin`, `jmax`, `s1`–`s4`, `h1`–`h4`, optional `i1`–`i5`). RioNexTunnel parses:
+
+- `awg://` share links (and `wg://` / `wireguard://` when AWG query params are present)
+- sing-box subscription JSON with AWG fields on `type: wireguard` outbounds
+
+**Official cores only:** the bundled [SagerNet/sing-box](https://github.com/SagerNet/sing-box) from `scripts/fetch_cores.sh` does **not** yet implement AWG obfuscation. The client generates valid AWG outbound JSON for subscriptions and fallback ordering, but **connect fails closed** with a clear message until upstream sing-box adds AWG support. Do not ship unmaintained AWG core forks.
+
+Example link:
+
+```
+awg://PRIVATE_KEY@host:51820?publickey=SERVER_KEY&address=10.8.1.2/32&jc=4&jmin=40&jmax=70&s1=0&s2=0&h1=...&h2=...&h3=...&h4=...
+```
+
+AWG profiles require the **sing-box** engine (Auto or sing-box). MTU is clamped to **1280** for AWG nodes.
+
 ## Troubleshooting
 
 | Symptom | Try |
 |---------|-----|
-| Works on Wi‑Fi, fails on mobile operator | Enable **mux**; ask provider for XHTTP or AmneziaWG node |
+| Works on Wi‑Fi, fails on mobile operator | Enable **mux**; ask provider for XHTTP or **AmneziaWG** (`awg://`) node |
 | XHTTP connect errors | Ensure server uses `mode: stream-one` (not `auto`) |
 | RU direct / geo errors | Run `scripts/fetch_cores.sh` or disable RU preset |
 | iOS XHTTP+REALITY issues | Prefer TCP+REALITY+Vision node from same subscription |

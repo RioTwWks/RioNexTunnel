@@ -29,7 +29,7 @@ flutter config --enable-macos-desktop
 | System proxy integration | HTTP/HTTPS via `networksetup` on `127.0.0.1:1081` when `set-system-proxy` is enabled |
 | Session credentials | `secure_vpn/credentials` channel; SOCKS `1080`, HTTP system proxy `1081` |
 | E2E connect verification | **Pending** — smoke test on physical Mac |
-| Browser extension / proxy auth helper | **Linux only today** — macOS has no native messaging host yet |
+| Browser extension / proxy auth helper | **Implemented** — native messaging host (Chrome, Chromium, Edge, Firefox); installed on first `setup()` |
 
 macOS desktop uses **proxy mode** (`VpnMode.proxy`), not a system TUN VPN. **Connected** starts xray/sing-box with authenticated inbounds on `127.0.0.1:1080` (SOCKS) and `127.0.0.1:1081` (HTTP), and sets system HTTP proxy to `1081` when enabled in config options.
 

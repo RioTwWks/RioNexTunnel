@@ -90,8 +90,9 @@ Code-complete across targets; device E2E steps: [docs/en/platform_parity_checkli
 - [x] iOS plugin: credentials channel, `get_core_info`, config persist/wipe, sing-box only
 - [x] iOS app: PacketTunnel target + Runner entitlements (`scripts/setup_ios_packet_tunnel.py`)
 - [x] Dart: `engine_auto_selector` iOS → sing-box heuristic
-- [x] E2E smoke tests documented per platform (manual on device)
+- [x] E2E smoke tests documented per platform (manual on device); status table in `docs/en/README.md`
 - [x] Windows browser helper (native messaging + extension) — registry manifests for Chrome/Edge, file manifest for Firefox (#82)
+- [x] macOS browser helper — native messaging host + Chrome/Chromium/Edge/Firefox manifests (P4 Agent E)
 
 ---
 
@@ -102,6 +103,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### Engineering base
 
 - [x] CI: `flutter analyze`, `flutter test` on push (`.github/workflows/ci.yml`)
+- [x] Windows desktop: `flutter build windows` job on `windows-latest` (PR + main)
 - [x] Auto-run `security_probe.sh` in CI when Linux integration test connects (`linux-security-probe` job + `scripts/ci_security_probe_linux.sh`)
 - [x] Fail closed if geo assets missing and config contains geosite/geoip rules (`VpnService` + `ConfigParser.configRequiresXrayGeoRules`)
 - [x] Audit sing-box `mixed` / deprecated DNS paths on mobile VPN mode (`docs/en/mobile_vpn_config.md`)
@@ -146,7 +148,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [x] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
 - [x] iOS — document NE limitations; per-app split tunneling is limited on iOS
 - [x] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
-- [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan
+- [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan — **deferred** (documented in `docs/en/split_tunneling.md`; desktop uses proxy mode only)
 - [x] UI — installed app list with toggles (mobile) or desktop warning
 - [x] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
 - [x] Tests — unit + platform smoke for whitelist/blacklist
@@ -514,4 +516,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P4 Agent A RioNexGate panel completion (60s stats flush, scheduled sync, full JSON connect, secure token, pairing docs).*
+*Last updated: 2026-09-04 — P4 Agent A RioNexGate panel completion (60s stats flush, scheduled sync, full JSON connect, secure token, pairing docs). P4 Agent C AmneziaWG protocol (awg:// parse, outbound JSON, tests, docs). Prior: P3 UX complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
