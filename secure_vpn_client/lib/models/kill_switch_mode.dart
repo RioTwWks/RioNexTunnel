@@ -4,13 +4,10 @@ enum KillSwitchMode {
   adaptive;
 
   static const storageKey = 'kill_switch_mode';
-
   String get storageName => name;
 
   static KillSwitchMode fromStorage(String? value) {
-    if (value == null) {
-      return KillSwitchMode.off;
-    }
+    if (value == null) return KillSwitchMode.off;
     return KillSwitchMode.values.firstWhere(
       (mode) => mode.name == value,
       orElse: () => KillSwitchMode.off,
@@ -18,6 +15,7 @@ enum KillSwitchMode {
   }
 
   bool get isStrict => this == KillSwitchMode.strict;
-
+  bool get isAdaptive => this == KillSwitchMode.adaptive;
   bool get isEnabled => this != KillSwitchMode.off;
+  bool get blocksOnTunnelDrop => isStrict || isAdaptive;
 }

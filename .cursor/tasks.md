@@ -130,7 +130,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [x] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
 - [x] Strict mode — block all outbound internet when core/tunnel is down
-- [ ] Adaptive mode — block only selected apps (per-app) — deferred for Agent B split tunneling
+- [x] Adaptive mode — block only selected apps (per-app) via split tunnel list (Android TUN)
 - [x] Linux — iptables/nftables or NetworkManager firewall rules; remove on clean disconnect
 - [x] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
 - [x] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
@@ -481,7 +481,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
-| Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
+| Kill Switch | ✅ Strict + Adaptive (Android) | **P1** |
 | Split Tunneling | ✅ Android + docs | **P1** |
 | Obfuscation / DPI (UX) | ✅ Wizard + presets | **P1** |
 | XHTTP + stream-one | ✅ Link builder + ConfigParser | **P1** |
@@ -516,4 +516,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P4 Agent A RioNexGate panel completion (60s stats flush, scheduled sync, full JSON connect, secure token, pairing docs). P4 Agent C AmneziaWG protocol (awg:// parse, outbound JSON, tests, docs). Prior: P3 UX complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*
+*Last updated: 2026-09-04 — P4 Agent B adaptive kill switch (Android TUN, split tunnel integration, docs). P4 Agent A RioNexGate panel completion (60s stats flush, scheduled sync, full JSON connect, secure token, pairing docs). P4 Agent C AmneziaWG protocol (awg:// parse, outbound JSON, tests, docs). P4 Agent E macOS browser helper (native messaging host + manifests). Prior: P3 UX complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*

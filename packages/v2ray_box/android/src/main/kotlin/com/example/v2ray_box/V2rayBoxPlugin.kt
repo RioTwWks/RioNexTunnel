@@ -1284,7 +1284,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             }
 
             "arm_kill_switch" -> {
-                result.success(Settings.killSwitchMode == "strict")
+                result.success(Settings.killSwitchMode == "strict" || Settings.killSwitchMode == "adaptive")
             }
 
             "engage_kill_switch" -> {
@@ -1306,7 +1306,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.success(
                     mapOf(
                         "mode" to Settings.killSwitchMode,
-                        "armed" to (Settings.killSwitchMode == "strict"),
+                        "armed" to (Settings.killSwitchMode == "strict" || Settings.killSwitchMode == "adaptive"),
                         "engaged" to Settings.killSwitchEngaged,
                         "available" to true,
                         "backend" to "vpn_service",
