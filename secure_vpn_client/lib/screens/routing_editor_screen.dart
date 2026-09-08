@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/routing_rules_provider.dart';
 import '../utils/routing_config_builder.dart';
 
@@ -12,10 +13,11 @@ class RoutingEditorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final ruleSet = ref.watch(routingRulesProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Custom routing'),
+        title: Text(l10n.routingCustomTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.download_outlined),
@@ -62,24 +64,25 @@ class RoutingEditorScreen extends ConsumerWidget {
   }
 
   Future<void> _addRule(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final rule = ref.read(routingRulesProvider.notifier).createEmptyRule();
     final controller = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add domain rule'),
+        title: Text(l10n.routingAddDomainRule),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'example.com'),
+          decoration: InputDecoration(hintText: l10n.routingDomainHint),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Add'),
+            child: Text(l10n.actionAdd),
           ),
         ],
       ),

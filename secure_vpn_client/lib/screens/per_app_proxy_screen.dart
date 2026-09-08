@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/split_tunnel_settings.dart';
 import '../providers/per_app_proxy_provider.dart';
 import '../providers/vpn_providers.dart';
@@ -36,6 +37,7 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
   }
 
   Future<void> _loadApps() async {
+    final l10n = AppLocalizations.of(context);
     try {
       final apps = await ref.read(vpnServiceProvider).v2rayBox.getInstalledApps();
       if (!mounted) {
@@ -53,7 +55,7 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
       }
       setState(() {
         _loadingApps = false;
-        _loadError = 'Could not load installed apps';
+        _loadError = l10n.perAppProxyLoadError;
       });
     }
   }
@@ -76,30 +78,31 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
     });
   }
 
-  String get _title {
+  String _title(AppLocalizations l10n) {
     switch (widget.mode) {
       case SplitTunnelMode.include:
-        return 'Apps using VPN';
+        return l10n.perAppProxyTitleInclude;
       case SplitTunnelMode.exclude:
-        return 'Apps bypassing VPN';
+        return l10n.perAppProxyTitleExclude;
       case SplitTunnelMode.off:
-        return 'Split tunnel apps';
+        return l10n.perAppProxyTitleOff;
     }
   }
 
-  String get _selectionLabel {
+  String _selectionLabel(AppLocalizations l10n) {
     switch (widget.mode) {
       case SplitTunnelMode.include:
-        return 'selected for VPN';
+        return l10n.perAppProxySelectedForVpn;
       case SplitTunnelMode.exclude:
-        return 'bypassing VPN';
+        return l10n.perAppProxyBypassingVpnLabel;
       case SplitTunnelMode.off:
-        return 'selected';
+        return l10n.perAppProxySelectedLabel;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final selected = ref.watch(perAppProxyProvider).selectedPackages;
     final vpnConnected =
         ref.watch(vpnStatusProvider).value == VpnStatus.started;
@@ -107,16 +110,14 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_title),
+        title: Text(_title(l10n)),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (vpnConnected)
             MaterialBanner(
-              content: const Text(
-                'Reconnect VPN to apply split tunnel changes.',
-              ),
+              content: Text(l10n.splitTunnelReconnectAfterChange),
               leading: Icon(Icons.info_outline, color: scheme.primary),
               backgroundColor: scheme.primaryContainer.withValues(alpha: 0.35),
               actions: const [SizedBox(width: 8)],
@@ -128,12 +129,12 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
               controller: _searchController,
               onChanged: _filterApps,
               decoration: InputDecoration(
-                hintText: 'Search apps…',
+                hintText: l10n.perAppProxySearchHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'Clear search',
+                        tooltip: l10n.perAppProxyClearSearch,
                         onPressed: () {
                           _searchController.clear();
                           _filterApps('');
@@ -146,7 +147,11 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              '${selected.length} $_selectionLabel · ${_filteredApps.length} shown',
+              l10n.perAppProxySelectionSummary(
+                selected.length,
+                _selectionLabel(l10n),
+                _filteredApps.length,
+              ),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -161,8 +166,8 @@ class _PerAppProxyScreenState extends ConsumerState<PerAppProxyScreen> {
                     child: Text(
                       _loadError ??
                           (_searchQuery.isEmpty
-                              ? 'No apps found'
-                              : 'No apps matching "$_searchQuery"'),
+                              ? l10n.perAppProxyNoAppsFound
+                              : l10n.perAppProxyNoAppsMatching(_searchQuery)),
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),

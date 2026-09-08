@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../providers/vpn_providers.dart';
 import '../screens/config_screen.dart';
@@ -31,17 +32,18 @@ class ProfileQuickPicker extends ConsumerWidget {
     );
   }
 
-  String get _subtitle {
+  String _subtitle(AppLocalizations l10n) {
     if (selectedProfile == null) {
-      return 'Tap to choose a profile';
+      return l10n.profileTapToChoose;
     }
     return selectedProfile!.type == ProfileType.subscription
-        ? 'Subscription profile'
-        : 'Direct config link';
+        ? l10n.statusSubscriptionProfile
+        : l10n.statusDirectConfigLink;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
 
     return Material(
@@ -59,7 +61,7 @@ class ProfileQuickPicker extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      selectedProfile?.name ?? 'No profile selected',
+                      selectedProfile?.name ?? l10n.statusNoProfileSelected,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.5,
@@ -67,7 +69,7 @@ class ProfileQuickPicker extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      _subtitle,
+                      _subtitle(l10n),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -92,14 +94,15 @@ class _ProfileQuickPickerSheet extends ConsumerWidget {
 
   final VoidCallback? onProfileSelected;
 
-  String _profileTypeLabel(Profile profile) {
+  String _profileTypeLabel(AppLocalizations l10n, Profile profile) {
     return profile.type == ProfileType.subscription
-        ? 'Subscription'
-        : 'Config link';
+        ? l10n.profileTypeSubscription
+        : l10n.profileTypeConfigLink;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final profiles = ref.watch(profilesProvider);
     final selected = ref.watch(selectedProfileProvider);
     final scheme = Theme.of(context).colorScheme;
@@ -116,14 +119,14 @@ class _ProfileQuickPickerSheet extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Active profile',
+              l10n.profileActiveTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 4),
             Text(
-              'Select a profile to connect from Home',
+              l10n.profileSelectFromHome,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -133,7 +136,7 @@ class _ProfileQuickPickerSheet extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  'No profiles yet. Add a config link or subscription below.',
+                  l10n.profileNoProfilesAddBelow,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -157,7 +160,7 @@ class _ProfileQuickPickerSheet extends ConsumerWidget {
                         color: isSelected ? scheme.primary : scheme.onSurfaceVariant,
                       ),
                       title: Text(profile.name),
-                      subtitle: Text(_profileTypeLabel(profile)),
+                      subtitle: Text(_profileTypeLabel(l10n, profile)),
                       onTap: () async {
                         await ref
                             .read(selectedProfileProvider.notifier)
@@ -176,8 +179,8 @@ class _ProfileQuickPickerSheet extends ConsumerWidget {
               key: const ValueKey('profile_quick_picker_add'),
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.add_circle_outline, color: scheme.primary),
-              title: const Text('Add profile'),
-              subtitle: const Text('Config link or subscription URL'),
+              title: Text(l10n.configAddProfile),
+              subtitle: Text(l10n.configAddProfileSubtitle),
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(

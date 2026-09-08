@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/multihop_chain.dart';
 import '../models/profile.dart';
 import '../models/subscription_server.dart';
@@ -13,6 +14,7 @@ class MultihopPickerTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainerLow,
@@ -25,11 +27,18 @@ class MultihopPickerTile extends ConsumerWidget {
               key: const ValueKey('multihop_toggle'),
               contentPadding: EdgeInsets.zero,
               secondary: Icon(Icons.layers_outlined, color: scheme.primary),
-              title: const Text('Multihop (Double VPN)'),
-              subtitle: Text(_hopSummary(profile), maxLines: 2, overflow: TextOverflow.ellipsis),
+              title: Text(l10n.multihopTitle),
+              subtitle: Text(
+                _hopSummary(l10n, profile),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               value: profile.multihopEnabled,
               onChanged: (enabled) => ref.read(profilesProvider.notifier).updateProfile(
-                profile.copyWith(multihopEnabled: enabled, clearHopServerIndices: !enabled),
+                profile.copyWith(
+                  multihopEnabled: enabled,
+                  clearHopServerIndices: !enabled,
+                ),
               ),
             ),
             if (profile.multihopEnabled)
@@ -44,7 +53,7 @@ class MultihopPickerTile extends ConsumerWidget {
                     builder: (_) => _MultihopHopSheet(profile: profile),
                   ),
                   icon: const Icon(Icons.add_link_rounded, size: 18),
-                  label: const Text('Edit hop chain'),
+                  label: Text(l10n.multihopEditChain),
                 ),
               ),
           ],
@@ -53,17 +62,24 @@ class MultihopPickerTile extends ConsumerWidget {
     );
   }
 
-  String _hopSummary(Profile profile) {
-    if (!profile.multihopEnabled) return 'Route traffic through multiple servers';
-    if (profile.hopServerIndices.isEmpty) return 'Select additional hop servers';
-    final hops = profile.hopServerIndices.map((i) => 'Server ${i + 1}');
-    return 'Entry: Server ${profile.selectedServerIndex + 1} → ${hops.join(' → ')}';
+  String _hopSummary(AppLocalizations l10n, Profile profile) {
+    if (!profile.multihopEnabled) {
+      return l10n.multihopRouteMultiple;
+    }
+    if (profile.hopServerIndices.isEmpty) {
+      return l10n.multihopSelectHops;
+    }
+    final hops = profile.hopServerIndices
+        .map((i) => l10n.serverNumber(i + 1))
+        .join(' → ');
+    return l10n.multihopEntryChain(profile.selectedServerIndex + 1, hops);
   }
 }
 
 class _MultihopHopSheet extends ConsumerStatefulWidget {
   const _MultihopHopSheet({required this.profile});
   final Profile profile;
+
   @override
   ConsumerState<_MultihopHopSheet> createState() => _MultihopHopSheetState();
 }
@@ -81,23 +97,31 @@ class _MultihopHopSheetState extends ConsumerState<_MultihopHopSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Multihop chain', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              l10n.multihopChainTitle,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 12),
             FutureBuilder<List<SubscriptionServer>>(
               future: _serversFuture,
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const CircularProgressIndicator();
+                if (!snapshot.hasData) {
+                  return const CircularProgressIndicator();
+                }
                 final servers = snapshot.data!;
                 if (servers.length < 2) {
-                  return const Text('Multihop requires at least 2 servers.');
+                  return Text(l10n.multihopRequiresTwoServers);
                 }
-                final selectable = servers.where((s) => s.index != widget.profile.selectedServerIndex);
+                final selectable = servers.where(
+                  (s) => s.index != widget.profile.selectedServerIndex,
+                );
                 return Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
@@ -114,7 +138,7 @@ class _MultihopHopSheetState extends ConsumerState<_MultihopHopSheet> {
                           }
                         }),
                         title: Text(server.name),
-                        subtitle: Text('Server ${server.index + 1}'),
+                        subtitle: Text(l10n.serverNumber(server.index + 1)),
                       );
                     },
                   ),
@@ -123,7 +147,7 @@ class _MultihopHopSheetState extends ConsumerState<_MultihopHopSheet> {
             ),
             FilledButton(
               onPressed: _selectedHops.isEmpty ? null : _save,
-              child: const Text('Save chain'),
+              child: Text(l10n.multihopSaveChain),
             ),
           ],
         ),
@@ -135,16 +159,24 @@ class _MultihopHopSheetState extends ConsumerState<_MultihopHopSheet> {
     final servers = await _serversFuture;
     try {
       MultihopChain.validateProfile(
-        widget.profile.copyWith(multihopEnabled: true, hopServerIndices: _selectedHops),
+        widget.profile.copyWith(
+          multihopEnabled: true,
+          hopServerIndices: _selectedHops,
+        ),
         serverCount: servers.length,
       );
     } on MultihopChainException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
       return;
     }
     await ref.read(profilesProvider.notifier).updateProfile(
-      widget.profile.copyWith(multihopEnabled: true, hopServerIndices: List<int>.from(_selectedHops)),
+      widget.profile.copyWith(
+        multihopEnabled: true,
+        hopServerIndices: List<int>.from(_selectedHops),
+      ),
     );
     if (mounted) Navigator.of(context).pop();
   }

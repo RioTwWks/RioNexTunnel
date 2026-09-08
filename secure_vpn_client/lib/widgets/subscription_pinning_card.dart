@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/pinning_config.dart';
 import '../providers/pinning_provider.dart';
 
@@ -9,10 +10,9 @@ class SubscriptionPinningCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final config = ref.watch(pinningProvider);
     final scheme = Theme.of(context).colorScheme;
-    final locale = Localizations.localeOf(context);
-    final isRu = locale.languageCode == 'ru';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -20,16 +20,8 @@ class SubscriptionPinningCard extends ConsumerWidget {
         SwitchListTile(
           key: const ValueKey('subscription_pinning_toggle'),
           contentPadding: EdgeInsets.zero,
-          title: Text(
-            isRu
-                ? 'Проверка сертификата подписки (SPKI)'
-                : 'Subscription certificate pinning (SPKI)',
-          ),
-          subtitle: Text(
-            isRu
-                ? 'По умолчанию выключено. Проверяет только хосты с сохранёнными pin.'
-                : 'Off by default. Only hosts with saved pins are checked.',
-          ),
+          title: Text(l10n.pinningEnable),
+          subtitle: Text(l10n.pinningSubtitle),
           value: config.enabled,
           onChanged: (enabled) =>
               ref.read(pinningProvider.notifier).setEnabled(enabled),
@@ -37,9 +29,7 @@ class SubscriptionPinningCard extends ConsumerWidget {
         if (config.enabled) ...[
           const SizedBox(height: 8),
           Text(
-            isRu
-                ? 'Формат pin: sha256/<base64 SHA-256 SPKI>. При смене сертификата панели обновите pin.'
-                : 'Pin format: sha256/<base64 SHA-256 SPKI>. Update pins when the panel rotates certificates.',
+            l10n.pinningFormatHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
@@ -47,7 +37,7 @@ class SubscriptionPinningCard extends ConsumerWidget {
           const SizedBox(height: 8),
           if (config.pinsByHost.isEmpty)
             Text(
-              isRu ? 'Нет сохранённых pin.' : 'No saved pins yet.',
+              l10n.pinningNoSavedPins,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),
@@ -57,16 +47,15 @@ class SubscriptionPinningCard extends ConsumerWidget {
               (entry) => _HostPinTile(
                 host: entry.key,
                 pins: entry.value,
-                isRu: isRu,
               ),
             ),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               key: const ValueKey('add_subscription_pin_button'),
-              onPressed: () => _showAddPinDialog(context, ref, isRu: isRu),
+              onPressed: () => _showAddPinDialog(context, ref),
               icon: const Icon(Icons.add),
-              label: Text(isRu ? 'Добавить pin' : 'Add pin'),
+              label: Text(l10n.pinningAddPin),
             ),
           ),
         ],
@@ -74,11 +63,8 @@ class SubscriptionPinningCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _showAddPinDialog(
-    BuildContext context,
-    WidgetRef ref, {
-    required bool isRu,
-  }) async {
+  Future<void> _showAddPinDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final hostController = TextEditingController();
     final pinController = TextEditingController();
     final formKey = GlobalKey<FormState>();
@@ -87,7 +73,7 @@ class SubscriptionPinningCard extends ConsumerWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(isRu ? 'Добавить SPKI pin' : 'Add SPKI pin'),
+          title: Text(l10n.pinningAddSpkiTitle),
           content: Form(
             key: formKey,
             child: Column(
@@ -96,12 +82,12 @@ class SubscriptionPinningCard extends ConsumerWidget {
                 TextFormField(
                   controller: hostController,
                   decoration: InputDecoration(
-                    labelText: isRu ? 'Хост подписки' : 'Subscription host',
+                    labelText: l10n.pinningHost,
                     hintText: 'panel.example.com',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return isRu ? 'Укажите хост' : 'Enter a host';
+                      return l10n.pinningHostRequired;
                     }
                     return null;
                   },
@@ -110,15 +96,13 @@ class SubscriptionPinningCard extends ConsumerWidget {
                 TextFormField(
                   controller: pinController,
                   decoration: InputDecoration(
-                    labelText: isRu ? 'SPKI pin' : 'SPKI pin',
+                    labelText: l10n.pinningSpki,
                     hintText: 'sha256/AAAAAAAA...',
                   ),
                   validator: (value) {
                     if (value == null ||
                         !SubscriptionSpki.isValidPinFormat(value)) {
-                      return isRu
-                          ? 'Нужен base64 SHA-256 SPKI (32 байта)'
-                          : 'Expected base64 SHA-256 SPKI (32 bytes)';
+                      return l10n.pinningSpkiBytesRequired;
                     }
                     return null;
                   },
@@ -129,7 +113,7 @@ class SubscriptionPinningCard extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: Text(isRu ? 'Отмена' : 'Cancel'),
+              child: Text(l10n.actionCancel),
             ),
             FilledButton(
               onPressed: () {
@@ -137,7 +121,7 @@ class SubscriptionPinningCard extends ConsumerWidget {
                   Navigator.of(context).pop(true);
                 }
               },
-              child: Text(isRu ? 'Сохранить' : 'Save'),
+              child: Text(l10n.actionSave),
             ),
           ],
         );
@@ -160,15 +144,14 @@ class _HostPinTile extends ConsumerWidget {
   const _HostPinTile({
     required this.host,
     required this.pins,
-    required this.isRu,
   });
 
   final String host;
   final List<String> pins;
-  final bool isRu;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -186,7 +169,7 @@ class _HostPinTile extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: isRu ? 'Удалить хост' : 'Remove host',
+                  tooltip: l10n.pinningRemoveHost,
                   onPressed: () =>
                       ref.read(pinningProvider.notifier).removeHost(host),
                   icon: Icon(Icons.delete_outline, color: scheme.error),
@@ -202,7 +185,7 @@ class _HostPinTile extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 trailing: IconButton(
-                  tooltip: isRu ? 'Удалить pin' : 'Remove pin',
+                  tooltip: l10n.pinningRemovePin,
                   onPressed: () => ref.read(pinningProvider.notifier).removePin(
                     host: host,
                     pin: pin,

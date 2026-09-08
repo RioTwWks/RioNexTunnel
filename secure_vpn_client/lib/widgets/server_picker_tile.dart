@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/profile.dart';
 import '../models/subscription_server.dart';
 import '../providers/vpn_providers.dart';
@@ -14,13 +15,14 @@ class ServerPickerTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final label = profile.autoSelectBestServer
         ? (profile.selectedServerName != null
-              ? 'Automatic · ${profile.selectedServerName}'
-              : 'Automatic (best latency)')
+              ? l10n.configAutomaticWithServer(profile.selectedServerName!)
+              : l10n.serverAutomatic)
         : (profile.selectedServerName ??
-              'Server ${profile.selectedServerIndex + 1}');
+              l10n.serverNumber(profile.selectedServerIndex + 1));
 
     return Material(
       color: scheme.surfaceContainerLow,
@@ -46,7 +48,7 @@ class ServerPickerTile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Server',
+                      l10n.serverPickerTitle,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -216,12 +218,12 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
     }
   }
 
-  String _latencyLabel(int? ms) {
+  String _latencyLabel(AppLocalizations l10n, int? ms) {
     if (ms == null) {
       return '';
     }
     if (ms < 0) {
-      return 'timeout';
+      return l10n.serverLatencyTimeout;
     }
     return '${ms}ms';
   }
@@ -240,6 +242,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.7;
     final autoSelected = widget.profile.autoSelectBestServer;
@@ -256,7 +259,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Select server',
+                      l10n.serverSelectTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -273,13 +276,13 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                     ),
                   IconButton(
                     key: const ValueKey('server_picker_probe'),
-                    tooltip: 'Test latency (URL test)',
+                    tooltip: l10n.serverProbeLatency,
                     onPressed: _probing ? null : _probeOnly,
                     icon: const Icon(Icons.network_ping_outlined),
                   ),
                   IconButton(
                     key: const ValueKey('server_picker_refresh'),
-                    tooltip: 'Refresh list',
+                    tooltip: l10n.serverRefreshList,
                     onPressed: _probing
                         ? null
                         : () {
@@ -320,7 +323,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                   }
                   final servers = snapshot.data ?? const [];
                   if (servers.isEmpty) {
-                    return const Center(child: Text('No servers found'));
+                    return Center(child: Text(l10n.serverNoServers));
                   }
 
                   final sorted = List<SubscriptionServer>.from(servers);
@@ -354,7 +357,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                           !autoSelected &&
                           server.index == widget.profile.selectedServerIndex;
                       final latency = _latencies[server.index];
-                      final latencyText = _latencyLabel(latency);
+                      final latencyText = _latencyLabel(l10n, latency);
                       final latencyColor = _latencyColor(context, latency);
 
                       return ListTile(
@@ -372,8 +375,11 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
                         title: Text(server.name),
                         subtitle: Text(
                           latencyText.isEmpty
-                              ? 'Server ${server.index + 1}'
-                              : 'Server ${server.index + 1} · $latencyText',
+                              ? l10n.serverNumber(server.index + 1)
+                              : l10n.serverOptionWithLatency(
+                                  server.index + 1,
+                                  latencyText,
+                                ),
                         ),
                         trailing: latencyText.isEmpty
                             ? null
@@ -396,7 +402,7 @@ class _ServerPickerSheetState extends ConsumerState<_ServerPickerSheet> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Text(
-                  'Automatic: best server is re-tested on each Connect',
+                  l10n.serverAutoRetest,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
@@ -425,10 +431,11 @@ class _AutomaticServerTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final subtitle = lastServerName != null
-        ? 'Last: $lastServerName · re-tested on Connect'
-        : 'Pick the lowest-latency server on Connect';
+        ? l10n.serverAutoLastServer(lastServerName!)
+        : l10n.serverAutoPickLatency;
 
     return ListTile(
       key: const ValueKey('server_picker_auto'),
@@ -446,7 +453,7 @@ class _AutomaticServerTile extends StatelessWidget {
         selected ? Icons.radio_button_checked : Icons.speed_rounded,
         color: selected ? scheme.primary : scheme.secondary,
       ),
-      title: const Text('Automatic'),
+      title: Text(l10n.serverAutomaticLabel),
       subtitle: Text(subtitle),
       trailing: probing
           ? const SizedBox(
