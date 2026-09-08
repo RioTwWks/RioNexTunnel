@@ -76,7 +76,7 @@ flutter build linux --debug
 | Android | VPN | Scaffold + fork patches; needs device test |
 | iOS | VPN | Scaffold + docs; needs device test |
 | Windows | Proxy | **Implemented** — desktop plugin mirrors Linux (cores, credentials, system proxy) |
-| macOS | Proxy | **Implemented** — credentials channel, HTTP 1081 system proxy; needs device verify |
+| macOS | Proxy | **Implemented** — credentials channel, HTTP system proxy, browser helper native messaging; needs device E2E verify |
 
 ## Related docs
 

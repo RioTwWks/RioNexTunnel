@@ -40,6 +40,7 @@
 |-----------|------|
 | Бинарник (установленный) | `~/Library/Application Support/V2rayBox/working/native_host/secure_vpn_native_host` |
 | Chrome manifest | `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Chromium manifest | `~/Library/Application Support/Chromium/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
 | Edge manifest | `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
 | Firefox manifest | `~/Library/Application Support/Mozilla/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
 

@@ -164,6 +164,18 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         }
         enableSystemProxy(port: SecureVpnCredentials.httpProxyPort)
     }
+
+    private func publishBrowserHelperCredentialsIfNeeded() {
+        guard configOptionsSetSystemProxy(), !SecureVpnCredentials.username.isEmpty else {
+            return
+        }
+        _ = NativeMessaging.publishCredentials(
+            host: "127.0.0.1",
+            port: SecureVpnCredentials.httpProxyPort,
+            username: SecureVpnCredentials.username,
+            password: SecureVpnCredentials.password
+        )
+    }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
@@ -333,11 +345,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             startWithJson(configJson: configJson, name: name, args: args, result: result)
             
         case "get_browser_helper_status":
-            result([
-                "native_host_installed": false,
-                "chrome_manifest_installed": false,
-                "firefox_manifest_installed": false,
-            ] as [String: Any])
+            result(NativeMessaging.getBrowserHelperStatus())
 
         case "set_kill_switch_mode":
             if let mode = call.arguments as? String {
@@ -488,6 +496,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 try fileManager.createDirectory(at: workingDir, withIntermediateDirectories: true)
                 try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
                 self.ensureXrayGeoAssets()
+                _ = NativeMessaging.installHost()
+                _ = NativeMessaging.installManifests()
                 
                 DispatchQueue.main.async {
                     result("")
@@ -565,6 +575,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 if success {
                     self.isRunning = true
                     self.enableSystemProxyIfConfigured()
+                    self.publishBrowserHelperCredentialsIfNeeded()
                     self.startCoreMonitor()
                     
                     DispatchQueue.main.async {
@@ -648,6 +659,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                     self.isRunning = false
                     self.stopCoreMonitor()
                     self.disableSystemProxy()
+                    _ = NativeMessaging.clearCredentials()
                     self.statusEventSink?(["status": "Stopped"])
                 }
             }
@@ -679,6 +691,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             
             self.stopCore()
             self.disableSystemProxy()
+            _ = NativeMessaging.clearCredentials()
             SecureVpnCredentials.clearSession()
             V2rayBoxPlugin.wipeSensitiveConfigFiles()
             
@@ -726,6 +739,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 if success {
                     self.isRunning = true
                     self.enableSystemProxyIfConfigured()
+                    self.publishBrowserHelperCredentialsIfNeeded()
                     self.startCoreMonitor()
                     
                     DispatchQueue.main.async {
@@ -771,6 +785,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 if success {
                     self.isRunning = true
                     self.enableSystemProxyIfConfigured()
+                    self.publishBrowserHelperCredentialsIfNeeded()
                     self.startCoreMonitor()
                     
                     DispatchQueue.main.async {

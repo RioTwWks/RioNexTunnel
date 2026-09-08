@@ -4,7 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:secure_vpn_client/services/panel_manager.dart';
+import 'package:secure_vpn_client/services/panel_token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+PanelManager _manager({
+  required SharedPreferences prefs,
+  http.Client? httpClient,
+  InMemoryPanelTokenStorage? tokenStorage,
+}) =>
+    PanelManager(
+      preferences: prefs,
+      httpClient: httpClient,
+      tokenStorage: tokenStorage ?? InMemoryPanelTokenStorage(),
+    );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +30,7 @@ void main() {
     });
 
     test('is no-op when panel is not configured', () async {
-      final manager = PanelManager(preferences: prefs);
+      final manager = _manager(prefs: prefs);
       await manager.load();
 
       expect(manager.isActive, isFalse);
@@ -35,9 +47,11 @@ void main() {
       expect(prefs.getString('panel_stats_queue_v1'), isNull);
     });
 
-    test('register stores device token and subscription url', () async {
-      final manager = PanelManager(
-        preferences: prefs,
+    test('register stores device token in secure storage', () async {
+      final tokenStorage = InMemoryPanelTokenStorage();
+      final manager = _manager(
+        prefs: prefs,
+        tokenStorage: tokenStorage,
         httpClient: MockClient((request) async {
           expect(request.url.path, '/api/client/register');
           expect(request.headers['X-API-Version'], 'v1');
@@ -63,14 +77,19 @@ void main() {
       expect(result.deviceToken, 'dev-token-abc');
       expect(result.subscriptionUrl, 'https://panel.example/sub/token');
       expect(manager.settings.deviceToken, 'dev-token-abc');
+      expect(tokenStorage.token, 'dev-token-abc');
+      final persisted = jsonDecode(prefs.getString('panel_settings_v1')!) as Map;
+      expect(persisted.containsKey('deviceToken'), isFalse);
       expect(manager.settings.subscriptionUrl, 'https://panel.example/sub/token');
       expect(manager.syncStatus.name, 'synced');
     });
 
     test('syncConfig skips rewrite when config_hash unchanged', () async {
       var configCalls = 0;
-      final manager = PanelManager(
-        preferences: prefs,
+      final tokenStorage = InMemoryPanelTokenStorage()..token = 'dev-token';
+      final manager = _manager(
+        prefs: prefs,
+        tokenStorage: tokenStorage,
         httpClient: MockClient((request) async {
           if (request.url.path == '/api/client/config') {
             configCalls++;
@@ -103,8 +122,10 @@ void main() {
     });
 
     test('syncConfig caches config when hash changes', () async {
-      final manager = PanelManager(
-        preferences: prefs,
+      final tokenStorage = InMemoryPanelTokenStorage()..token = 'dev-token';
+      final manager = _manager(
+        prefs: prefs,
+        tokenStorage: tokenStorage,
         httpClient: MockClient((request) async {
           return http.Response(
             jsonEncode({
@@ -137,8 +158,10 @@ void main() {
 
     test('flushStats uploads queued entries', () async {
       String? postedBody;
-      final manager = PanelManager(
-        preferences: prefs,
+      final tokenStorage = InMemoryPanelTokenStorage()..token = 'dev-token';
+      final manager = _manager(
+        prefs: prefs,
+        tokenStorage: tokenStorage,
         httpClient: MockClient((request) async {
           if (request.url.path == '/api/client/stats') {
             postedBody = request.body;

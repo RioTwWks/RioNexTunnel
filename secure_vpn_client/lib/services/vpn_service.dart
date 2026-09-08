@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../constants/panel_constants.dart';
 import '../models/connection_detail.dart';
 import '../models/credentials.dart';
 import '../models/engine_preference.dart';
@@ -20,6 +21,7 @@ import '../models/subscription_server.dart';
 import '../models/transport_stack.dart';
 import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
+import '../utils/amnezia_wg_config.dart';
 import '../utils/config_parser.dart';
 import '../utils/core_version_gate.dart';
 import '../utils/engine_auto_selector.dart';
@@ -381,6 +383,13 @@ class VpnService {
       return _resolveMultihopProfileConfig(profile);
     }
 
+    if (contentOverride == null && profile.name == kPanelProfileName) {
+      final panelJson = await _resolvePanelCachedConfigJson();
+      if (panelJson != null) {
+        return _rawContentToJsonConfig(profile, panelJson);
+      }
+    }
+
     var linkForBuild = profile.configLink.trim();
     if (profile.type == ProfileType.link &&
         profile.censorshipModeEnabled &&
@@ -404,6 +413,33 @@ class VpnService {
             : linkForBuild);
 
     return _rawContentToJsonConfig(profile, raw);
+  }
+
+  Future<String?> _resolvePanelCachedConfigJson() async {
+    final manager = _panelManager;
+    if (manager == null || !manager.isActive) {
+      return null;
+    }
+
+    var cached = await manager.loadCachedConfig();
+    if (cached != null) {
+      return jsonEncode(cached);
+    }
+
+    try {
+      final synced = await manager.syncConfig();
+      cached = synced?.configJson ?? await manager.loadCachedConfig();
+      if (cached != null) {
+        return jsonEncode(cached);
+      }
+    } catch (_) {
+      cached = await manager.loadCachedConfig();
+      if (cached != null) {
+        return jsonEncode(cached);
+      }
+    }
+
+    return null;
   }
 
   Future<String> _resolveMultihopProfileConfig(Profile profile) async {
@@ -692,6 +728,8 @@ class VpnService {
     if (_engine == VpnEngine.xray) {
       await _warnIfXrayTooOldForXhttp(rawConfig);
     }
+
+    _assertOfficialCoreSupportsAwg(rawConfig);
 
     if (_engine == VpnEngine.xray &&
         ConfigParser.configRequiresXrayGeoRules(rawConfig) &&
@@ -992,6 +1030,11 @@ class VpnService {
       return _credentialService.generate();
     }
     return _credentialService.generate();
+  }
+
+  void _assertOfficialCoreSupportsAwg(String configOrContent) {
+    if (!AmneziaWgConfig.contentUsesAwg(configOrContent)) return;
+    throw StateError(AmneziaWgConfig.unsupportedCoreMessage());
   }
 
   Future<void> _warnIfXrayTooOldForXhttp(String configOrContent) async {

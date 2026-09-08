@@ -3,7 +3,6 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 import '../models/kill_switch_mode.dart';
-import '../services/app_log.dart';
 
 class KillSwitchService {
   KillSwitchService(this._v2rayBox);

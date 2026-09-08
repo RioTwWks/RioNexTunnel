@@ -70,11 +70,28 @@ RioNexTunnel поддерживает обычные ссылки VLESS/VMess/Tr
 
 `path`, `host` и прочие ключи XHTTP из подписки сохраняются. Отсутствующий или `auto` mode приводится к **`stream-one`** (как у `vless://` через `LinkConfigBuilder`).
 
+## AmneziaWG
+
+AmneziaWG (AWG) — WireGuard с параметрами обфускации от DPI (`jc`, `jmin`, `jmax`, `s1`–`s4`, `h1`–`h4`, опционально `i1`–`i5`). RioNexTunnel разбирает:
+
+- ссылки `awg://` (и `wg://` / `wireguard://`, если в query есть AWG-параметры)
+- JSON подписки sing-box с AWG-полями на outbound `type: wireguard`
+
+**Только официальные ядра:** поставляемый [SagerNet/sing-box](https://github.com/SagerNet/sing-box) из `scripts/fetch_cores.sh` **пока не** реализует AWG-обфускацию. Клиент строит корректный AWG outbound JSON для подписок и цепочки fallback, но **подключение завершается с ошибкой** до появления поддержки в upstream sing-box. Не используйте неподдерживаемые AWG-форки ядра.
+
+Пример ссылки:
+
+```
+awg://PRIVATE_KEY@host:51820?publickey=SERVER_KEY&address=10.8.1.2/32&jc=4&jmin=40&jmax=70&s1=0&s2=0&h1=...&h2=...&h3=...&h4=...
+```
+
+Для AWG нужен движок **sing-box** (Авто или sing-box). MTU для AWG ограничивается **1280**.
+
 ## Устранение неполадок
 
 | Симптом | Что попробовать |
 |---------|-----------------|
-| Wi‑Fi ок, мобильный оператор нет | **mux**; узел XHTTP или AmneziaWG у провайдера |
+| Wi‑Fi ок, мобильный оператор нет | **mux**; узел XHTTP или **AmneziaWG** (`awg://`) у провайдера |
 | Ошибки XHTTP | На сервере `mode: stream-one`, не `auto` |
 | Ошибки geo / RU direct | `scripts/fetch_cores.sh` или отключить пресет |
 | iOS + XHTTP+REALITY | Узел TCP+REALITY+Vision из той же подписки |

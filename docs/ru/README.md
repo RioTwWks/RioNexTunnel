@@ -93,8 +93,21 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Выбор сервера из списка подписки
 - [x] Автовыбор сервера с лучшей задержкой
 - [x] Автовыбор ядра (доступность / формат / fallback connect)
-- [ ] Полноценный E2E на Android / iOS / Windows / macOS
+- [ ] Полноценный E2E на Android / iOS / Windows / macOS — см. [E2E на устройствах](#e2e-проверка-на-устройствах)
 - [x] CI: `flutter analyze` + `flutter test` + Linux `security_probe.sh`
+- [x] macOS browser helper — native messaging host как на Linux/Windows
+
+### E2E проверка на устройствах
+
+Ручной sign-off по [platform parity checklist](platform_parity_checklist.md). Обновляйте таблицу после успешного smoke на физическом устройстве.
+
+| Платформа | Режим | Код | E2E на устройстве | Browser helper | Заметки |
+|-----------|-------|-----|-------------------|----------------|---------|
+| Linux | Proxy | ✅ | ✅ Проверено | ✅ | Эталон; CI security probe |
+| Windows | Proxy | ✅ | ⏳ Ожидает | ✅ | CI job `windows-build` |
+| macOS | Proxy | ✅ | ⏳ Ожидает | ✅ | Native host при первом `setup()` |
+| Android | VPN (TUN) | ✅ | ⏳ Ожидает | N/A | Нужно физическое устройство |
+| iOS | VPN (TUN) | ✅ | ⏳ Ожидает | N/A | PacketTunnel + устройство |
 
 ---
 

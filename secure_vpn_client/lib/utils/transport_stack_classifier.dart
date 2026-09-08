@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../models/transport_stack.dart';
 import '../models/subscription_server.dart';
+import 'amnezia_wg_config.dart';
 import 'link_config_builder.dart';
 import 'transport_presets.dart';
 
@@ -75,8 +76,13 @@ class TransportStackClassifier {
       final flow = (params['flow'] ?? '').toLowerCase();
       final scheme = uri.scheme.toLowerCase();
 
-      if (scheme == 'wg' || scheme == 'wireguard') {
+      if (AmneziaWgConfig.isAwgScheme(scheme) ||
+          ((scheme == 'wg' || scheme == 'wireguard') &&
+              AmneziaWgConfig.linkHasAwgParams(params))) {
         return TransportStackKind.amneziaWg;
+      }
+      if (scheme == 'wg' || scheme == 'wireguard') {
+        return TransportStackKind.other;
       }
       if (type == 'xhttp' && security == 'reality') {
         return TransportStackKind.xhttpReality;
@@ -147,7 +153,10 @@ class TransportStackClassifier {
   ) {
     final type = outbound['type']?.toString().toLowerCase() ?? '';
     if (type == 'wireguard') {
-      return TransportStackKind.amneziaWg;
+      if (AmneziaWgConfig.outboundHasAwgFields(outbound)) {
+        return TransportStackKind.amneziaWg;
+      }
+      return TransportStackKind.other;
     }
     final tls = outbound['tls'];
     var security = '';
@@ -239,7 +248,7 @@ class TransportStackClassifier {
   static int _defaultPort(String scheme) {
     return switch (scheme.toLowerCase()) {
       'trojan' || 'vless' || 'vmess' => 443,
-      'wg' || 'wireguard' => 51820,
+      'wg' || 'wireguard' || 'awg' => 51820,
       _ => 443,
     };
   }

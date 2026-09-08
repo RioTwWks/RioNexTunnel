@@ -93,8 +93,21 @@ Secure-Cross-Platform-VPN-Client/
 - [x] Server picker from subscription list
 - [x] Auto-select best server by latency
 - [x] Auto engine selection (availability / format / connect fallback)
-- [ ] Full E2E on Android / iOS / Windows / macOS
+- [ ] Full E2E on Android / iOS / Windows / macOS — see [E2E device verification](#e2e-device-verification) below
 - [x] CI: `flutter analyze` + `flutter test` + Linux `security_probe.sh`
+- [x] macOS browser helper — native messaging host parity with Linux/Windows
+
+### E2E device verification
+
+Manual sign-off per [platform parity checklist](platform_parity_checklist.md). Update this table when a platform passes full smoke on a physical device.
+
+| Platform | Mode | Code | Device E2E | Browser helper | Notes |
+|----------|------|------|------------|----------------|-------|
+| Linux | Proxy | ✅ | ✅ Verified | ✅ | Reference platform; CI security probe |
+| Windows | Proxy | ✅ | ⏳ Pending | ✅ | CI `windows-build` job |
+| macOS | Proxy | ✅ | ⏳ Pending | ✅ | Native host on first `setup()` |
+| Android | VPN (TUN) | ✅ | ⏳ Pending | N/A | Physical device required |
+| iOS | VPN (TUN) | ✅ | ⏳ Pending | N/A | PacketTunnel + device required |
 
 ---
 
