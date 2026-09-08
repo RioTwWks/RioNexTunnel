@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/panel_sync_interval.dart';
 import '../providers/panel_providers.dart';
 import '../services/panel_manager.dart';
 import '../l10n/app_localizations.dart';
@@ -117,6 +118,8 @@ class _PanelSettingsSectionState extends ConsumerState<PanelSettingsSection> {
                   ),
               ],
             ),
+            const SizedBox(height: 12),
+            if (settings.isConfigured) DropdownButtonFormField<PanelSyncInterval>(initialValue: settings.syncInterval, decoration: InputDecoration(labelText: l10n.panelSyncInterval), items: PanelSyncInterval.values.map((i)=>DropdownMenuItem(value:i,child:Text(i.label()))).toList(), onChanged: panel.busy?null:(v) async { if(v!=null) await ref.read(panelStateProvider.notifier).setSyncInterval(v); }),
             const SizedBox(height: 12),
             const PanelStatusCard(),
           ],

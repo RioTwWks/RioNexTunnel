@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:v2ray_box/v2ray_box.dart';
 
+import '../constants/panel_constants.dart';
 import '../models/panel_settings.dart';
+import '../models/panel_sync_interval.dart';
 import '../models/panel_sync_status.dart';
 import '../models/profile.dart';
 import '../services/panel_command_service.dart';
@@ -13,7 +15,7 @@ import 'vpn_providers.dart';
 
 export 'panel_manager_provider.dart';
 
-const _panelProfileName = 'RioNexGate';
+const _panelProfileName = kPanelProfileName;
 
 final panelCommandServiceProvider = Provider<PanelCommandService>((ref) {
   final service = PanelCommandService(
@@ -111,7 +113,7 @@ class PanelStateNotifier extends StateNotifier<PanelState> {
     try {
       final result = await _manager.register(pairingToken: pairingToken);
       await _upsertPanelProfile(result.subscriptionUrl);
-      await _manager.syncConfig();
+      await _applySyncResult(await _manager.syncConfig());
       await _manager.flushStats();
       _refreshFromManager();
     } finally {
@@ -125,14 +127,46 @@ class PanelStateNotifier extends StateNotifier<PanelState> {
     }
     state = state.copyWith(busy: true);
     try {
-      final result = await _manager.syncConfig(force: true);
-      if (result?.subscriptionUrl != null) {
-        await _upsertPanelProfile(result!.subscriptionUrl);
-      }
+      await _applySyncResult(await _manager.syncConfig(force: true), reconnect: true);
       await _manager.flushStats();
       _refreshFromManager();
     } finally {
       state = state.copyWith(busy: false);
+    }
+  }
+
+  Future<void> setSyncInterval(PanelSyncInterval interval) async {
+    await _manager.setSyncInterval(interval);
+    _refreshFromManager();
+  }
+
+  Future<void> applyScheduledSync() async {
+    if (!_manager.isActive) {
+      return;
+    }
+    try {
+      await _applySyncResult(
+        await _manager.syncConfig(),
+        reconnect: true,
+      );
+      _refreshFromManager();
+    } catch (_) {
+      _refreshFromManager();
+    }
+  }
+
+  Future<void> _applySyncResult(
+    PanelConfigResult? result, {
+    bool reconnect = false,
+  }) async {
+    if (result == null) {
+      return;
+    }
+    if (result.subscriptionUrl != null) {
+      await _upsertPanelProfile(result.subscriptionUrl);
+    }
+    if (reconnect && result.configJson != null) {
+      await _reconnectPanelProfileIfConnected();
     }
   }
 
@@ -248,28 +282,81 @@ class PanelStateNotifier extends StateNotifier<PanelState> {
 final panelStatsLifecycleProvider = Provider<void>((ref) {
   ref.watch(panelBootstrapProvider);
   VpnStatus? previous;
-  ref.listen<AsyncValue<VpnStatus>>(vpnStatusProvider, (old, next) async {
+  Timer? statsTimer;
+
+  Future<void> flushStats(String status) async {
+    final manager = ref.read(panelManagerProvider);
+    if (!manager.isActive) {
+      return;
+    }
+    final stats = ref.read(vpnStatsProvider).value;
+    if (stats != null) {
+      await manager.enqueueStats(
+        PanelStatsPayload(
+          sessionId: ref.read(panelSessionIdProvider),
+          bytesIn: stats.downlinkTotal,
+          bytesOut: stats.uplinkTotal,
+          status: status,
+        ),
+      );
+    }
+    await manager.flushStats();
+  }
+
+  ref.listen<AsyncValue<VpnStatus>>(vpnStatusProvider, (_, next) async {
     final status = next.value;
+    if (status == VpnStatus.started && previous != VpnStatus.started) {
+      statsTimer?.cancel();
+      statsTimer = Timer.periodic(kPanelStatsFlushInterval, (_) {
+        if (ref.read(vpnStatusProvider).value == VpnStatus.started) {
+          unawaited(flushStats('active'));
+        }
+      });
+    }
     if (previous == VpnStatus.started && status == VpnStatus.stopped) {
-      final manager = ref.read(panelManagerProvider);
-      if (!manager.isActive) {
-        return;
+      statsTimer?.cancel();
+      if (ref.read(panelManagerProvider).isActive) {
+        await flushStats('stopped');
       }
-      final stats = ref.read(vpnStatsProvider).value;
-      if (stats != null) {
-        await manager.enqueueStats(
-          PanelStatsPayload(
-            sessionId: ref.read(panelSessionIdProvider),
-            bytesIn: stats.downlinkTotal,
-            bytesOut: stats.uplinkTotal,
-            status: 'stopped',
-          ),
-        );
-      }
-      await manager.flushStats();
     }
     previous = status;
   });
+
+  ref.onDispose(() => statsTimer?.cancel());
+});
+
+final panelPeriodicSyncProvider = Provider<void>((ref) {
+  ref.watch(panelBootstrapProvider);
+  Timer? syncTimer;
+
+  void startTimer(PanelSettings settings) {
+    syncTimer?.cancel();
+    if (!settings.isConfigured) {
+      return;
+    }
+    syncTimer = Timer.periodic(settings.syncIntervalDuration, (_) {
+      unawaited(ref.read(panelStateProvider.notifier).applyScheduledSync());
+    });
+  }
+
+  ref.listen<PanelState>(panelStateProvider, (previous, next) {
+    if (!next.settings.isConfigured) {
+      syncTimer?.cancel();
+      return;
+    }
+    final wasConfigured = previous?.settings.isConfigured ?? false;
+    if (!wasConfigured ||
+        previous!.settings.syncInterval != next.settings.syncInterval) {
+      startTimer(next.settings);
+    }
+  });
+
+  final initial = ref.read(panelStateProvider).settings;
+  if (initial.isConfigured) {
+    startTimer(initial);
+  }
+
+  ref.onDispose(() => syncTimer?.cancel());
 });
 
 final panelCommandsLifecycleProvider = Provider<void>((ref) {
@@ -277,25 +364,25 @@ final panelCommandsLifecycleProvider = Provider<void>((ref) {
   final manager = ref.watch(panelManagerProvider);
   final commandService = ref.watch(panelCommandServiceProvider);
 
+  PanelCommandHandlers handlers() => (
+    onRefreshConfig: () =>
+        ref.read(panelStateProvider.notifier).handleRemoteRefreshConfig(),
+    onDisconnect: () =>
+        ref.read(panelStateProvider.notifier).handleRemoteDisconnect(),
+    onSwitchServer: ({serverIndex, serverName}) => ref
+        .read(panelStateProvider.notifier)
+        .handleRemoteSwitchServer(
+          serverIndex: serverIndex,
+          serverName: serverName,
+        ),
+  );
+
   if (!manager.isActive) {
     unawaited(commandService.stop());
     return;
   }
 
-  unawaited(
-    commandService.start((
-      onRefreshConfig: () =>
-          ref.read(panelStateProvider.notifier).handleRemoteRefreshConfig(),
-      onDisconnect: () =>
-          ref.read(panelStateProvider.notifier).handleRemoteDisconnect(),
-      onSwitchServer: ({serverIndex, serverName}) => ref
-          .read(panelStateProvider.notifier)
-          .handleRemoteSwitchServer(
-            serverIndex: serverIndex,
-            serverName: serverName,
-          ),
-    )),
-  );
+  unawaited(commandService.start(handlers()));
 
   ref.onDispose(() {
     unawaited(commandService.stop());
@@ -307,18 +394,7 @@ final panelCommandsLifecycleProvider = Provider<void>((ref) {
     if (wasActive && !isActive) {
       await commandService.stop();
     } else if (!wasActive && isActive) {
-      await commandService.start((
-        onRefreshConfig: () =>
-            ref.read(panelStateProvider.notifier).handleRemoteRefreshConfig(),
-        onDisconnect: () =>
-            ref.read(panelStateProvider.notifier).handleRemoteDisconnect(),
-        onSwitchServer: ({serverIndex, serverName}) => ref
-            .read(panelStateProvider.notifier)
-            .handleRemoteSwitchServer(
-              serverIndex: serverIndex,
-              serverName: serverName,
-            ),
-      ));
+      await commandService.start(handlers());
     }
   });
 });

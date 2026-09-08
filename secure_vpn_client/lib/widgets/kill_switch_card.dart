@@ -1,8 +1,12 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/kill_switch_mode.dart';
 import '../providers/kill_switch_provider.dart';
+import '../providers/per_app_proxy_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/animated_entrance.dart';
 
@@ -13,7 +17,12 @@ class KillSwitchCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final mode = ref.watch(killSwitchModeProvider);
+    final perAppProxy = ref.watch(perAppProxyProvider);
     final scheme = Theme.of(context).colorScheme;
+    final androidVpn = !kIsWeb && Platform.isAndroid;
+    final iosVpn = !kIsWeb && Platform.isIOS;
+    final desktopProxy =
+        !kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS);
 
     return FadeSlideIn(
       delay: const Duration(milliseconds: 105),
@@ -54,15 +63,12 @@ class KillSwitchCard extends ConsumerWidget {
                     value: KillSwitchMode.adaptive,
                     label: Text(l10n.killSwitchAdaptive),
                     icon: const Icon(Icons.apps_outlined, size: 18),
-                    enabled: false,
                   ),
                 ],
                 onSelectionChanged: (selection) {
-                  final picked = selection.first;
-                  if (picked == KillSwitchMode.adaptive) {
-                    return;
-                  }
-                  ref.read(killSwitchModeProvider.notifier).setMode(picked);
+                  ref
+                      .read(killSwitchModeProvider.notifier)
+                      .setMode(selection.first);
                 },
                 selected: {mode},
               ),
@@ -74,13 +80,53 @@ class KillSwitchCard extends ConsumerWidget {
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.info_outline, color: scheme.primary),
-                title: Text(l10n.killSwitchAdaptiveTitle),
-                subtitle: Text(l10n.killSwitchAdaptiveSubtitle),
-                dense: true,
-              ),
+              if (mode == KillSwitchMode.adaptive) ...[
+                Text(
+                  l10n.killSwitchAdaptiveDesc,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (desktopProxy) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.killSwitchAdaptiveDesktopNote,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.error,
+                    ),
+                  ),
+                ],
+                if (iosVpn) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.killSwitchAdaptiveIosNote,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (androidVpn &&
+                    perAppProxy.isEnabled &&
+                    perAppProxy.selectedPackages.isEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.killSwitchAdaptiveNoApps,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: scheme.error,
+                    ),
+                  ),
+                ],
+                if (androidVpn) ...[
+                  const SizedBox(height: 4),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.tune_outlined, color: scheme.primary),
+                    title: Text(l10n.killSwitchAdaptiveSplitTunnelLink),
+                    subtitle: Text(l10n.killSwitchAdaptiveSubtitle),
+                    dense: true,
+                  ),
+                ],
+              ],
             ],
           ),
         ),

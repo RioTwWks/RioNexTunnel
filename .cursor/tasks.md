@@ -90,8 +90,9 @@ Code-complete across targets; device E2E steps: [docs/en/platform_parity_checkli
 - [x] iOS plugin: credentials channel, `get_core_info`, config persist/wipe, sing-box only
 - [x] iOS app: PacketTunnel target + Runner entitlements (`scripts/setup_ios_packet_tunnel.py`)
 - [x] Dart: `engine_auto_selector` iOS → sing-box heuristic
-- [x] E2E smoke tests documented per platform (manual on device)
+- [x] E2E smoke tests documented per platform (manual on device); status table in `docs/en/README.md`
 - [x] Windows browser helper (native messaging + extension) — registry manifests for Chrome/Edge, file manifest for Firefox (#82)
+- [x] macOS browser helper — native messaging host + Chrome/Chromium/Edge/Firefox manifests (P4 Agent E)
 
 ---
 
@@ -102,6 +103,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### Engineering base
 
 - [x] CI: `flutter analyze`, `flutter test` on push (`.github/workflows/ci.yml`)
+- [x] Windows desktop: `flutter build windows` job on `windows-latest` (PR + main)
 - [x] Auto-run `security_probe.sh` in CI when Linux integration test connects (`linux-security-probe` job + `scripts/ci_security_probe_linux.sh`)
 - [x] Fail closed if geo assets missing and config contains geosite/geoip rules (`VpnService` + `ConfigParser.configRequiresXrayGeoRules`)
 - [x] Audit sing-box `mixed` / deprecated DNS paths on mobile VPN mode (`docs/en/mobile_vpn_config.md`)
@@ -128,7 +130,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 
 - [x] Architecture design — separate behavior for Proxy mode (desktop) vs TUN mode (mobile)
 - [x] Strict mode — block all outbound internet when core/tunnel is down
-- [ ] Adaptive mode — block only selected apps (per-app) — deferred for Agent B split tunneling
+- [x] Adaptive mode — block only selected apps (per-app) via split tunnel list (Android TUN)
 - [x] Linux — iptables/nftables or NetworkManager firewall rules; remove on clean disconnect
 - [x] Android/iOS — VPNService / NEPacketTunnelProvider integration (block non-VPN traffic)
 - [x] Windows/macOS — WFP / pf or equivalent for proxy-mode fallback
@@ -146,7 +148,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [x] Android — per-app via `VpnService.Builder.addAllowedApplication` / `addDisallowedApplication`
 - [x] iOS — document NE limitations; per-app split tunneling is limited on iOS
 - [x] Desktop proxy mode — document that split tunneling is OS/app-level, not TUN
-- [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan
+- [ ] Linux TUN (if added) — policy routing / cgroup + no bypass via localhost scan — **deferred** (documented in `docs/en/split_tunneling.md`; desktop uses proxy mode only)
 - [x] UI — installed app list with toggles (mobile) or desktop warning
 - [x] Security — no bypass via unauthenticated localhost; leak test with split tunnel enabled
 - [x] Tests — unit + platform smoke for whitelist/blacklist
@@ -186,7 +188,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 2.1 — `PanelManager` module
 
 - [x] New service: `lib/services/panel_manager.dart` (or `lib/services/panel/`)
-- [x] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials) — SharedPreferences MVP; migrate to secure storage later
+- [x] Persist `panel_url`, `device_token`, `subscription_url` in secure local storage (not credentials) — `device_token` in `flutter_secure_storage`; panel metadata in SharedPreferences
 - [x] REST client with timeouts, exponential backoff (max 3–5 retries), `X-API-Version: v1` header
 - [x] **Optional service:** if panel is not configured, all panel code paths are no-ops; local profiles only
 - [x] Riverpod provider wiring; Settings screen for panel URL + login/register (`PanelSettingsSection`, `PanelStatusCard`)
@@ -204,16 +206,16 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 2.2 — Registration & config sync
 
 - [x] On first setup with `panel_url` + credentials → `POST /api/client/register`; store `device_token`
-- [x] Manual **Refresh** → `GET /api/client/config` (periodic sync — **partial**, not yet scheduled)
+- [x] Manual **Refresh** → `GET /api/client/config`; scheduled sync (default 15 min, configurable in Settings)
 - [x] Compare `config_hash` from server with local hash; skip rewrite if unchanged
-- [x] Apply config: subscription URL → `Profile` named RioNexGate + `ConfigParser` pipeline (**partial** — full JSON config apply pending)
+- [x] Apply config: subscription URL → `Profile` named RioNexGate + `ConfigParser` pipeline; full JSON config used on connect when panel provides `config` object
 - [x] Cache last good config on disk (SharedPreferences); use when offline (**stale** status)
 - [x] Invalid JSON from panel → log error, keep previous config, show non-blocking warning (no crash)
 
 ### 2.3 — Stats upload
 
 - [x] Collect bytes in/out from core counters on disconnect (`VpnStats` uplink/downlink totals)
-- [ ] Background flush every ~60s and on disconnect → `POST /api/client/stats` (**partial** — disconnect flush only)
+- [x] Background flush every ~60s and on disconnect → `POST /api/client/stats`
 - [x] Local queue when panel unreachable; batch replay when back online
 - [x] `session_id` per connect session for server-side deduplication
 - [x] Never include SOCKS passwords or transport secrets in stats payload
@@ -245,7 +247,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 - [x] No changes to `vless://` / `vmess://` / `trojan://` import parsers
 - [x] Panel-managed profiles and manual profiles coexist in same profile list
 - [x] Engine auto-select and server picker unchanged for non-panel subscriptions
-- [ ] Document: panel integration is additive; uninstalling panel config does not remove manual profiles
+- [x] Document: panel integration is additive; uninstalling panel config does not remove manual profiles (`docs/en|ru/panel_pairing.md`)
 
 ### 3 — Client testing & observability (with RioNexGate)
 
@@ -262,9 +264,9 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 | Phase | RioNexTunnel tasks |
 |-------|-------------------|
 | **1** | `PanelManager` skeleton, register + config fetch + local cache + `config_hash` — **done (MVP)** |
-| **2** | Stats collector + offline queue + `session_id` — **partial** (disconnect flush; no 60s timer) |
+| **2** | Stats collector + offline queue + `session_id` + 60s background flush — **done** |
 | **3** | WebSocket / long-poll commands; reconnect on `refresh_config` — **done (§2.4)** |
-| **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing |
+| **4** | SOCKS mode toggle; integration tests; RU/EN docs for panel pairing — **done** (`panel_pairing.md`) |
 
 ### Expected outcomes
 
@@ -358,6 +360,7 @@ Kill Switch and Split Tunneling depend on reliable platform plumbing first.
 ### 7 — Testing & docs (client)
 
 - [x] Config fixture tests for each recommended stack (XHTTP stream-one, mux, Vision, AmneziaWG link samples)
+- [x] AmneziaWG — `awg://` parse, sing-box outbound JSON, fallback tests, docs (official cores only; connect fail-closed)
 - [x] No live DPI test in CI — validate JSON shape and parser resilience only
 - [x] `docs/en/` + `docs/ru/` — censorship preset guide, fingerprint choice, fallback behavior, iOS caveats
 - [x] Troubleshooting entry: "works on Wi‑Fi, fails on mobile operator" → suggest mux / AmneziaWG fallback
@@ -478,7 +481,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Subscriptions + server picker | ✅ Done | — |
 | Auto best server by latency | ✅ Done | — |
 | Open Source, zero telemetry | ✅ Done | — |
-| Kill Switch | ✅ Strict + plumbing (Adaptive deferred) | **P1** |
+| Kill Switch | ✅ Strict + Adaptive (Android) | **P1** |
 | Split Tunneling | ✅ Android + docs | **P1** |
 | Obfuscation / DPI (UX) | ✅ Wizard + presets | **P1** |
 | XHTTP + stream-one | ✅ Link builder + ConfigParser | **P1** |
@@ -486,7 +489,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | mux toggle (mobile) | ✅ Profile wizard | **P1** |
 | RU direct routing preset | ✅ ConfigEnhancer + UI | **P1** |
 | Protocol auto-fallback chain | ✅ Stack probe + reconnect fallback | **P1** |
-| AmneziaWG | ❌ Missing | P1/P2 |
+| AmneziaWG | ✅ Link parse + outbound JSON; connect blocked until official sing-box AWG | P1/P2 |
 | Double VPN / Multihop | ✅ Done (#75) | **P2** |
 | DNS leak protection, DoH/DoT | ✅ Done (#74) | **P2** |
 | Custom routing UI | ✅ Done (#73) | **P2** |
@@ -499,7 +502,7 @@ Avoid cluttered UI (PIA anti-pattern); advanced settings in a separate section.
 | Work mode switch (VPN/Proxy) | ✅ Done (#80) | — |
 | Windows browser helper | ✅ Done (#82) | — |
 | Connection stats | ✅ Done | — |
-| RioNexGate panel API (optional) | ⚠️ MVP (register, sync, stats queue, Settings UI) | **P1** |
+| RioNexGate panel API (optional) | ✅ Done (register, sync, stats, scheduled sync, secure token, pairing docs) | **P1** |
 
 ---
 
@@ -513,4 +516,4 @@ When fixing a new connect/config bug:
 
 ---
 
-*Last updated: 2026-09-04 — P4 Agent D l10n secondary sweep (censorship wizard, routing, config/import/QR, per-app proxy, advanced widgets).*
+*Last updated: 2026-09-04 — P4 Agent D l10n secondary sweep (censorship wizard, routing, config/import/QR, per-app proxy, advanced widgets). P4 Agent B adaptive kill switch (Android TUN, split tunnel integration, docs). P4 Agent A RioNexGate panel completion (60s stats flush, scheduled sync, full JSON connect, secure token, pairing docs). P4 Agent C AmneziaWG protocol (awg:// parse, outbound JSON, tests, docs). P4 Agent E macOS browser helper (native messaging host + manifests). Prior: P3 UX complete (minimal UI #79, l10n #83, profiles #81, transparency/modes #80, Windows browser #82; agent plan #78; tasks consolidation). Prior: P2 v0.8.0 (#75–#72, release notes #76); P0 Foundation stability; P1 split tunneling, kill switch, censorship resistance, RioNexGate panel MVP.*

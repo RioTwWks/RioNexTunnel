@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../models/transport_preset.dart';
 import '../models/vpn_engine.dart';
+import 'amnezia_wg_config.dart';
 import 'config_enhancer.dart';
 import 'config_parser.dart';
 import 'dns_config_builder.dart';
@@ -21,6 +22,7 @@ class LinkConfigBuilder {
     'tuic',
     'wg',
     'wireguard',
+    'awg',
     'ssh',
   ];
 
@@ -33,6 +35,7 @@ class LinkConfigBuilder {
     'tuic',
     'wg',
     'wireguard',
+    'awg',
     'ssh',
   ];
 
@@ -60,7 +63,7 @@ class LinkConfigBuilder {
     if (requiresSingbox(normalized) && engine != VpnEngine.singbox) {
       throw ConfigParserException(
         'This protocol requires the sing-box engine '
-        '(Hysteria, Hysteria2, TUIC, WireGuard, SSH). '
+        '(Hysteria, Hysteria2, TUIC, WireGuard, AmneziaWG, SSH). '
         'Switch engine preference to Auto or sing-box.',
       );
     }
@@ -166,6 +169,9 @@ class LinkConfigBuilder {
     }
     if (lower.startsWith('tuic://')) {
       return _parseSingboxTuic(link);
+    }
+    if (lower.startsWith('awg://')) {
+      return _parseSingboxAmneziaWg(link);
     }
     if (lower.startsWith('wg://') || lower.startsWith('wireguard://')) {
       return _parseSingboxWireGuard(link);
@@ -501,47 +507,36 @@ class LinkConfigBuilder {
   }
 
   static Map<String, dynamic> _parseSingboxWireGuard(String link) {
+    return _parseSingboxWireGuardLink(link, forceAwg: false);
+  }
+
+  static Map<String, dynamic> _parseSingboxAmneziaWg(String link) {
+    return _parseSingboxWireGuardLink(link, forceAwg: true);
+  }
+
+  static Map<String, dynamic> _parseSingboxWireGuardLink(
+    String link, {
+    required bool forceAwg,
+  }) {
     final uri = Uri.parse(link);
     final server = uri.host;
     if (server.isEmpty) {
       throw ConfigParserException('Invalid wireguard link');
     }
-    final params = uri.queryParameters;
-    final outbound = <String, dynamic>{
-      'type': 'wireguard',
-      'tag': 'proxy',
-      'server': server,
-      'server_port': uri.port > 0 ? uri.port : 51820,
-      'private_key': uri.userInfo,
-    };
-    if (params['publickey']?.isNotEmpty == true) {
-      outbound['peer_public_key'] = params['publickey'];
+    final params = Map<String, String>.from(uri.queryParameters);
+    final publicKey = params['publickey'] ?? params['public_key'] ?? '';
+    final isAwg = forceAwg || AmneziaWgConfig.linkHasAwgParams(params);
+    if (isAwg && publicKey.isEmpty) {
+      throw ConfigParserException('AmneziaWG link requires publickey');
     }
-    if (params['psk']?.isNotEmpty == true) {
-      outbound['pre_shared_key'] = params['psk'];
-    }
-    if (params['address']?.isNotEmpty == true) {
-      outbound['local_address'] = params['address']!
-          .split(',')
-          .map((a) => a.trim())
-          .where((a) => a.isNotEmpty)
-          .toList();
-    }
-    if (params['reserved']?.isNotEmpty == true) {
-      final bytes = params['reserved']!
-          .split(',')
-          .map((v) => int.tryParse(v.trim()))
-          .whereType<int>()
-          .toList();
-      if (bytes.isNotEmpty) {
-        outbound['reserved'] = bytes;
-      }
-    }
-    final mtu = int.tryParse(params['mtu'] ?? '');
-    if (mtu != null) {
-      outbound['mtu'] = mtu;
-    }
-    return outbound;
+    return AmneziaWgConfig.buildSingboxOutbound(
+      server: server,
+      port: uri.port > 0 ? uri.port : 51820,
+      privateKey: uri.userInfo,
+      publicKey: publicKey,
+      params: params,
+      forceAwg: isAwg,
+    );
   }
 
   static Map<String, dynamic> _parseSingboxSsh(String link) {

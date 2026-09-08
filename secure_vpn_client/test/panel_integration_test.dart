@@ -5,11 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:secure_vpn_client/constants/panel_constants.dart';
 import 'package:secure_vpn_client/models/panel_sync_status.dart';
 import 'package:secure_vpn_client/models/profile.dart';
 import 'package:secure_vpn_client/providers/panel_providers.dart';
 import 'package:secure_vpn_client/providers/vpn_providers.dart';
 import 'package:secure_vpn_client/services/panel_manager.dart';
+import 'package:secure_vpn_client/services/panel_token_storage.dart';
+import 'package:secure_vpn_client/services/vpn_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// In-memory RioNexGate panel simulator for integration-style Dart tests.
@@ -86,9 +89,14 @@ class FakePanelServer {
 
 Future<PanelManager> _managerWithPrefs(
   SharedPreferences prefs,
-  FakePanelServer server,
-) async {
-  final manager = PanelManager(preferences: prefs, httpClient: server.client);
+  FakePanelServer server, {
+  InMemoryPanelTokenStorage? tokenStorage,
+}) async {
+  final manager = PanelManager(
+    preferences: prefs,
+    httpClient: server.client,
+    tokenStorage: tokenStorage ?? InMemoryPanelTokenStorage(),
+  );
   await manager.load();
   await manager.updatePanelUrl(FakePanelServer.panelBase);
   await manager.setEnabled(true);
@@ -237,9 +245,12 @@ void main() {
         }
         return http.Response('not found', 404);
       });
+      final tokenStorage = InMemoryPanelTokenStorage()
+        ..token = manager.settings.deviceToken;
       final brokenManager = PanelManager(
         preferences: prefs,
         httpClient: brokenClient,
+        tokenStorage: tokenStorage,
       );
       await brokenManager.load();
 
@@ -280,9 +291,12 @@ void main() {
         }
         return http.Response('not found', 404);
       });
+      final tokenStorage = InMemoryPanelTokenStorage()
+        ..token = manager.settings.deviceToken;
       final brokenManager = PanelManager(
         preferences: prefs,
         httpClient: brokenClient,
+        tokenStorage: tokenStorage,
       );
       await brokenManager.load();
 
@@ -302,7 +316,11 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
       server = FakePanelServer();
-      manager = PanelManager(preferences: prefs, httpClient: server.client);
+      manager = PanelManager(
+        preferences: prefs,
+        httpClient: server.client,
+        tokenStorage: InMemoryPanelTokenStorage(),
+      );
       await manager.load();
       await manager.updatePanelUrl(FakePanelServer.panelBase);
       await manager.setEnabled(true);
@@ -312,6 +330,9 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           panelManagerProvider.overrideWithValue(manager),
+          vpnServiceProvider.overrideWith(
+            (ref) => VpnService(panelManager: manager),
+          ),
         ],
       );
       addTearDown(container.dispose);
@@ -335,6 +356,22 @@ void main() {
       expect(updated.configLink, 'https://panel.test/sub/v3');
       expect(updated.type, ProfileType.subscription);
       expect(container.read(panelStateProvider).syncStatus, PanelSyncStatus.synced);
+    });
+
+    test('resolveProfileConfig uses cached panel JSON for RioNexGate profile', () async {
+      final manager = await _managerWithPrefs(prefs, server);
+      await manager.register(pairingToken: server.pairingToken);
+      await manager.syncConfig();
+
+      final vpn = VpnService(panelManager: manager);
+      final profile = Profile(
+        id: 'panel-1',
+        name: kPanelProfileName,
+        configLink: server.subscriptionUrl,
+        type: ProfileType.subscription,
+      );
+      final resolved = await vpn.resolveProfileConfig(profile);
+      expect((jsonDecode(resolved) as Map)['outbounds'], isA<List>());
     });
   });
 }

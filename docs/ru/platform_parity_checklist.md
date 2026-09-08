@@ -6,6 +6,22 @@
 
 Используйте после `scripts/fetch_cores.sh` (десктоп) или настройки нативного плагина (мобильные). На всех платформах **SOCKS только на `127.0.0.1` с паролем на сессию** — никогда не открывайте `0.0.0.0:7890` без auth.
 
+## Шаблон E2E sign-off
+
+Заполняйте при проверке на физическом устройстве или VM. Обновляйте таблицу в [README](README.md#e2e-проверка-на-устройствах), когда платформа подписана.
+
+| Поле | Значение |
+|------|----------|
+| **Дата** | ГГГГ-ММ-ДД |
+| **Тестер** | имя / ник |
+| **Версия приложения** | git tag или commit |
+| **Платформа** | напр. Windows 11 x64, macOS 14 arm64 |
+| **Engine × profile** | xray/sing-box × config link / subscription |
+| **Connect** | pass / fail + заметки |
+| **Security probe** | pass / fail / N/A |
+| **Browser helper** | pass / fail / N/A (только desktop) |
+| **Блокеры** | открытые issues или PR |
+
 ## Linux (эталон — проверено)
 
 | Шаг | Ожидание |
@@ -22,12 +38,14 @@
 | Шаг | Ожидание |
 |-----|----------|
 | Cores в bundle `resources/` | `xray.exe`, `sing-box.exe`, geo |
-| `flutter run -d windows` | Запуск |
+| `flutter build windows` или `flutter run -d windows` | Запуск |
 | Connect (proxy mode) | **Connected** |
 | Системный прокси | HTTP `127.0.0.1:1081` |
 | `netstat -ano \| findstr 1080` | `127.0.0.1:1080` LISTENING |
 | Disconnect | Прокси выключен; конфиг удалён |
 | Browser helper | Native host + реестр Chrome/Edge + manifest Firefox; карточка в Settings |
+
+**CI:** сборка Windows в workflow `windows-build` на `windows-latest` (PR + main).
 
 ## macOS
 
@@ -39,7 +57,18 @@
 | Системный прокси | HTTP `127.0.0.1:1081` |
 | SOCKS | `127.0.0.1:1080` с auth сессии |
 | Credentials channel | В Settings видны user/pass при Connected |
-| Disconnect | Прокси off; credentials сброшены |
+| Browser helper | При первом `setup()` host копируется в `~/Library/Application Support/V2rayBox/working/native_host/secure_vpn_native_host`; manifests в Chrome/Chromium/Edge/Firefox `NativeMessagingHosts/` |
+| Расширение | Unpacked из `extensions/secure-vpn-proxy-auth/` (dev) или store; карточка Browser helper — **Ready** при Connected |
+| Disconnect | Прокси off; credentials сброшены; `session.json` удалён |
+
+### Пути browser helper на macOS
+
+| Компонент | Путь |
+|-----------|------|
+| Native host (установленный) | `~/Library/Application Support/V2rayBox/working/native_host/secure_vpn_native_host` |
+| Chrome manifest | `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Edge manifest | `~/Library/Application Support/Microsoft Edge/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
+| Firefox manifest | `~/Library/Application Support/Mozilla/NativeMessagingHosts/com.secure.vpn.proxy_auth.json` |
 
 ## Android
 

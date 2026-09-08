@@ -853,7 +853,7 @@ class BoxService(
         Log.d(TAG, "CoreCallbackHandler: shutdown")
         emitServiceLog("Core callback: shutdown", force = true)
         mainHandler.post {
-            if (Settings.killSwitchMode == "strict") {
+            if (Settings.killSwitchMode == "strict" || Settings.killSwitchMode == "adaptive") {
                 engageKillSwitchOnCoreDrop()
             } else {
                 stopService()
@@ -878,7 +878,7 @@ class BoxService(
         }
         if (message?.contains("core stopped", ignoreCase = true) == true) {
             mainHandler.post {
-                if (Settings.killSwitchMode == "strict") {
+                if (Settings.killSwitchMode == "strict" || Settings.killSwitchMode == "adaptive") {
                     engageKillSwitchOnCoreDrop()
                 } else {
                     stopService()

@@ -20,7 +20,23 @@ System proxy is automatically configured when the core starts.
   s.author           = { 'Your Company' => 'email@example.com' }
   s.source           = { :path => '.' }
   s.source_files     = 'Classes/**/*'
-  
+  s.resources        = ['Resources/secure_vpn_native_host']
+  s.script_phases    = [
+    {
+      :name => 'Build secure_vpn_native_host',
+      :script => <<-SCRIPT
+        set -e
+        HOST_DIR="${PODS_TARGET_SRCROOT}/Resources"
+        mkdir -p "${HOST_DIR}"
+        swiftc -o "${HOST_DIR}/secure_vpn_native_host" \
+          "${PODS_TARGET_SRCROOT}/native_messaging_host/main.swift"
+        chmod 755 "${HOST_DIR}/secure_vpn_native_host"
+      SCRIPT
+      ,
+      :execution_position => :before_compile
+    }
+  ]
+
   s.dependency 'FlutterMacOS'
 
   s.platform = :osx, '10.15'

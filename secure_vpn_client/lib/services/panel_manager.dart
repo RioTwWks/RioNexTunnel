@@ -7,8 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/panel_settings.dart';
+import '../models/panel_sync_interval.dart';
 import '../models/panel_sync_status.dart';
 import 'app_log.dart';
+import 'panel_token_storage.dart';
 
 class PanelRegisterResult {
   const PanelRegisterResult({
@@ -73,10 +75,12 @@ class PanelManager {
     http.Client? httpClient,
     SharedPreferences? preferences,
     Future<SharedPreferences> Function()? preferencesFactory,
+    PanelTokenStorage? tokenStorage,
   }) : _http = httpClient ?? http.Client(),
        _preferences = preferences,
        _preferencesFactory =
-           preferencesFactory ?? SharedPreferences.getInstance;
+           preferencesFactory ?? SharedPreferences.getInstance,
+       _tokenStorage = tokenStorage ?? SecurePanelTokenStorage();
 
   static const _settingsKey = 'panel_settings_v1';
   static const _cachedConfigKey = 'panel_cached_config_v1';
@@ -89,6 +93,7 @@ class PanelManager {
   final http.Client _http;
   final SharedPreferences? _preferences;
   final Future<SharedPreferences> Function() _preferencesFactory;
+  final PanelTokenStorage _tokenStorage;
 
   PanelSettings _settings = const PanelSettings();
   PanelSyncStatus _syncStatus = PanelSyncStatus.disabled;
@@ -110,10 +115,12 @@ class PanelManager {
         _settings = const PanelSettings();
       }
     }
+    await _loadDeviceToken();
     _deviceIdHash = await _loadDeviceIdHash(prefs);
     _syncStatus = _deriveStatus();
   }
-
+  Future<void> _loadDeviceToken() async { final t=await _tokenStorage.readToken(); if(t!=null&&t.isNotEmpty){_settings=_settings.copyWith(deviceToken:t);return;} final l=_settings.deviceToken; if(l!=null&&l.isNotEmpty){await _tokenStorage.writeToken(l);await _persistSettings(_settings,persistToken:false);} }
+  Future<void> _persistDeviceToken(String? t) async { if(t==null||t.isEmpty){await _tokenStorage.deleteToken();return;} await _tokenStorage.writeToken(t); }
   Future<SharedPreferences> _prefs() async =>
       _preferences ?? await _preferencesFactory();
 
@@ -142,15 +149,7 @@ class PanelManager {
     return PanelSyncStatus.stale;
   }
 
-  Future<void> _persistSettings(
-    PanelSettings next, {
-    PanelSyncStatus? syncStatus,
-  }) async {
-    _settings = next;
-    final prefs = await _prefs();
-    await prefs.setString(_settingsKey, jsonEncode(next.toJson()));
-    _syncStatus = syncStatus ?? _deriveStatus();
-  }
+  Future<void> _persistSettings(PanelSettings next,{PanelSyncStatus? syncStatus,bool persistToken=true}) async { if(persistToken) await _persistDeviceToken(next.deviceToken); _settings=next; final prefs=await _prefs(); await prefs.setString(_settingsKey,jsonEncode(_settings.toJson(includeDeviceToken:false))); _syncStatus=syncStatus??_deriveStatus(); }
 
   Future<void> setEnabled(bool enabled) async {
     if (!enabled) {
@@ -181,6 +180,7 @@ class PanelManager {
     final prefs = await _prefs();
     await prefs.remove(_cachedConfigKey);
     await prefs.remove(_statsQueueKey);
+    await _tokenStorage.deleteToken();
     await _persistSettings(
       _settings.copyWith(
         clearDeviceToken: true,
@@ -188,10 +188,11 @@ class PanelManager {
         clearConfigHash: true,
         clearLastSyncAt: true,
         clearLastError: true,
-      ),
+      ), persistToken: false,
     );
     _syncStatus = PanelSyncStatus.disabled;
   }
+  Future<void> setSyncInterval(PanelSyncInterval interval) async { await _persistSettings(_settings.copyWith(syncInterval: interval)); }
 
   Future<PanelRegisterResult> register({required String pairingToken}) async {
     final panelUrl = _settings.panelUrl;
