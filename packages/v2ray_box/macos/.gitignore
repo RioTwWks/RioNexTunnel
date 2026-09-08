@@ -1,3 +1,4 @@
 Frameworks/*.dylib
 Frameworks/sing-box
 Frameworks/xray
+Resources/secure_vpn_native_host
