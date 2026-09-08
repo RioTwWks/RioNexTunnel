@@ -19,20 +19,29 @@ System proxy is automatically configured when the core starts.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'email@example.com' }
   s.source           = { :path => '.' }
-  s.source_files     = 'Classes/**/*'
-  s.resources        = ['Resources/secure_vpn_native_host']
-  s.script_phases    = [
+  s.source_files = 'Classes/**/*'
+
+  build_native_host_script = <<-SCRIPT
+set -e
+HOST_DIR="${PODS_TARGET_SRCROOT}/Resources"
+mkdir -p "${HOST_DIR}"
+swiftc -o "${HOST_DIR}/secure_vpn_native_host" \
+  "${PODS_TARGET_SRCROOT}/native_messaging_host/main.swift"
+chmod 755 "${HOST_DIR}/secure_vpn_native_host"
+SCRIPT
+
+  s.prepare_command = <<-CMD
+set -e
+mkdir -p Resources
+swiftc -o Resources/secure_vpn_native_host native_messaging_host/main.swift
+chmod 755 Resources/secure_vpn_native_host
+CMD
+
+  s.resources = ['Resources/secure_vpn_native_host']
+  s.script_phases = [
     {
       :name => 'Build secure_vpn_native_host',
-      :script => <<-SCRIPT
-        set -e
-        HOST_DIR="${PODS_TARGET_SRCROOT}/Resources"
-        mkdir -p "${HOST_DIR}"
-        swiftc -o "${HOST_DIR}/secure_vpn_native_host" \
-          "${PODS_TARGET_SRCROOT}/native_messaging_host/main.swift"
-        chmod 755 "${HOST_DIR}/secure_vpn_native_host"
-      SCRIPT
-      ,
+      :script => build_native_host_script,
       :execution_position => :before_compile
     }
   ]
