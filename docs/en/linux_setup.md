@@ -8,7 +8,7 @@
 ## Prerequisites
 
 ```bash
-sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev
+sudo apt install clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libsecret-1-dev
 ```
 
 Flutter stable SDK (Dart version in `secure_vpn_client/pubspec.yaml`).
