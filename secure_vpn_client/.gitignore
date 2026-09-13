@@ -55,3 +55,4 @@ macos/Runner/Resources/*
 !macos/Runner/Resources/.gitkeep
 android/app/src/main/jniLibs/**/libsingbox.so
 android/app/src/main/assets/xray/*.dat
+ios/Runner/Resources/geo/*.dat

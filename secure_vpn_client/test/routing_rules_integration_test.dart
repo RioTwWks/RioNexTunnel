@@ -37,7 +37,7 @@ void main() {
     final rules =
         ((jsonDecode(enhanced) as Map)['routing'] as Map)['rules'] as List;
     expect((rules.first as Map)['domain'], contains('geosite:ru'));
-    expect(ConfigParser.configRequiresXrayGeoRules(enhanced), isTrue);
+    expect(ConfigParser.configRequiresGeoRules(enhanced), isTrue);
     expect(
       RoutingConfigBuilder.rulesRequireGeoAssets(
         RoutingPresetRegistry.rulesFor(RoutingPresetId.ruDirect),

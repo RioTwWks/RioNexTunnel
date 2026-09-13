@@ -134,7 +134,7 @@ class EngineAutoSelector {
     return false;
   }
 
-  static Future<bool> xrayGeoAssetsPresent({V2rayBox? box}) async {
+  static Future<bool> geoAssetsPresent({V2rayBox? box}) async {
     if (kIsWeb) {
       return false;
     }
@@ -142,6 +142,9 @@ class EngineAutoSelector {
       if (box != null) {
         try {
           final info = await box.getCoreInfo();
+          if (info.containsKey('geo_assets_available')) {
+            return _truthy(info['geo_assets_available']);
+          }
           if (info.containsKey('xray_geo_assets_available')) {
             return _truthy(info['xray_geo_assets_available']);
           }
@@ -180,6 +183,10 @@ class EngineAutoSelector {
     }
     return false;
   }
+
+  /// Back-compat alias — geo databases are shared by xray and sing-box.
+  static Future<bool> xrayGeoAssetsPresent({V2rayBox? box}) async =>
+      geoAssetsPresent(box: box);
 
   /// Builds attempt order for [preference] and [profile].
   static Future<EngineResolution> resolve({
@@ -277,7 +284,7 @@ class EngineAutoSelector {
       }
     }
 
-    final geoOk = await xrayGeoAssetsPresent(box: box);
+    final geoOk = await geoAssetsPresent(box: box);
     if (!geoOk &&
         xrayBody != null &&
         needsXrayGeo(xrayBody) &&

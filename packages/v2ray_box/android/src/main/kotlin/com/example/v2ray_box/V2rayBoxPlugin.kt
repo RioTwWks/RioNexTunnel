@@ -945,11 +945,20 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         val ctx = applicationContext
                         val singboxPath = ctx?.let { SingboxProcess.getBinaryPath(it) }
                         val xrayAvailable = isXrayAvailable(ctx)
+                        val geoReady = if (ctx != null) {
+                            val workDir = (ctx.getExternalFilesDir(null) ?: ctx.filesDir).absolutePath
+                            XrayBridge.initCoreEnv(ctx, workDir)
+                            XrayBridge.geoAssetsReady(workDir)
+                        } else {
+                            false
+                        }
                         val info = mutableMapOf<String, Any>(
                             "core" to engine,
                             "active_runtime_engine" to Settings.effectiveCoreEngine(),
                             "xray_available" to xrayAvailable,
                             "singbox_available" to (singboxPath != null),
+                            "geo_assets_available" to geoReady,
+                            "xray_geo_assets_available" to geoReady,
                         )
                         if (engine == CoreEngine.SINGBOX) {
                             info["engine"] = "sing-box"
@@ -966,11 +975,6 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         } else {
                             info["engine"] = "xray-core"
                             try {
-                                if (ctx != null) {
-                                    val workDir = (ctx.getExternalFilesDir(null) ?: ctx.filesDir).absolutePath
-                                    XrayBridge.initCoreEnv(ctx, workDir)
-                                    info["xray_geo_assets_available"] = XrayBridge.geoAssetsReady(workDir)
-                                }
                                 val rawVersion = XrayBridge.checkVersion().trim()
                                 if (rawVersion.isNotEmpty()) {
                                     info["version_raw"] = rawVersion

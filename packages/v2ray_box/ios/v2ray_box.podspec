@@ -39,6 +39,9 @@ For Xray-core:
   }
   s.swift_version = '5.0'
 
-  # Privacy manifest
-  s.resource_bundles = {'v2ray_box_privacy' => ['Resources/PrivacyInfo.xcprivacy']}
+  # Privacy manifest + optional geo databases (populated by scripts/fetch_cores.sh).
+  s.resource_bundles = {
+    'v2ray_box_privacy' => ['Resources/PrivacyInfo.xcprivacy'],
+    'v2ray_box_geo' => ['Resources/geo/*.dat'],
+  }
 end

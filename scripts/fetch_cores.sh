@@ -281,6 +281,15 @@ ANDROID_XRAY_ASSETS="${ROOT_DIR}/secure_vpn_client/android/app/src/main/assets/x
 copy_if_exists "${GEO_DEST}/geoip.dat" "${ANDROID_XRAY_ASSETS}/geoip.dat"
 copy_if_exists "${GEO_DEST}/geosite.dat" "${ANDROID_XRAY_ASSETS}/geosite.dat"
 
+# iOS: bundled into v2ray_box pod + app PacketTunnel extension (not committed to git).
+IOS_PLUGIN_GEO="${ROOT_DIR}/packages/v2ray_box/ios/Resources/geo"
+IOS_APP_GEO="${ROOT_DIR}/secure_vpn_client/ios/Runner/Resources/geo"
+mkdir -p "${IOS_PLUGIN_GEO}" "${IOS_APP_GEO}"
+copy_if_exists "${GEO_DEST}/geoip.dat" "${IOS_PLUGIN_GEO}/geoip.dat"
+copy_if_exists "${GEO_DEST}/geosite.dat" "${IOS_PLUGIN_GEO}/geosite.dat"
+copy_if_exists "${GEO_DEST}/geoip.dat" "${IOS_APP_GEO}/geoip.dat"
+copy_if_exists "${GEO_DEST}/geosite.dat" "${IOS_APP_GEO}/geosite.dat"
+
 echo "Core binaries downloaded to ${DEST}"
 echo "Versions: Xray v${XRAY_VERSION}, sing-box v${SINGBOX_VERSION}"
 echo "Note: official sing-box does not yet support AmneziaWG obfuscation (awg:// links parse in the app; connect fails closed until upstream adds AWG)."

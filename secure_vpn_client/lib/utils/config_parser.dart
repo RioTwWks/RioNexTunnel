@@ -1068,6 +1068,40 @@ class ConfigParser {
     return lower.contains('geosite:') || lower.contains('geoip:');
   }
 
+  /// True when config needs geo databases (xray `geosite:` tags or sing-box route rules).
+  static bool configRequiresGeoRules(String jsonConfig) {
+    if (configRequiresXrayGeoRules(jsonConfig)) {
+      return true;
+    }
+    try {
+      final decoded = jsonDecode(jsonConfig);
+      if (decoded is Map<String, dynamic>) {
+        return singboxRouteRequiresGeo(decoded);
+      }
+    } catch (_) {
+      // Fall through — string heuristics above are enough for xray configs.
+    }
+    return false;
+  }
+
+  /// True when a sing-box config uses legacy `geosite` / `geoip` route rule fields.
+  static bool singboxRouteRequiresGeo(Map<String, dynamic> config) {
+    final route = config['route'];
+    if (route is! Map) {
+      return false;
+    }
+    final rules = route['rules'];
+    if (rules is! List) {
+      return false;
+    }
+    for (final rule in rules) {
+      if (rule is Map && (rule.containsKey('geosite') || rule.containsKey('geoip'))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   static void validateSecure(String jsonConfig, {VpnEngine? engine}) {
     final decoded = jsonDecode(jsonConfig);
     if (decoded is! Map<String, dynamic>) {

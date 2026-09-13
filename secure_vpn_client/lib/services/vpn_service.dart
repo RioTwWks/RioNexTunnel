@@ -780,18 +780,17 @@ class VpnService {
 
     _assertOfficialCoreSupportsAwg(rawConfig);
 
-    if (_engine == VpnEngine.xray &&
-        ConfigParser.configRequiresXrayGeoRules(rawConfig)) {
+    if (ConfigParser.configRequiresGeoRules(rawConfig)) {
       if (Platform.isAndroid || Platform.isIOS) {
-        // Copies geo assets from APK into the core work dir when packaged.
+        // Copies geo assets from the app bundle into the core work dir when packaged.
         await _v2rayBox.getCoreInfo();
       }
-      if (!await EngineAutoSelector.xrayGeoAssetsPresent(box: _v2rayBox)) {
+      if (!await EngineAutoSelector.geoAssetsPresent(box: _v2rayBox)) {
         throw StateError(
-          'Config uses geosite:/geoip: routing rules but geo assets '
-          '(geoip.dat, geosite.dat) are missing. '
+          'Config uses geosite/geoip routing rules but geo assets '
+          '(geoip.dat, geosite.dat) are missing on this device. '
           'Run scripts/fetch_cores.sh from the repo root, rebuild the app, '
-          'or disable RU sites direct / custom geo routing.',
+          'or disable "RU sites direct" / custom geo routing in censorship settings.',
         );
       }
     }
