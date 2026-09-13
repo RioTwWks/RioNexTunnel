@@ -732,13 +732,19 @@ class VpnService {
     _assertOfficialCoreSupportsAwg(rawConfig);
 
     if (_engine == VpnEngine.xray &&
-        ConfigParser.configRequiresXrayGeoRules(rawConfig) &&
-        !await EngineAutoSelector.xrayGeoAssetsPresent()) {
-      throw StateError(
-        'Config uses geosite:/geoip: routing rules but geo assets '
-        '(geoip.dat, geosite.dat) are missing. '
-        'Run scripts/fetch_cores.sh from the repo root, or switch to sing-box.',
-      );
+        ConfigParser.configRequiresXrayGeoRules(rawConfig)) {
+      if (Platform.isAndroid || Platform.isIOS) {
+        // Copies geo assets from APK into the core work dir when packaged.
+        await _v2rayBox.getCoreInfo();
+      }
+      if (!await EngineAutoSelector.xrayGeoAssetsPresent(box: _v2rayBox)) {
+        throw StateError(
+          'Config uses geosite:/geoip: routing rules but geo assets '
+          '(geoip.dat, geosite.dat) are missing. '
+          'Run scripts/fetch_cores.sh from the repo root, rebuild the app, '
+          'or disable RU sites direct / custom geo routing.',
+        );
+      }
     }
 
     final credentials = await _resolveSessionCredentials(

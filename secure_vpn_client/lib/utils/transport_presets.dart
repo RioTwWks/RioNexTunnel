@@ -179,13 +179,62 @@ class TransportPresets {
   }
 
   static TransportPresetId suggestPreset(String content) {
-    final detected = detectFromContent(content);
-    if (detected.preset != TransportPresetId.plainTls ||
-        detected.security != null ||
-        detected.network != null) {
-      return detected.preset;
+    return detectFromContent(content).preset;
+  }
+
+  /// Mux is only valid for plain TLS-style transports (see censorship_resistance.md).
+  static bool linkParamsSupportMux(Map<String, String> params) {
+    final network = (params['type'] ?? 'tcp').toLowerCase();
+    final security = (params['security'] ?? '').toLowerCase();
+    if (security == 'reality') {
+      return false;
     }
-    return TransportPresetId.xhttpReality;
+    return switch (network) {
+      'tcp' || 'ws' || 'httpupgrade' => security == 'tls' || security.isEmpty,
+      _ => false,
+    };
+  }
+
+  static bool xrayOutboundSupportsMux(Map<String, dynamic> outbound) {
+    final stream = outbound['streamSettings'];
+    if (stream is! Map) {
+      return false;
+    }
+    final network = stream['network']?.toString().toLowerCase() ?? 'tcp';
+    final security = stream['security']?.toString().toLowerCase() ?? '';
+    if (security == 'reality') {
+      return false;
+    }
+    return switch (network) {
+      'tcp' || 'ws' || 'httpupgrade' => security == 'tls' || security.isEmpty,
+      _ => false,
+    };
+  }
+
+  static bool singboxOutboundSupportsMux(Map<String, dynamic> outbound) {
+    final tls = outbound['tls'];
+    if (tls is Map) {
+      if (tls['reality'] is Map && (tls['reality'] as Map)['enabled'] == true) {
+        return false;
+      }
+    }
+    final transport = outbound['transport'];
+    final network = transport is Map
+        ? transport['type']?.toString().toLowerCase() ?? 'tcp'
+        : 'tcp';
+    return switch (network) {
+      'tcp' || 'ws' || 'httpupgrade' => true,
+      _ => false,
+    };
+  }
+
+  static bool linkHasRealityKeys(Map<String, String> params) {
+    return params['pbk']?.isNotEmpty == true ||
+        params['security']?.toLowerCase() == 'reality';
+  }
+
+  static String _resolveRealityOrTlsSecurity(Map<String, String> params) {
+    return linkHasRealityKeys(params) ? 'reality' : 'tls';
   }
 
   static String applyPresetToLink(
@@ -221,11 +270,11 @@ class TransportPresets {
         params.remove('mode');
       case TransportPresetId.reality:
         params['type'] = 'tcp';
-        params['security'] = 'reality';
+        params['security'] = _resolveRealityOrTlsSecurity(params);
         params.remove('mode');
       case TransportPresetId.xhttpReality:
         params['type'] = 'xhttp';
-        params['security'] = 'reality';
+        params['security'] = _resolveRealityOrTlsSecurity(params);
         params['mode'] = defaultXhttpMode;
         params.putIfAbsent('path', () => '/');
     }

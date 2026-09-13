@@ -127,8 +127,18 @@ class RoutingConfigBuilder {
 
   static Map<String, dynamic> _toSingboxRule(RoutingRule rule) {
     if (rule.outbound == RoutingOutboundAction.block) {
-      return {'domain': rule.values, 'action': 'reject'};
+      return switch (rule.type) {
+        RoutingRuleType.ipCidr => {'ip_cidr': rule.values, 'action': 'reject'},
+        RoutingRuleType.geoip => {'geoip': rule.values, 'action': 'reject'},
+        _ => {'domain': rule.values, 'action': 'reject'},
+      };
     }
-    return {'domain': rule.values, 'outbound': rule.outbound.name};
+    final tag = rule.outbound.name;
+    return switch (rule.type) {
+      RoutingRuleType.domain => {'domain': rule.values, 'outbound': tag},
+      RoutingRuleType.ipCidr => {'ip_cidr': rule.values, 'outbound': tag},
+      RoutingRuleType.geosite => {'geosite': rule.values, 'outbound': tag},
+      RoutingRuleType.geoip => {'geoip': rule.values, 'outbound': tag},
+    };
   }
 }

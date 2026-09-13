@@ -962,6 +962,7 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                                 if (ctx != null) {
                                     val workDir = (ctx.getExternalFilesDir(null) ?: ctx.filesDir).absolutePath
                                     XrayBridge.initCoreEnv(ctx, workDir)
+                                    info["xray_geo_assets_available"] = XrayBridge.geoAssetsReady(workDir)
                                 }
                                 val rawVersion = XrayBridge.checkVersion().trim()
                                 if (rawVersion.isNotEmpty()) {
