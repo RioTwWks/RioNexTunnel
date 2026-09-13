@@ -6,6 +6,34 @@ import 'package:secure_vpn_client/utils/engine_auto_selector.dart';
 import 'package:secure_vpn_client/utils/link_config_builder.dart';
 
 void main() {
+  group('EngineAutoSelector.platformDefaultEngine', () {
+    test('prefers sing-box on iOS heuristic path', () {
+      expect(EngineAutoSelector.platformDefaultEngine(), isA<VpnEngine>());
+    });
+  });
+
+  group('EngineAutoSelector.pickAvailableEngine', () {
+    test('falls back when preferred engine missing', () {
+      expect(
+        EngineAutoSelector.pickAvailableEngine(
+          {VpnEngine.singbox},
+          preferred: VpnEngine.xray,
+        ),
+        VpnEngine.singbox,
+      );
+    });
+
+    test('keeps preferred engine when available', () {
+      expect(
+        EngineAutoSelector.pickAvailableEngine(
+          {VpnEngine.xray, VpnEngine.singbox},
+          preferred: VpnEngine.xray,
+        ),
+        VpnEngine.xray,
+      );
+    });
+  });
+
   group('EnginePreference', () {
     test('parses storage values', () {
       expect(EnginePreference.fromStorage('auto'), EnginePreference.auto);

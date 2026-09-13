@@ -409,6 +409,10 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
   } else if (strcmp(method, "get_logs") == 0) {
     g_autoptr(FlValue) list = fl_value_new_list();
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(list));
+  } else if (strcmp(method, "get_last_start_error") == 0) {
+    response = make_success_string("");
+  } else if (strcmp(method, "clear_last_start_error") == 0) {
+    response = make_success_bool(true);
   } else if (strcmp(method, "get_active_config") == 0) {
     std::ifstream in(active_config_path());
     std::ostringstream buffer;

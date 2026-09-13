@@ -28,6 +28,40 @@ class EngineAutoSelector {
   /// Default preference order when scores are equal.
   static const defaultOrder = [VpnEngine.xray, VpnEngine.singbox];
 
+  /// Platform-native default when no preference is stored yet.
+  static VpnEngine platformDefaultEngine() {
+    if (kIsWeb) {
+      return VpnEngine.xray;
+    }
+    if (Platform.isIOS) {
+      return VpnEngine.singbox;
+    }
+    if (Platform.isAndroid) {
+      return VpnEngine.xray;
+    }
+    return VpnEngine.xray;
+  }
+
+  /// Picks the best engine from [available], preferring [preferred] when set.
+  static VpnEngine pickAvailableEngine(
+    Set<VpnEngine> available, {
+    VpnEngine? preferred,
+  }) {
+    if (available.isEmpty) {
+      return platformDefaultEngine();
+    }
+    final target = preferred ?? platformDefaultEngine();
+    if (available.contains(target)) {
+      return target;
+    }
+    for (final engine in defaultOrder) {
+      if (available.contains(engine)) {
+        return engine;
+      }
+    }
+    return available.first;
+  }
+
   /// Returns engines that appear present on this device.
   static Future<Set<VpnEngine>> availableEngines(V2rayBox box) async {
     if (kIsWeb) {

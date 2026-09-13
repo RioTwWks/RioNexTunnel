@@ -81,7 +81,7 @@ class VpnService {
 
   bool _initialized = false;
   SessionCredentials? _sessionCredentials;
-  VpnEngine _engine = VpnEngine.xray;
+  VpnEngine _engine = EngineAutoSelector.platformDefaultEngine();
   EnginePreference _enginePreference = EnginePreference.auto;
   ServiceModePreference _serviceModePreference = ServiceModePreference.auto;
   SocksAuthMode _socksAuthMode = SocksAuthMode.randomPerSession;
@@ -313,9 +313,42 @@ class VpnService {
     if (_initialized) return;
     await _v2rayBox.initialize(notificationStopButtonText: 'Stop');
     await applyServiceMode();
-    await _v2rayBox.setCoreEngine(_engine.coreName);
+    await _syncEngineWithPlatform();
     _statusSubscription ??= _v2rayBox.watchStatus().listen(_publishStatus);
     _initialized = true;
+  }
+
+  /// Align Dart engine with native availability (iOS → sing-box only).
+  Future<void> _syncEngineWithPlatform() async {
+    final available = await EngineAutoSelector.availableEngines(_v2rayBox);
+    if (available.isEmpty) {
+      throw StateError('No VPN core engines are available on this device');
+    }
+
+    VpnEngine target;
+    if (_enginePreference == EnginePreference.singbox ||
+        _enginePreference == EnginePreference.xray) {
+      target = _enginePreference == EnginePreference.singbox
+          ? VpnEngine.singbox
+          : VpnEngine.xray;
+      if (!available.contains(target)) {
+        throw StateError(
+          '${target.coreName} is not available on this device. '
+          'Install cores or switch engine preference to Auto.',
+        );
+      }
+    } else {
+      target = EngineAutoSelector.pickAvailableEngine(
+        available,
+        preferred: _engine,
+      );
+    }
+
+    _engine = target;
+    final ok = await _v2rayBox.setCoreEngine(target.coreName);
+    if (!ok) {
+      throw StateError('Failed to activate ${target.coreName} on native side');
+    }
   }
 
   Future<void> applyServiceMode([ServiceModePreference? preference]) async {
@@ -361,7 +394,7 @@ class VpnService {
     VpnEngine engine, {
     bool disconnectIfNeeded = true,
   }) async {
-    if (_engine == engine) {
+    if (_engine == engine && _initialized) {
       return;
     }
 
@@ -369,10 +402,20 @@ class VpnService {
       await disconnect(userInitiated: false);
     }
 
-    _engine = engine;
     if (_initialized) {
-      await _v2rayBox.setCoreEngine(engine.coreName);
+      final available = await EngineAutoSelector.availableEngines(_v2rayBox);
+      if (!available.contains(engine)) {
+        throw StateError(
+          '${engine.coreName} is not available on this device',
+        );
+      }
+      final ok = await _v2rayBox.setCoreEngine(engine.coreName);
+      if (!ok) {
+        throw StateError('Failed to activate ${engine.coreName} on native side');
+      }
     }
+
+    _engine = engine;
   }
 
   Future<String> resolveProfileConfig(
@@ -719,6 +762,12 @@ class VpnService {
       );
     }
 
+    if (!kIsWeb && Platform.isIOS && _engine == VpnEngine.xray) {
+      throw StateError(
+        'Xray is not supported on iOS. Open Settings → Engine and choose Auto or sing-box.',
+      );
+    }
+
     final rawConfig = await resolveProfileConfig(
       effectiveProfile,
       contentOverride: stack?.content,
@@ -780,6 +829,7 @@ class VpnService {
     }
 
     await _setSessionCredentials(credentials, port: effectiveSocksPort);
+    await _v2rayBox.clearLastStartError();
     final started = await _v2rayBox.connectWithJson(
       secureConfig,
       name: effectiveProfile.name,
@@ -788,22 +838,23 @@ class VpnService {
       socksPort: effectiveSocksPort,
     );
     if (!started) {
-      AppLog.error('connectWithJson returned false');
+      final detail = await _describeNativeStartFailure();
+      AppLog.error('connectWithJson returned false${detail.isEmpty ? '' : ': $detail'}');
       await _clearSessionCredentials();
       _credentialService.clear(credentials);
-      throw StateError('Failed to start VPN');
+      throw StateError(
+        detail.isEmpty ? 'Failed to start VPN' : 'Failed to start VPN: $detail',
+      );
     }
 
     try {
       await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
     } catch (error) {
-      AppLog.error('Did not reach Connected: $error');
+      final detail = await _describeNativeStartFailure();
+      AppLog.error('Did not reach Connected: $error${detail.isEmpty ? '' : ' — $detail'}');
       await disconnect(userInitiated: false);
       _credentialService.clear(credentials);
-      throw StateError(
-        'VPN did not reach Connected state. '
-        'Grant VPN and notification permissions, then try again. ($error)',
-      );
+      throw StateError(_formatConnectFailureMessage(error, detail));
     }
 
     _sessionCredentials = credentials;
@@ -966,6 +1017,31 @@ class VpnService {
         'VPN failed to reach Connected (status=${_currentStatus.name})',
       );
     }
+  }
+
+  Future<String> _describeNativeStartFailure() async {
+    final native = (await _v2rayBox.getLastStartError()).trim();
+    if (native.isNotEmpty) {
+      return native;
+    }
+    final logs = await _v2rayBox.getLogs();
+    if (logs.isEmpty) {
+      return '';
+    }
+    final tail = logs.length > 4 ? logs.sublist(logs.length - 4) : logs;
+    return tail.join(' | ');
+  }
+
+  String _formatConnectFailureMessage(Object error, String nativeDetail) {
+    final base = error.toString();
+    if (nativeDetail.isEmpty) {
+      return 'VPN did not reach Connected state. '
+          'Grant VPN and notification permissions, then try again. ($base)';
+    }
+    if (base.contains(nativeDetail)) {
+      return 'VPN did not reach Connected state. $nativeDetail';
+    }
+    return 'VPN did not reach Connected state. $nativeDetail ($base)';
   }
 
   SocksAuthMode _resolveSocksAuthMode(Profile profile) {

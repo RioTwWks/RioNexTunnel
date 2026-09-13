@@ -44,6 +44,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     private var activeProfileName: String = ""
     private var killSwitchMode: String = "off"
     private var killSwitchEngaged: Bool = false
+    private var lastStartError: String = ""
+    private static let tunnelErrorDefaultsKey = "v2ray_box_last_tunnel_error"
     
     private var singboxConfigBuilder: ConfigBuilder {
         return ConfigBuilder(optionsJson: configOptions)
@@ -192,10 +194,19 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             statusString = "Starting"
         case .connected:
             statusString = "Started"
+            lastStartError = ""
+            clearSharedTunnelError()
         case .disconnecting:
             statusString = "Stopping"
         case .disconnected, .invalid:
             statusString = "Stopped"
+            if let tunnelError = readSharedTunnelError(), !tunnelError.isEmpty {
+                lastStartError = tunnelError
+                alertsEventSink?([
+                    "type": "StartService",
+                    "message": tunnelError,
+                ])
+            }
         @unknown default:
             statusString = "Stopped"
         }
@@ -450,6 +461,14 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             
         case "get_logs":
             result([String]())
+            
+        case "get_last_start_error":
+            result(lastStartError)
+            
+        case "clear_last_start_error":
+            lastStartError = ""
+            clearSharedTunnelError()
+            result(true)
             
         case "set_debug_mode":
             if let enabled = call.arguments as? Bool {
@@ -921,6 +940,18 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 }
                 return
                 #endif
+
+                if coreEngine == "xray" && !isXrayAvailableOnDevice() {
+                    let message = "Xray is not supported on iOS. Switch engine to Auto or sing-box in Settings."
+                    lastStartError = message
+                    await MainActor.run {
+                        result(FlutterError(code: "ENGINE_UNAVAILABLE", message: message, details: nil))
+                    }
+                    return
+                }
+                
+                lastStartError = ""
+                clearSharedTunnelError()
                 
                 if coreEngine == "singbox" {
                     var validateError: NSError?
@@ -983,11 +1014,26 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     // MARK: - Helper Methods
     
     private func getAppGroupIdentifier() -> String {
-        // Try to find the app group from the main bundle
+        if let groupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
+           !groupId.isEmpty {
+            return groupId
+        }
         if let bundleId = Bundle.main.bundleIdentifier {
             return "group.\(bundleId)"
         }
-        return "group.com.example.v2rayBoxExample"
+        return "group.com.example.secureVpnClient"
+    }
+
+    private func sharedTunnelDefaults() -> UserDefaults? {
+        UserDefaults(suiteName: getAppGroupIdentifier())
+    }
+
+    private func readSharedTunnelError() -> String? {
+        sharedTunnelDefaults()?.string(forKey: V2rayBoxPlugin.tunnelErrorDefaultsKey)
+    }
+
+    private func clearSharedTunnelError() {
+        sharedTunnelDefaults()?.removeObject(forKey: V2rayBoxPlugin.tunnelErrorDefaultsKey)
     }
     
     private func getBaseDirectory() -> URL {

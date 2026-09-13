@@ -453,6 +453,17 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
   }
 
   @override
+  Future<String> getLastStartError() async {
+    final result = await methodChannel.invokeMethod<String>('get_last_start_error');
+    return result ?? '';
+  }
+
+  @override
+  Future<void> clearLastStartError() async {
+    await methodChannel.invokeMethod<void>('clear_last_start_error');
+  }
+
+  @override
   Future<List<String>> getLogs() async {
     final result = await methodChannel.invokeMethod<List<dynamic>>('get_logs');
     if (result == null) return [];
