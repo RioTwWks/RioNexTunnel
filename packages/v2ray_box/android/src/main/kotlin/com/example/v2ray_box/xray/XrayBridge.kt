@@ -58,6 +58,14 @@ object XrayBridge {
         return assetDir.absolutePath
     }
 
+    fun geoAssetsReady(workDir: String): Boolean {
+        val assetDir = File(workDir, "assets")
+        return listOf("geoip.dat", "geosite.dat").all { name ->
+            val file = File(assetDir, name)
+            file.exists() && file.length() > 0L
+        }
+    }
+
     private fun copyAssetCandidates(context: Context, name: String, dest: File): Boolean {
         val candidates = listOf("xray/$name", name, "geo/$name")
         for (path in candidates) {

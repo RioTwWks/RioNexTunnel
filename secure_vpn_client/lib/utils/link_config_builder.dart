@@ -644,7 +644,9 @@ class LinkConfigBuilder {
     Map<String, dynamic> outbound,
     LinkBuildOptions options,
   ) {
-    if (!options.muxEnabled) {
+    if (!options.muxEnabled ||
+        !TransportPresets.xrayOutboundSupportsMux(outbound)) {
+      outbound.remove('mux');
       return;
     }
     outbound['mux'] = {
@@ -657,7 +659,9 @@ class LinkConfigBuilder {
     Map<String, dynamic> outbound,
     LinkBuildOptions options,
   ) {
-    if (!options.muxEnabled) {
+    if (!options.muxEnabled ||
+        !TransportPresets.singboxOutboundSupportsMux(outbound)) {
+      outbound.remove('multiplex');
       return;
     }
     outbound['multiplex'] = {

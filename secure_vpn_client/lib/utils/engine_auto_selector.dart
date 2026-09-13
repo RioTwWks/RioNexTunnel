@@ -100,13 +100,22 @@ class EngineAutoSelector {
     return false;
   }
 
-  static Future<bool> xrayGeoAssetsPresent() async {
+  static Future<bool> xrayGeoAssetsPresent({V2rayBox? box}) async {
     if (kIsWeb) {
       return false;
     }
-    if (Platform.isAndroid) {
-      // Packaged under assets/xray and copied at runtime by XrayBridge.
-      return true;
+    if (Platform.isAndroid || Platform.isIOS) {
+      if (box != null) {
+        try {
+          final info = await box.getCoreInfo();
+          if (info.containsKey('xray_geo_assets_available')) {
+            return _truthy(info['xray_geo_assets_available']);
+          }
+        } catch (_) {
+          // Fall through to false — fail closed for geo routing.
+        }
+      }
+      return false;
     }
     if (!Platform.isLinux && !Platform.isWindows && !Platform.isMacOS) {
       return true;
@@ -168,7 +177,7 @@ class EngineAutoSelector {
     }
 
     // Auto: availability → format → geo demotion → default order + fallback.
-    final order = await _autoOrder(profile, available, pinning: pinning);
+    final order = await _autoOrder(profile, available, box: box, pinning: pinning);
     return EngineResolution(
       attemptOrder: order,
       reason: 'Auto: try ${order.map((e) => e.coreName).join(' → ')}',
@@ -178,6 +187,7 @@ class EngineAutoSelector {
   static Future<List<VpnEngine>> _autoOrder(
     Profile profile,
     Set<VpnEngine> available, {
+    required V2rayBox box,
     PinningConfig? pinning,
   }) async {
     final base = defaultOrder.where(available.contains).toList();
@@ -233,7 +243,7 @@ class EngineAutoSelector {
       }
     }
 
-    final geoOk = await xrayGeoAssetsPresent();
+    final geoOk = await xrayGeoAssetsPresent(box: box);
     if (!geoOk &&
         xrayBody != null &&
         needsXrayGeo(xrayBody) &&

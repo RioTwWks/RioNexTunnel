@@ -34,6 +34,43 @@ void main() {
       expect(updated, contains('type=grpc'));
       expect(updated, contains('fp=edge'));
     });
+
+    test('suggestPreset keeps detected transport', () {
+      const tlsLink =
+          'vless://11111111-2222-3333-4444-555555555555@example.com:443';
+      expect(
+        TransportPresets.suggestPreset(tlsLink),
+        TransportPresetId.plainTls,
+      );
+    });
+
+    test('xhttpReality preset keeps TLS when REALITY keys are absent', () {
+      const link =
+          'vless://11111111-2222-3333-4444-555555555555@example.com:443'
+          '?security=tls&type=tcp';
+      final updated = TransportPresets.applyPresetToLink(
+        link,
+        preset: TransportPresetId.xhttpReality,
+      );
+      expect(updated, contains('type=xhttp'));
+      expect(updated, contains('security=tls'));
+      expect(updated, isNot(contains('security=reality')));
+    });
+
+    test('linkParamsSupportMux rejects XHTTP and REALITY', () {
+      expect(
+        TransportPresets.linkParamsSupportMux(
+          const {'type': 'xhttp', 'security': 'reality', 'pbk': 'abc'},
+        ),
+        isFalse,
+      );
+      expect(
+        TransportPresets.linkParamsSupportMux(
+          const {'type': 'tcp', 'security': 'tls'},
+        ),
+        isTrue,
+      );
+    });
   });
 
   group('LinkConfigBuilder censorship transports', () {
@@ -75,7 +112,7 @@ void main() {
       expect((stream['grpcSettings'] as Map)['serviceName'], 'mygrpc');
     });
 
-    test('applies mux when enabled', () {
+    test('applies mux when enabled for plain TLS', () {
       const link =
           'vless://11111111-2222-3333-4444-555555555555@example.com:443?security=tls';
       final json = LinkConfigBuilder.buildFromLink(
@@ -86,6 +123,20 @@ void main() {
       final outbound =
           (jsonDecode(json) as Map)['outbounds'].first as Map<String, dynamic>;
       expect((outbound['mux'] as Map)['enabled'], isTrue);
+    });
+
+    test('skips mux on XHTTP outbounds', () {
+      const link =
+          'vless://11111111-2222-3333-4444-555555555555@example.com:443'
+          '?security=reality&type=xhttp&pbk=key&sid=ab&sni=cdn.example.com';
+      final json = LinkConfigBuilder.buildFromLink(
+        link,
+        VpnEngine.xray,
+        options: const LinkBuildOptions(muxEnabled: true),
+      );
+      final outbound =
+          (jsonDecode(json) as Map)['outbounds'].first as Map<String, dynamic>;
+      expect(outbound['mux'], isNull);
     });
 
     test('builds AmneziaWG sing-box outbound from awg link', () {
@@ -121,6 +172,28 @@ void main() {
       final rules =
           ((jsonDecode(enhanced) as Map)['routing'] as Map)['rules'] as List;
       expect(rules.first['domain'], contains('geosite:ru'));
+    });
+
+    test('skips mux on XHTTP outbounds when censorship mode enabled', () {
+      const link =
+          'vless://11111111-2222-3333-4444-555555555555@example.com:443'
+          '?security=reality&type=xhttp&pbk=key&sid=ab&sni=cdn.example.com';
+      final base = LinkConfigBuilder.buildFromLink(link, VpnEngine.xray);
+      const profile = Profile(
+        id: 'p1',
+        name: 'test',
+        configLink: link,
+        censorshipModeEnabled: true,
+        muxEnabled: true,
+      );
+      final enhanced = ConfigEnhancer.applyProfileSettings(
+        base,
+        profile,
+        VpnEngine.xray,
+      );
+      final outbound =
+          (jsonDecode(enhanced) as Map)['outbounds'].first as Map<String, dynamic>;
+      expect(outbound['mux'], isNull);
     });
 
     test('secure SOCKS injection after enhancement', () {

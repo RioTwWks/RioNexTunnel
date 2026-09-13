@@ -34,7 +34,7 @@ void main() {
     expect((rules.first as Map)['domain'], ['user.example']);
   });
 
-  test('ru preset uses geosite/geoip', () {
+  test('ru preset uses geosite/geoip for xray', () {
     final config = <String, dynamic>{'routing': {'rules': <dynamic>[]}};
     RoutingConfigBuilder.mergeUserRulesIntoConfig(
       config,
@@ -43,5 +43,17 @@ void main() {
     );
     expect(jsonEncode(config), contains('geosite:ru'));
     expect(jsonEncode(config), contains('geoip:ru'));
+  });
+
+  test('ru preset uses geosite/geoip for sing-box', () {
+    final config = <String, dynamic>{'route': {'rules': <dynamic>[]}};
+    RoutingConfigBuilder.mergeUserRulesIntoConfig(
+      config,
+      RoutingPresetRegistry.rulesFor(RoutingPresetId.ruDirect),
+      VpnEngine.singbox,
+    );
+    final rules = (config['route'] as Map)['rules'] as List;
+    expect((rules.first as Map)['geosite'], ['ru']);
+    expect((rules[1] as Map)['geoip'], ['ru']);
   });
 }

@@ -6,6 +6,7 @@ import '../models/transport_preset.dart';
 import 'routing_config_builder.dart';
 import '../models/vpn_engine.dart';
 import 'multihop_config_builder.dart';
+import 'transport_presets.dart';
 
 /// Options passed when building config from a share link.
 class LinkBuildOptions {
@@ -101,19 +102,25 @@ class ConfigEnhancer {
 
       if (engine == VpnEngine.xray) {
         _applyXrayFingerprint(outbound, profile.tlsFingerprint);
-        if (profile.muxEnabled) {
+        if (profile.muxEnabled &&
+            TransportPresets.xrayOutboundSupportsMux(outbound)) {
           outbound['mux'] = {
             'enabled': true,
             'concurrency': profile.muxConcurrency,
           };
+        } else {
+          outbound.remove('mux');
         }
       } else {
         _applySingboxFingerprint(outbound, profile.tlsFingerprint);
-        if (profile.muxEnabled) {
+        if (profile.muxEnabled &&
+            TransportPresets.singboxOutboundSupportsMux(outbound)) {
           outbound['multiplex'] = {
             'enabled': true,
             'max_connections': profile.muxConcurrency,
           };
+        } else {
+          outbound.remove('multiplex');
         }
       }
       outbounds[i] = outbound;
