@@ -388,6 +388,12 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
 
         case "get_logs":
             result([String]())
+
+        case "get_last_start_error":
+            result("")
+
+        case "clear_last_start_error":
+            result(true)
             
         case "set_debug_mode":
             if let enabled = call.arguments as? Bool {

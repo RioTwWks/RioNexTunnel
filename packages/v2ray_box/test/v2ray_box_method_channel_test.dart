@@ -87,6 +87,10 @@ void main() {
           return true;
         case 'get_logs':
           return <String>['line1'];
+        case 'get_last_start_error':
+          return '';
+        case 'clear_last_start_error':
+          return true;
         case 'set_debug_mode':
           return true;
         case 'get_debug_mode':

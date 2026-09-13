@@ -93,6 +93,8 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     private val logList = LinkedList<String>()
     private val logListLock = Any()
+    @Volatile
+    private var lastStartError: String? = null
     val serviceStatus = MutableLiveData(Status.Stopped)
     val serviceAlerts = MutableLiveData<ServiceEvent?>(null)
 
@@ -356,6 +358,9 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             activity?.runOnUiThread {
                 statusEventSink?.success(mapOf("status" to status.name))
             }
+            if (status == Status.Started) {
+                lastStartError = null
+            }
             if (status == Status.Started && statsEventSink != null) {
                 scope.launch(Dispatchers.IO) {
                     delay(500)
@@ -468,6 +473,8 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     override fun onServiceAlert(type: Alert, message: String?) {
+        val detail = message?.trim()?.takeIf { it.isNotEmpty() } ?: type.name
+        lastStartError = detail
         serviceAlerts.postValue(ServiceEvent(Status.Stopped, type, message))
     }
 
@@ -1094,6 +1101,15 @@ class V2rayBoxPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     logList.toList()
                 }
                 result.success(snapshot)
+            }
+
+            "get_last_start_error" -> {
+                result.success(lastStartError ?: "")
+            }
+
+            "clear_last_start_error" -> {
+                lastStartError = null
+                result.success(true)
             }
 
             "clear_logs" -> {

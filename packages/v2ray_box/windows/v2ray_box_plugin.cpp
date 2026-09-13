@@ -581,6 +581,16 @@ void V2rayBoxPlugin::HandleMethodCall(
     return;
   }
 
+  if (method == "get_last_start_error") {
+    SuccessStringResult(std::move(result), "");
+    return;
+  }
+
+  if (method == "clear_last_start_error") {
+    result->Success(flutter::EncodableValue(true));
+    return;
+  }
+
   if (method == "get_active_config") {
     std::ifstream in(ActiveConfigPath());
     std::ostringstream buffer;

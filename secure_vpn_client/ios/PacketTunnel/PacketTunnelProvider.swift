@@ -17,18 +17,22 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     private var downloadTotal: Int64 = 0
     
     override func startTunnel(options: [String: NSObject]?) async throws {
-        // Get config from options
+        clearTunnelError()
         guard let configString = options?["Config"] as? String else {
-            throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Config not provided"])
+            let message = "Config not provided"
+            saveTunnelError(message)
+            throw NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
         }
         
         config = configString
         coreEngine = (options?["CoreEngine"] as? String ?? "singbox").lowercased()
         if coreEngine == "xray" {
+            let message = "Xray is not supported on iOS. Switch engine to Auto or sing-box in Settings."
+            saveTunnelError(message)
             throw NSError(
                 domain: "V2rayBox",
                 code: -10,
-                userInfo: [NSLocalizedDescriptionKey: "iOS xray engine is not enabled in default PacketTunnel. Build and integrate XTLS/libXray in your tunnel target first."]
+                userInfo: [NSLocalizedDescriptionKey: message]
             )
         }
         let disableMemoryLimit = (options?["DisableMemoryLimit"] as? String ?? "NO") == "YES"
@@ -71,8 +75,13 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         commandServer = server
         try server.start()
         
-        // Start service
-        try await startService()
+        do {
+            try await startService()
+        } catch {
+            let message = (error as NSError).localizedDescription
+            saveTunnelError(message)
+            throw error
+        }
     }
     
     private func startService() async throws {
@@ -140,7 +149,16 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     
     func writeFatalError(_ message: String) {
         NSLog("FATAL: \(message)")
+        saveTunnelError(message)
         cancelTunnelWithError(NSError(domain: "V2rayBox", code: -1, userInfo: [NSLocalizedDescriptionKey: message]))
+    }
+
+    private func saveTunnelError(_ message: String) {
+        UserDefaults(suiteName: getAppGroupIdentifier())?.set(message, forKey: "v2ray_box_last_tunnel_error")
+    }
+
+    private func clearTunnelError() {
+        UserDefaults(suiteName: getAppGroupIdentifier())?.removeObject(forKey: "v2ray_box_last_tunnel_error")
     }
     
     func updateTraffic(upload: Int64, download: Int64) {
@@ -166,12 +184,11 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
     }
     
     private func getAppGroupIdentifier() -> String {
-        // Get from Info.plist or use default pattern
-        if let groupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String {
+        if let groupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
+           !groupId.isEmpty {
             return groupId
         }
-        // Default pattern: group.{main_bundle_identifier}
-        let mainBundleId = Bundle.main.bundleIdentifier?.replacingOccurrences(of: ".PacketTunnel", with: "") ?? "com.example.v2raybox"
+        let mainBundleId = Bundle.main.bundleIdentifier?.replacingOccurrences(of: ".PacketTunnel", with: "") ?? "com.example.secureVpnClient"
         return "group.\(mainBundleId)"
     }
 }

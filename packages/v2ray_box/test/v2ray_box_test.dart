@@ -193,6 +193,12 @@ class MockV2rayBoxPlatform
       true;
 
   @override
+  Future<String> getLastStartError() async => '';
+
+  @override
+  Future<void> clearLastStartError() async {}
+
+  @override
   Future<List<String>> getLogs() async => ['log line 1', 'log line 2'];
 
   @override

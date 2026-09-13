@@ -241,6 +241,16 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
     throw UnimplementedError('startWithJson() has not been implemented.');
   }
 
+  /// Last native start/stop error (service alert or tunnel failure).
+  Future<String> getLastStartError() {
+    throw UnimplementedError('getLastStartError() has not been implemented.');
+  }
+
+  /// Clear cached native start error before a new connect attempt.
+  Future<void> clearLastStartError() {
+    throw UnimplementedError('clearLastStartError() has not been implemented.');
+  }
+
   /// Get current log buffer
   Future<List<String>> getLogs() {
     throw UnimplementedError('getLogs() has not been implemented.');

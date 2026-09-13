@@ -6,6 +6,8 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>AppGroupIdentifier</key>
+	<string>group.com.example.secureVpnClient</string>
 	<key>CFBundleDisplayName</key>
 	<string>RioNexTunnel</string>
 	<key>CFBundleExecutable</key>

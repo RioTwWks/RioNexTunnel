@@ -10,6 +10,7 @@ import 'package:v2ray_box/v2ray_box.dart';
 import '../models/credentials.dart';
 import '../models/connection_detail.dart';
 import '../models/engine_preference.dart';
+import '../utils/engine_auto_selector.dart';
 import '../models/profile.dart';
 import '../models/subscription_refresh_interval.dart';
 import '../models/transport_preset.dart';
@@ -224,11 +225,7 @@ class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
       state = EnginePreference.fromStorage(savedPref);
       _vpnService.setEnginePreference(state);
       if (!state.isAuto) {
-        final engine = state == EnginePreference.singbox
-            ? VpnEngine.singbox
-            : VpnEngine.xray;
-        await _vpnService.setEngine(engine, disconnectIfNeeded: false);
-        _onActiveEngine?.call(engine);
+        await _applyFixedEnginePreference(state);
       }
       return;
     }
@@ -241,9 +238,8 @@ class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
           ? EnginePreference.singbox
           : EnginePreference.xray;
       _vpnService.setEnginePreference(state);
-      await _vpnService.setEngine(engine, disconnectIfNeeded: false);
+      await _applyFixedEnginePreference(state);
       await prefs.setString(_enginePreferenceKey, state.storageName);
-      _onActiveEngine?.call(engine);
       return;
     }
 
@@ -257,13 +253,24 @@ class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
     await prefs.setString(_enginePreferenceKey, preference.storageName);
 
     if (!preference.isAuto) {
-      final engine = preference == EnginePreference.singbox
-          ? VpnEngine.singbox
-          : VpnEngine.xray;
-      await _vpnService.setEngine(engine);
+      await _applyFixedEnginePreference(preference);
+      final engine = _vpnService.engine;
       await prefs.setString(_engineKey, engine.coreName);
-      _onActiveEngine?.call(engine);
     }
+  }
+
+  Future<void> _applyFixedEnginePreference(EnginePreference preference) async {
+    final requested = preference == EnginePreference.singbox
+        ? VpnEngine.singbox
+        : VpnEngine.xray;
+    final available = await EngineAutoSelector.availableEngines(
+      _vpnService.v2rayBox,
+    );
+    final engine = available.contains(requested)
+        ? requested
+        : EngineAutoSelector.pickAvailableEngine(available, preferred: requested);
+    await _vpnService.setEngine(engine, disconnectIfNeeded: false);
+    _onActiveEngine?.call(engine);
   }
 }
 

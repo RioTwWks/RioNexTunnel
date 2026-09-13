@@ -309,6 +309,16 @@ class V2rayBox {
     );
   }
 
+  /// Last native VPN start error (service alert, tunnel failure, etc.).
+  Future<String> getLastStartError() {
+    return V2rayBoxPlatform.instance.getLastStartError();
+  }
+
+  /// Clear cached native start error before a new connect attempt.
+  Future<void> clearLastStartError() {
+    return V2rayBoxPlatform.instance.clearLastStartError();
+  }
+
   /// Get current log buffer
   Future<List<String>> getLogs() {
     return V2rayBoxPlatform.instance.getLogs();
