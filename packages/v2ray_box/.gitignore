@@ -49,5 +49,6 @@ migrate_working_dir/
 /example/windows/cores/
 /ios/Frameworks/Libbox.xcframework
 /ios/Frameworks/LibXray.xcframework
+/ios/Resources/geo/*.dat
 /macos/Frameworks/LibXray.xcframework
 /clone_temp/

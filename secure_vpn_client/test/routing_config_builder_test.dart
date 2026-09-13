@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:secure_vpn_client/models/routing_rule.dart';
 import 'package:secure_vpn_client/models/vpn_engine.dart';
+import 'package:secure_vpn_client/utils/config_parser.dart';
 import 'package:secure_vpn_client/utils/routing_config_builder.dart';
 
 void main() {
@@ -55,5 +56,9 @@ void main() {
     final rules = (config['route'] as Map)['rules'] as List;
     expect((rules.first as Map)['geosite'], ['ru']);
     expect((rules[1] as Map)['geoip'], ['ru']);
+    expect(
+      ConfigParser.configRequiresGeoRules(jsonEncode(config)),
+      isTrue,
+    );
   });
 }

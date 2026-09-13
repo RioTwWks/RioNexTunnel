@@ -159,6 +159,25 @@ void main() {
       );
     });
 
+    test('detects sing-box geosite/geoip route rules', () {
+      expect(
+        ConfigParser.configRequiresGeoRules(
+          '{"route":{"rules":[{"geosite":["ru"],"outbound":"direct"}]}}',
+        ),
+        isTrue,
+      );
+      expect(
+        ConfigParser.configRequiresGeoRules(
+          '{"route":{"rules":[{"geoip":["ru"],"outbound":"direct"}]}}',
+        ),
+        isTrue,
+      );
+      expect(
+        ConfigParser.configRequiresGeoRules('{"route":{"rules":[]}}'),
+        isFalse,
+      );
+    });
+
     test('strips deprecated allowInsecure from xray TLS settings', () {
       const withInsecure = '''
 {

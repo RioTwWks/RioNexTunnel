@@ -46,6 +46,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         try fileManager.createDirectory(at: workingDir, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: cacheDir, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: sharedDir, withIntermediateDirectories: true)
+        GeoAssets.ensureCopied(to: sharedDir)
         
         // Setup libbox (stderr redirect and memory limit are configured inside LibboxSetup)
         let options = LibboxSetupOptions()

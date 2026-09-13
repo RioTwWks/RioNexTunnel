@@ -376,6 +376,9 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         case "get_core_info":
             let xrayAvailable = isXrayAvailableOnDevice()
             let singboxAvailable = isSingboxAvailable()
+            let baseDir = getBaseDirectory()
+            GeoAssets.ensureCopied(to: baseDir)
+            let geoReady = GeoAssets.areReady(in: baseDir)
             if coreEngine == "xray" {
                 result([
                     "engine": "xray",
@@ -383,6 +386,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                     "version": "",
                     "xray_available": xrayAvailable,
                     "singbox_available": singboxAvailable,
+                    "geo_assets_available": geoReady,
+                    "xray_geo_assets_available": geoReady,
                 ] as [String: Any])
             } else {
                 var info: [String: Any] = [
@@ -390,6 +395,8 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                     "core": "sing-box",
                     "xray_available": xrayAvailable,
                     "singbox_available": singboxAvailable,
+                    "geo_assets_available": geoReady,
+                    "xray_geo_assets_available": geoReady,
                 ]
                 let version = LibboxVersion()
                 if !version.isEmpty { info["version"] = version }
@@ -594,6 +601,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 try fileManager.createDirectory(at: baseDir, withIntermediateDirectories: true)
                 try fileManager.createDirectory(at: workingDir, withIntermediateDirectories: true)
                 try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                GeoAssets.ensureCopied(to: baseDir)
                 
                 let options = LibboxSetupOptions()
                 options.basePath = baseDir.path
