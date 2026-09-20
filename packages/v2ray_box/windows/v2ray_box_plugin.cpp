@@ -411,6 +411,13 @@ void V2rayBoxPlugin::HandleMethodCall(
   }
 
   if (method == "start_with_json") {
+    if (g_core_engine == "skadi") {
+      result->Error(
+          "START_ERROR",
+          "SkadiCore is not available on Windows yet (authenticated proxy front "
+          "is Linux-only in this release). Use Xray or sing-box.");
+      return;
+    }
     const auto* args = GetArgumentMap(method_call);
     if (args == nullptr) {
       ErrorResult(std::move(result), "INVALID_ARGS", "Missing config parameter");
@@ -572,6 +579,9 @@ void V2rayBoxPlugin::HandleMethodCall(
         flutter::EncodableValue(xray_ok);
     map[flutter::EncodableValue("singbox_available")] =
         flutter::EncodableValue(singbox_ok);
+    // SkadiCore LocalAuthProxy front is Linux-first; hide until Windows port.
+    map[flutter::EncodableValue("skadi_available")] =
+        flutter::EncodableValue(false);
     result->Success(flutter::EncodableValue(map));
     return;
   }

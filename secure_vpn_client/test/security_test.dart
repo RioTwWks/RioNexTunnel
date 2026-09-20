@@ -81,7 +81,7 @@ void main() {
 }
 ''';
       final credentials = CredentialService().generate();
-      for (final engine in VpnEngine.values) {
+      for (final engine in [VpnEngine.xray, VpnEngine.singbox]) {
         final secure = ConfigParser.injectSecureSocksInbound(
           config,
           credentials,

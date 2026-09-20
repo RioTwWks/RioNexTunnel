@@ -365,6 +365,11 @@ class ConfigParser {
       throw ConfigParserException('Config root must be a JSON object');
     }
     final config = Map<String, dynamic>.from(decoded);
+    if (engine == VpnEngine.skadi) {
+      throw ConfigParserException(
+        'SkadiCore uses TOML via SkadiConfigBuilder, not JSON inbound injection',
+      );
+    }
     if (engine == VpnEngine.xray) {
       _normalizeXraySubscriptionConfig(config);
       _normalizeXrayXhttpTransport(config);

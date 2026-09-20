@@ -338,6 +338,12 @@ abstract class AppLocalizations {
   /// **'sing-box'**
   String get engineSingbox;
 
+  /// No description provided for @engineSkadi.
+  ///
+  /// In en, this message translates to:
+  /// **'Skadi'**
+  String get engineSkadi;
+
   /// No description provided for @actionOff.
   ///
   /// In en, this message translates to:

@@ -27,6 +27,7 @@ import '../utils/core_version_gate.dart';
 import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
 import '../utils/platform_transport_selector.dart';
+import '../utils/skadi_config_builder.dart';
 import '../utils/transport_presets.dart';
 import '../utils/transport_stack_classifier.dart';
 import '../utils/server_latency.dart';
@@ -327,10 +328,13 @@ class VpnService {
 
     VpnEngine target;
     if (_enginePreference == EnginePreference.singbox ||
-        _enginePreference == EnginePreference.xray) {
-      target = _enginePreference == EnginePreference.singbox
-          ? VpnEngine.singbox
-          : VpnEngine.xray;
+        _enginePreference == EnginePreference.xray ||
+        _enginePreference == EnginePreference.skadi) {
+      target = switch (_enginePreference) {
+        EnginePreference.singbox => VpnEngine.singbox,
+        EnginePreference.skadi => VpnEngine.skadi,
+        _ => VpnEngine.xray,
+      };
       if (!available.contains(target)) {
         throw StateError(
           '${target.coreName} is not available on this device. '
@@ -767,6 +771,11 @@ class VpnService {
         'Xray is not supported on iOS. Open Settings → Engine and choose Auto or sing-box.',
       );
     }
+    if (!kIsWeb && Platform.isIOS && _engine == VpnEngine.skadi) {
+      throw StateError(
+        'SkadiCore is not supported on iOS yet. Open Settings → Engine and choose Auto or sing-box.',
+      );
+    }
 
     final rawConfig = await resolveProfileConfig(
       effectiveProfile,
@@ -779,6 +788,14 @@ class VpnService {
     }
 
     _assertOfficialCoreSupportsAwg(rawConfig);
+
+    if (_engine == VpnEngine.skadi) {
+      return _connectWithSkadi(
+        effectiveProfile: effectiveProfile,
+        rawConfig: rawConfig,
+        stack: stack,
+      );
+    }
 
     if (ConfigParser.configRequiresGeoRules(rawConfig)) {
       if (Platform.isAndroid || Platform.isIOS) {
@@ -851,6 +868,95 @@ class VpnService {
     } catch (error) {
       final detail = await _describeNativeStartFailure();
       AppLog.error('Did not reach Connected: $error${detail.isEmpty ? '' : ' — $detail'}');
+      await disconnect(userInitiated: false);
+      _credentialService.clear(credentials);
+      throw StateError(_formatConnectFailureMessage(error, detail));
+    }
+
+    _sessionCredentials = credentials;
+    _activeProfile = effectiveProfile;
+    _panelSessionId = const Uuid().v4();
+    if (stack != null) {
+      await _recordStackAttempt(
+        profile: effectiveProfile,
+        stack: stack,
+        success: true,
+      );
+    }
+    await _killSwitchService?.onTunnelRestored();
+    _publishStatus(VpnStatus.started);
+    AppLog.info(
+      'VPN connected with ${_engine.coreName}'
+      '${stack != null ? ' stack=${stack.tag}' : ''}',
+    );
+    return effectiveProfile;
+  }
+
+  /// SkadiCore: TOML client config; native fronts no-auth SOCKS with auth proxy.
+  Future<Profile> _connectWithSkadi({
+    required Profile effectiveProfile,
+    required String rawConfig,
+    TransportStackCandidate? stack,
+  }) async {
+    if (!SkadiConfigBuilder.supportsContent(rawConfig)) {
+      throw StateError(
+        'SkadiCore supports VLESS (TLS/REALITY/XHTTP) only. '
+        'Switch engine to Auto, Xray, or sing-box for this profile.',
+      );
+    }
+
+    final credentials = await _resolveSessionCredentials(
+      profile: effectiveProfile,
+      rawConfig: rawConfig,
+    );
+    final effectiveSocksPort = socksPort;
+    final toml = SkadiConfigBuilder.build(
+      rawConfig,
+      publicSocksPort: effectiveSocksPort,
+    );
+    AppLog.info(
+      'SkadiCore TOML ready backend=127.0.0.1:'
+      '${SkadiConfigBuilder.internalSocksPort(effectiveSocksPort)}',
+    );
+
+    final validationError = await _v2rayBox.checkConfigJson(toml);
+    if (validationError.isNotEmpty) {
+      AppLog.error('Skadi config validation failed: $validationError');
+      _credentialService.clear(credentials);
+      throw StateError('Invalid SkadiCore config: $validationError');
+    }
+
+    await _setSessionCredentials(credentials, port: effectiveSocksPort);
+    await _v2rayBox.clearLastStartError();
+    final started = await _v2rayBox.connectWithJson(
+      toml,
+      name: effectiveProfile.name,
+      socksUsername: credentials.username,
+      socksPassword: credentials.password,
+      socksPort: effectiveSocksPort,
+    );
+    if (!started) {
+      final detail = await _describeNativeStartFailure();
+      AppLog.error(
+        'Skadi connectWithJson failed${detail.isEmpty ? '' : ': $detail'}',
+      );
+      await _clearSessionCredentials();
+      _credentialService.clear(credentials);
+      throw StateError(
+        detail.isEmpty
+            ? 'Failed to start SkadiCore'
+            : 'Failed to start SkadiCore: $detail',
+      );
+    }
+
+    try {
+      await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
+    } catch (error) {
+      final detail = await _describeNativeStartFailure();
+      AppLog.error(
+        'Skadi did not reach Connected: $error'
+        '${detail.isEmpty ? '' : ' — $detail'}',
+      );
       await disconnect(userInitiated: false);
       _credentialService.clear(credentials);
       throw StateError(_formatConnectFailureMessage(error, detail));

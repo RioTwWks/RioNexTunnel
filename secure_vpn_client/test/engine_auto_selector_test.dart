@@ -39,6 +39,7 @@ void main() {
       expect(EnginePreference.fromStorage('auto'), EnginePreference.auto);
       expect(EnginePreference.fromStorage('xray'), EnginePreference.xray);
       expect(EnginePreference.fromStorage('singbox'), EnginePreference.singbox);
+      expect(EnginePreference.fromStorage('skadi'), EnginePreference.skadi);
       expect(EnginePreference.fromStorage(null), EnginePreference.auto);
     });
   });

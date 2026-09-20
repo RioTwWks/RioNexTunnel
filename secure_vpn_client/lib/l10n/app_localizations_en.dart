@@ -132,6 +132,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get engineSingbox => 'sing-box';
 
   @override
+  String get engineSkadi => 'Skadi';
+
+  @override
   String get actionOff => 'Off';
 
   @override

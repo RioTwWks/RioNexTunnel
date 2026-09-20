@@ -43,7 +43,8 @@ Secure-Cross-Platform-VPN-Client/
 | Subscription | `ConfigParser.parseFromUrl()` | Engine-specific User-Agent; see `troubleshooting.md` |
 | Config link | `LinkConfigBuilder.buildFromLink()` | Used when profile is a `vless://` / `trojan://` etc. |
 | Credentials | `CredentialService` + channel `secure_vpn/credentials` | Native side reads env vars on Linux |
-| Linux core | `packages/v2ray_box/linux/desktop_core.cc` | Spawns xray/sing-box subprocess |
+| Linux core | `packages/v2ray_box/linux/desktop_core.cc` | Spawns xray/sing-box/skadicore subprocess |
+| SkadiCore | `lib/utils/skadi_config_builder.dart` + `local_auth_proxy.cc` | VLESS→TOML; auth front on 1080/1081 → backend 1280 |
 
 ## Common commands
 

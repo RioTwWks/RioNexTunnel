@@ -234,9 +234,11 @@ class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
     final legacy = prefs.getString(_engineKey);
     if (legacy != null) {
       final engine = VpnEngine.fromCoreName(legacy);
-      state = engine == VpnEngine.singbox
-          ? EnginePreference.singbox
-          : EnginePreference.xray;
+      state = switch (engine) {
+        VpnEngine.singbox => EnginePreference.singbox,
+        VpnEngine.skadi => EnginePreference.skadi,
+        VpnEngine.xray => EnginePreference.xray,
+      };
       _vpnService.setEnginePreference(state);
       await _applyFixedEnginePreference(state);
       await prefs.setString(_enginePreferenceKey, state.storageName);
@@ -260,9 +262,11 @@ class EnginePreferenceNotifier extends StateNotifier<EnginePreference> {
   }
 
   Future<void> _applyFixedEnginePreference(EnginePreference preference) async {
-    final requested = preference == EnginePreference.singbox
-        ? VpnEngine.singbox
-        : VpnEngine.xray;
+    final requested = switch (preference) {
+      EnginePreference.singbox => VpnEngine.singbox,
+      EnginePreference.skadi => VpnEngine.skadi,
+      EnginePreference.xray || EnginePreference.auto => VpnEngine.xray,
+    };
     final available = await EngineAutoSelector.availableEngines(
       _vpnService.v2rayBox,
     );

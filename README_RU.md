@@ -6,20 +6,21 @@
 
 # RioNexTunnel
 
-**RIO — надёжная интернет-прослойка.** Кроссплатформенный VPN-клиент на Flutter с Xray-core и sing-box  
+**RIO — надёжная интернет-прослойка.** Кроссплатформенный VPN-клиент на Flutter с Xray-core, sing-box и SkadiCore  
 *Nexus + Tunnel — «связующий туннель» для конфигов и платформ.*  
 *Защита от неавторизованного локального SOCKS5-прокси (март 2026)*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue.svg)](https://flutter.dev)
 [![Xray-core](https://img.shields.io/badge/Xray--core-1.8.24+-green.svg)](https://github.com/XTLS/Xray-core)
 [![sing-box](https://img.shields.io/badge/sing--box-1.10+-orange.svg)](https://github.com/SagerNet/sing-box)
+[![SkadiCore](https://img.shields.io/badge/SkadiCore-0.1+-purple.svg)](https://github.com/RioTwWks/SkadiCore)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 ---
 
 ## Описание
 
-**RioNexTunnel** объединяет конфиги и платформы в защищённый канал. Приложение подключается к VPN-серверам по протоколам VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH и другим через ядра **Xray-core** и **sing-box**.
+**RioNexTunnel** объединяет конфиги и платформы в защищённый канал. Приложение подключается к VPN-серверам по протоколам VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH и другим через ядра **Xray-core**, **sing-box** и экспериментальное **[SkadiCore](https://github.com/RioTwWks/SkadiCore)** (VLESS TLS/REALITY/XHTTP на Linux desktop).
 
 Создано на Flutter для **Android, iOS, Windows, Linux и macOS**.
 

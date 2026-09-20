@@ -40,6 +40,7 @@
   "engineAuto": "Авто",
   "engineXray": "Xray",
   "engineSingbox": "sing-box",
+  "engineSkadi": "Skadi",
   "actionOff": "Выкл",
   "actionProxy": "Прокси",
   "actionVpn": "VPN",
