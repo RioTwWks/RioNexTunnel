@@ -4,13 +4,15 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEST="${ROOT_DIR}/secure_vpn_client/assets/binaries"
 
-# Override with env vars, e.g. XRAY_VERSION=26.3.27 SINGBOX_VERSION=1.13.13
+# Override with env vars, e.g. XRAY_VERSION=26.3.27 SINGBOX_VERSION=1.13.13 SKADI_VERSION=0.1.2
 XRAY_VERSION="${XRAY_VERSION:-}"
 SINGBOX_VERSION="${SINGBOX_VERSION:-}"
+SKADI_VERSION="${SKADI_VERSION:-}"
 
 # Used when GitHub API is unavailable (rate limit, offline dev machine, etc.)
 DEFAULT_XRAY_VERSION="${DEFAULT_XRAY_VERSION:-26.3.27}"
 DEFAULT_SINGBOX_VERSION="${DEFAULT_SINGBOX_VERSION:-1.14.0}"
+DEFAULT_SKADI_VERSION="${DEFAULT_SKADI_VERSION:-0.1.2}"
 
 mkdir -p "${DEST}"/{android/arm64-v8a,android/armeabi-v7a,ios,windows/x64,linux/x64,macos}
 
@@ -185,9 +187,12 @@ fi
 if [[ -z "${SINGBOX_VERSION}" ]]; then
   SINGBOX_VERSION="$(fetch_latest_tag "SagerNet/sing-box" "${DEFAULT_SINGBOX_VERSION}")"
 fi
+if [[ -z "${SKADI_VERSION}" ]]; then
+  SKADI_VERSION="$(fetch_latest_tag "RioTwWks/SkadiCore" "${DEFAULT_SKADI_VERSION}")"
+fi
 
-if [[ -z "${XRAY_VERSION}" || -z "${SINGBOX_VERSION}" ]]; then
-  echo "Could not resolve core versions. Set XRAY_VERSION and SINGBOX_VERSION explicitly." >&2
+if [[ -z "${XRAY_VERSION}" || -z "${SINGBOX_VERSION}" || -z "${SKADI_VERSION}" ]]; then
+  echo "Could not resolve core versions. Set XRAY_VERSION, SINGBOX_VERSION, and SKADI_VERSION explicitly." >&2
   exit 1
 fi
 
@@ -244,16 +249,37 @@ download_and_extract \
   "$(resolve_asset_url "SagerNet/sing-box" "${SINGBOX_VERSION}" "^sing-box-${SINGBOX_VERSION}-android-arm\\.tar\\.gz\$")" \
   "${DEST}/android/armeabi-v7a" "sing-box" "true"
 
+echo "Fetching SkadiCore v${SKADI_VERSION}..."
+# Official releases ship musl Linux + Windows GNU + macOS Darwin archives named skadicore-*.
+download_and_extract \
+  "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-x86_64-unknown-linux-musl\\.tar\\.gz$')" \
+  "${DEST}/linux/x64" "skadicore"
+download_and_extract \
+  "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-x86_64-pc-windows-gnu\\.zip$')" \
+  "${DEST}/windows/x64" "skadicore.exe" "true"
+if [[ "${MACOS_ARCH}" == "arm64" ]]; then
+  download_and_extract \
+    "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-aarch64-apple-darwin\\.tar\\.gz$')" \
+    "${DEST}/macos" "skadicore" "true"
+else
+  download_and_extract \
+    "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-x86_64-apple-darwin\\.tar\\.gz$')" \
+    "${DEST}/macos" "skadicore" "true"
+fi
+
 LINUX_RES="${ROOT_DIR}/secure_vpn_client/linux/runner/resources"
 WINDOWS_RES="${ROOT_DIR}/secure_vpn_client/windows/runner/resources"
 MACOS_RES="${ROOT_DIR}/secure_vpn_client/macos/Runner/Resources"
 
 copy_if_exists "${DEST}/linux/x64/xray" "${LINUX_RES}/xray"
 copy_if_exists "${DEST}/linux/x64/sing-box" "${LINUX_RES}/sing-box"
+copy_if_exists "${DEST}/linux/x64/skadicore" "${LINUX_RES}/skadicore"
 copy_if_exists "${DEST}/windows/x64/xray.exe" "${WINDOWS_RES}/xray.exe"
 copy_if_exists "${DEST}/windows/x64/sing-box.exe" "${WINDOWS_RES}/sing-box.exe"
+copy_if_exists "${DEST}/windows/x64/skadicore.exe" "${WINDOWS_RES}/skadicore.exe"
 copy_if_exists "${DEST}/macos/xray" "${MACOS_RES}/xray"
 copy_if_exists "${DEST}/macos/sing-box" "${MACOS_RES}/sing-box"
+copy_if_exists "${DEST}/macos/skadicore" "${MACOS_RES}/skadicore"
 
 # Android: ProcessBuilder runs nativeLibraryDir/libsingbox.so (requires useLegacyPackaging).
 # Official android-arm* archives ship a plain "sing-box" binary — rename for jniLibs packaging.
@@ -291,5 +317,6 @@ copy_if_exists "${GEO_DEST}/geoip.dat" "${IOS_APP_GEO}/geoip.dat"
 copy_if_exists "${GEO_DEST}/geosite.dat" "${IOS_APP_GEO}/geosite.dat"
 
 echo "Core binaries downloaded to ${DEST}"
-echo "Versions: Xray v${XRAY_VERSION}, sing-box v${SINGBOX_VERSION}"
+echo "Versions: Xray v${XRAY_VERSION}, sing-box v${SINGBOX_VERSION}, SkadiCore v${SKADI_VERSION}"
 echo "Note: official sing-box does not yet support AmneziaWG obfuscation (awg:// links parse in the app; connect fails closed until upstream adds AWG)."
+echo "Note: SkadiCore client SOCKS is no-auth; Linux plugin fronts it with LocalAuthProxy (auth on 1080/1081)."

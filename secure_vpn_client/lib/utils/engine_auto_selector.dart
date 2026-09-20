@@ -23,9 +23,10 @@ class EngineResolution {
   VpnEngine get preferred => attemptOrder.first;
 }
 
-/// Picks xray vs sing-box from availability, subscription format, and geo needs.
+/// Picks xray / sing-box / SkadiCore from availability, format, and geo needs.
 class EngineAutoSelector {
   /// Default preference order when scores are equal.
+  /// SkadiCore is opt-in (manual) or last Auto fallback for VLESS-only profiles.
   static const defaultOrder = [VpnEngine.xray, VpnEngine.singbox];
 
   /// Platform-native default when no preference is stored yet.
@@ -72,9 +73,15 @@ class EngineAutoSelector {
       final info = await box.getCoreInfo();
       final xray = _truthy(info['xray_available']);
       final singbox = _truthy(info['singbox_available']);
+      final skadi = _truthy(info['skadi_available']);
       if (info.containsKey('xray_available') ||
-          info.containsKey('singbox_available')) {
-        return {if (xray) VpnEngine.xray, if (singbox) VpnEngine.singbox};
+          info.containsKey('singbox_available') ||
+          info.containsKey('skadi_available')) {
+        return {
+          if (xray) VpnEngine.xray,
+          if (singbox) VpnEngine.singbox,
+          if (skadi) VpnEngine.skadi,
+        };
       }
     } catch (_) {
       // Fall through to filesystem / platform heuristics.
@@ -102,6 +109,9 @@ class EngineAutoSelector {
       if (await _linuxBinaryExists('sing-box')) {
         available.add(VpnEngine.singbox);
       }
+      if (await _linuxBinaryExists('skadicore')) {
+        available.add(VpnEngine.skadi);
+      }
       if (available.isEmpty) {
         // Still allow attempts — Start() will surface a clear error.
         return {VpnEngine.xray, VpnEngine.singbox};
@@ -121,6 +131,9 @@ class EngineAutoSelector {
       if (Platform.environment['V2RAY_BOX_SINGBOX_PATH'] != null &&
           binaryName == 'sing-box')
         Platform.environment['V2RAY_BOX_SINGBOX_PATH']!,
+      if (Platform.environment['V2RAY_BOX_SKADI_PATH'] != null &&
+          binaryName == 'skadicore')
+        Platform.environment['V2RAY_BOX_SKADI_PATH']!,
       '$exeDir/lib/resources/$binaryName',
       '$exeDir/resources/$binaryName',
       '$exeDir/$binaryName',
@@ -201,14 +214,18 @@ class EngineAutoSelector {
     }
 
     if (preference == EnginePreference.xray ||
-        preference == EnginePreference.singbox) {
-      final fixed = preference == EnginePreference.xray
-          ? VpnEngine.xray
-          : VpnEngine.singbox;
+        preference == EnginePreference.singbox ||
+        preference == EnginePreference.skadi) {
+      final fixed = switch (preference) {
+        EnginePreference.xray => VpnEngine.xray,
+        EnginePreference.singbox => VpnEngine.singbox,
+        EnginePreference.skadi => VpnEngine.skadi,
+        EnginePreference.auto => VpnEngine.xray,
+      };
       if (!available.contains(fixed)) {
         throw StateError(
           '${fixed.coreName} is not available on this device. '
-          'Install cores or switch engine preference.',
+          'Install cores (scripts/fetch_cores.sh) or switch engine preference.',
         );
       }
       return EngineResolution(

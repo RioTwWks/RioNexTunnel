@@ -8,13 +8,14 @@ sequenceDiagram
     participant VS as VpnService
     participant CP as ConfigParser
     participant VB as v2ray_box plugin
-    participant Core as xray / sing-box
+    participant Core as xray / sing-box / skadicore
 
     UI->>VS: connect(profile)
-    VS->>CP: parseFromUrl / buildFromLink
-    VS->>CP: injectSecureSocksInbound(credentials)
+    VS->>CP: parseFromUrl / buildFromLink / SkadiConfigBuilder
+    VS->>CP: injectSecureSocksInbound(credentials) [xray/sing-box]
+    Note over VS,Core: SkadiCore: TOML + LocalAuthProxy (auth SOCKS/HTTP)
     VS->>VB: connectWithJson(secureConfig)
-    VB->>VB: write active_config.json
+    VB->>VB: write active_config.json|.toml
     VB->>VB: SystemProxy::Enable (Linux GNOME)
     VB->>Core: spawn subprocess
     Core-->>VB: stderr on failure

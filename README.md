@@ -6,20 +6,21 @@
 
 # RioNexTunnel
 
-**RIO — Reliable Internet Overlay.** Cross-platform Flutter VPN client with Xray-core and sing-box  
+**RIO — Reliable Internet Overlay.** Cross-platform Flutter VPN client with Xray-core, sing-box, and SkadiCore  
 *Nexus + Tunnel — a secure linking channel across configs and platforms.*  
 *Immune to unauthenticated local SOCKS5 proxy vulnerability (March 2026)*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.22+-blue.svg)](https://flutter.dev)
 [![Xray-core](https://img.shields.io/badge/Xray--core-1.8.24+-green.svg)](https://github.com/XTLS/Xray-core)
 [![sing-box](https://img.shields.io/badge/sing--box-1.10+-orange.svg)](https://github.com/SagerNet/sing-box)
+[![SkadiCore](https://img.shields.io/badge/SkadiCore-0.1+-purple.svg)](https://github.com/RioTwWks/SkadiCore)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 ---
 
 ## Overview
 
-**RioNexTunnel** unifies configs and platforms into a protected channel. The app connects to VPN servers via VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH, and other protocols through **Xray-core** and **sing-box** engines.
+**RioNexTunnel** unifies configs and platforms into a protected channel. The app connects to VPN servers via VLESS, VMess, Shadowsocks, Trojan, Hysteria/Hysteria2, TUIC, WireGuard, SSH, and other protocols through **Xray-core**, **sing-box**, and experimental **[SkadiCore](https://github.com/RioTwWks/SkadiCore)** (VLESS TLS/REALITY/XHTTP on Linux desktop).
 
 Built on Flutter for **Android, iOS, Windows, Linux, and macOS**.
 

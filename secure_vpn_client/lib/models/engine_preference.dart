@@ -2,7 +2,8 @@
 enum EnginePreference {
   auto,
   xray,
-  singbox;
+  singbox,
+  skadi;
 
   String get storageName => name;
 
@@ -12,6 +13,8 @@ enum EnginePreference {
         return EnginePreference.auto;
       case 'singbox':
         return EnginePreference.singbox;
+      case 'skadi':
+        return EnginePreference.skadi;
       case 'xray':
         return EnginePreference.xray;
       default:

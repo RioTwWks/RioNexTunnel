@@ -45,6 +45,27 @@ void KillProcessOnPort(int port) {
 
 constexpr const char* kXrayName = "xray";
 constexpr const char* kSingboxName = "sing-box";
+constexpr const char* kSkadiName = "skadicore";
+
+const char* BinaryNameForEngine(const std::string& engine) {
+  if (engine == "singbox") {
+    return kSingboxName;
+  }
+  if (engine == "skadi") {
+    return kSkadiName;
+  }
+  return kXrayName;
+}
+
+const char* EnvPathForEngine(const std::string& engine) {
+  if (engine == "singbox") {
+    return getenv("V2RAY_BOX_SINGBOX_PATH");
+  }
+  if (engine == "skadi") {
+    return getenv("V2RAY_BOX_SKADI_PATH");
+  }
+  return getenv("V2RAY_BOX_XRAY_PATH");
+}
 
 bool IsExecutable(const std::string& path) {
   return access(path.c_str(), X_OK) == 0;
@@ -268,10 +289,8 @@ bool IsValidJson(const std::string& json) {
 }
 
 std::string DesktopCore::FindBinary(const std::string& engine) const {
-  const bool singbox = engine == "singbox";
-  const char* binary_name = singbox ? kSingboxName : kXrayName;
-  const char* env_override =
-      singbox ? getenv("V2RAY_BOX_SINGBOX_PATH") : getenv("V2RAY_BOX_XRAY_PATH");
+  const char* binary_name = BinaryNameForEngine(engine);
+  const char* env_override = EnvPathForEngine(engine);
 
   std::vector<std::string> candidates;
   if (env_override != nullptr && env_override[0] != '\0') {
@@ -313,6 +332,9 @@ std::string DesktopCore::GetVersion(const std::string& engine) const {
   if (binary.empty()) {
     return "";
   }
+  if (engine == "skadi") {
+    return RunForOutput(binary, {"--version"});
+  }
   return RunForOutput(binary, {"version"});
 }
 
@@ -350,11 +372,15 @@ std::string DesktopCore::Start(const std::string& engine,
   }
   KillProcessOnPort(socks_port);
   KillProcessOnPort(socks_port + 1);
+  if (engine == "skadi") {
+    // Backend no-auth SOCKS used only by LocalAuthProxy.
+    KillProcessOnPort(socks_port + 200);
+  }
 
   const std::string binary = FindBinary(engine);
   if (binary.empty()) {
     return "Core binary not found. Run scripts/fetch_cores.sh and ensure "
-           "linux/runner/resources contains xray/sing-box.";
+           "linux/runner/resources contains xray/sing-box/skadicore.";
   }
 
   int stderr_pipe[2];
@@ -387,7 +413,7 @@ std::string DesktopCore::Start(const std::string& engine,
 
     const std::string asset_dir = JoinPath(work_dir, "assets");
     EnsureDirectory(asset_dir);
-    if (engine != "singbox") {
+    if (engine != "singbox" && engine != "skadi") {
       EnsureXrayGeoAssets(work_dir, binary);
     }
     setenv("XRAY_LOCATION_ASSET", asset_dir.c_str(), 1);
@@ -395,6 +421,10 @@ std::string DesktopCore::Start(const std::string& engine,
     if (engine == "singbox") {
       const char* argv[] = {binary.c_str(), "run", "-c", config_path.c_str(), "-D",
                             work_dir.c_str(), nullptr};
+      execv(binary.c_str(), const_cast<char* const*>(argv));
+    } else if (engine == "skadi") {
+      const char* argv[] = {binary.c_str(), "client", "--config",
+                            config_path.c_str(), nullptr};
       execv(binary.c_str(), const_cast<char* const*>(argv));
     } else {
       const char* argv[] = {binary.c_str(), "run", "-c", config_path.c_str(), nullptr};

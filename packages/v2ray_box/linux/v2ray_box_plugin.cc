@@ -12,6 +12,7 @@
 #include "desktop_core.h"
 #include "desktop_ping.h"
 #include "kill_switch.h"
+#include "local_auth_proxy.h"
 #include "native_messaging.h"
 #include "system_proxy.h"
 #include "v2ray_box_plugin_private.h"
@@ -93,11 +94,25 @@ void apply_session_credentials() {
 }
 
 std::string active_config_path() {
-  return v2ray_box::JoinPath(v2ray_box::GetWorkingDirectory(), "profiles/active_config.json");
+  if (g_core_engine == "skadi") {
+    return v2ray_box::JoinPath(v2ray_box::GetWorkingDirectory(),
+                               "profiles/active_config.toml");
+  }
+  return v2ray_box::JoinPath(v2ray_box::GetWorkingDirectory(),
+                             "profiles/active_config.json");
+}
+
+bool LooksLikeSkadiToml(const std::string& content) {
+  return content.find("[client]") != std::string::npos &&
+         content.find("[remote]") != std::string::npos;
 }
 
 void wipe_sensitive_files() {
   v2ray_box::RemoveFileIfExists(active_config_path());
+  v2ray_box::RemoveFileIfExists(v2ray_box::JoinPath(
+      v2ray_box::GetWorkingDirectory(), "profiles/active_config.json"));
+  v2ray_box::RemoveFileIfExists(v2ray_box::JoinPath(
+      v2ray_box::GetWorkingDirectory(), "profiles/active_config.toml"));
   v2ray_box::RemoveFileIfExists(
       v2ray_box::JoinPath(v2ray_box::GetWorkingDirectory(), "singbox_config.json"));
 }
@@ -254,32 +269,44 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
         "NOT_SUPPORTED",
         "generate_config is not supported on Linux. Use subscription JSON.");
   } else if (strcmp(method, "check_config_json") == 0) {
-    const char* json = fl_value_get_type(args) == FL_VALUE_TYPE_STRING
+    const char* raw = fl_value_get_type(args) == FL_VALUE_TYPE_STRING
                            ? fl_value_get_string(args)
                            : "";
-    response = v2ray_box::IsValidJson(json)
-                   ? make_success_string("")
-                   : make_error("INVALID_CONFIG", "Invalid JSON format");
+    const std::string content = raw != nullptr ? raw : "";
+    if (g_core_engine == "skadi") {
+      response = LooksLikeSkadiToml(content)
+                     ? make_success_string("")
+                     : make_error("INVALID_CONFIG",
+                                  "Invalid SkadiCore TOML (need [client] and [remote])");
+    } else {
+      response = v2ray_box::IsValidJson(content)
+                     ? make_success_string("")
+                     : make_error("INVALID_CONFIG", "Invalid JSON format");
+    }
   } else if (strcmp(method, "start_with_json") == 0) {
     if (fl_value_get_type(args) != FL_VALUE_TYPE_MAP) {
       response = make_error("INVALID_ARGS", "Missing config parameter");
     } else {
       FlValue* config = fl_value_lookup_string(args, "config");
-      const char* config_json = fl_value_get_type(config) == FL_VALUE_TYPE_STRING
+      const char* config_raw = fl_value_get_type(config) == FL_VALUE_TYPE_STRING
                                     ? fl_value_get_string(config)
                                     : nullptr;
-      if (config_json == nullptr || !v2ray_box::IsValidJson(config_json)) {
+      const std::string config_content =
+          config_raw != nullptr ? config_raw : "";
+      const bool skadi = g_core_engine == "skadi";
+      const bool config_ok = skadi ? LooksLikeSkadiToml(config_content)
+                                   : v2ray_box::IsValidJson(config_content);
+      if (!config_ok) {
         response = make_error("INVALID_CONFIG", "Config validation failed");
       } else {
         emit_status(self, "Starting");
         const std::string profiles_dir =
             v2ray_box::JoinPath(v2ray_box::GetWorkingDirectory(), "profiles");
-        const std::string path =
-            v2ray_box::JoinPath(profiles_dir, "active_config.json");
+        const std::string path = active_config_path();
         if (!v2ray_box::EnsureDirectory(profiles_dir)) {
           emit_status(self, "Stopped");
           response = make_error("START_ERROR", "Failed to create profiles directory");
-        } else if (!v2ray_box::WriteTextFile(path, config_json)) {
+        } else if (!v2ray_box::WriteTextFile(path, config_content)) {
           emit_status(self, "Stopped");
           const std::string write_error =
               "Failed to write config file: " + path;
@@ -300,7 +327,37 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
           apply_session_credentials();
           const std::string start_error = v2ray_box::DesktopCore::Instance().Start(
               g_core_engine, path, v2ray_box::GetWorkingDirectory());
-          if (start_error.empty()) {
+          if (!start_error.empty()) {
+            self->is_running = FALSE;
+            wipe_sensitive_files();
+            emit_status(self, "Stopped");
+            response = make_error("START_ERROR", start_error.c_str());
+          } else if (skadi) {
+            const int backend_port = g_socks_port + 200;
+            const int http_port = g_socks_port + 1;
+            const std::string proxy_error =
+                v2ray_box::LocalAuthProxy::Instance().Start(
+                    g_socks_port, http_port, backend_port, g_socks_user,
+                    g_socks_pass);
+            if (!proxy_error.empty()) {
+              v2ray_box::DesktopCore::Instance().Stop();
+              self->is_running = FALSE;
+              wipe_sensitive_files();
+              emit_status(self, "Stopped");
+              response = make_error("START_ERROR", proxy_error.c_str());
+            } else {
+              self->is_running = TRUE;
+              if (v2ray_box::ConfigOptionsSetSystemProxy(g_config_options) &&
+                  !g_socks_user.empty()) {
+                v2ray_box::SystemProxy::Enable("127.0.0.1", http_port,
+                                               g_socks_user, g_socks_pass);
+                v2ray_box::NativeMessaging::PublishCredentials(
+                    "127.0.0.1", http_port, g_socks_user, g_socks_pass);
+              }
+              emit_status(self, "Started");
+              response = make_success_bool(true);
+            }
+          } else {
             self->is_running = TRUE;
             if (v2ray_box::ConfigOptionsSetSystemProxy(g_config_options) &&
                 !g_socks_user.empty()) {
@@ -312,11 +369,6 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
             }
             emit_status(self, "Started");
             response = make_success_bool(true);
-          } else {
-            self->is_running = FALSE;
-            wipe_sensitive_files();
-            emit_status(self, "Stopped");
-            response = make_error("START_ERROR", start_error.c_str());
           }
         }
       }
@@ -334,6 +386,7 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
     emit_status(self, "Stopping");
     v2ray_box::NativeMessaging::ClearCredentials();
     v2ray_box::SystemProxy::Disable();
+    v2ray_box::LocalAuthProxy::Instance().Stop();
     v2ray_box::DesktopCore::Instance().Stop();
     v2ray_box::KillSwitch::Instance().Release();
     self->is_running = FALSE;
@@ -401,10 +454,14 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
         !v2ray_box::DesktopCore::Instance().FindBinary("xray").empty();
     const bool singbox_ok =
         !v2ray_box::DesktopCore::Instance().FindBinary("singbox").empty();
+    const bool skadi_ok =
+        !v2ray_box::DesktopCore::Instance().FindBinary("skadi").empty();
     fl_value_set_string_take(map, "xray_available",
                              fl_value_new_bool(xray_ok ? TRUE : FALSE));
     fl_value_set_string_take(map, "singbox_available",
                              fl_value_new_bool(singbox_ok ? TRUE : FALSE));
+    fl_value_set_string_take(map, "skadi_available",
+                             fl_value_new_bool(skadi_ok ? TRUE : FALSE));
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(map));
   } else if (strcmp(method, "get_logs") == 0) {
     g_autoptr(FlValue) list = fl_value_new_list();

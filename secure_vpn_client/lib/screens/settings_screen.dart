@@ -72,11 +72,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (!preference.isAuto) {
       ref
           .read(engineProvider.notifier)
-          .noteActiveEngine(
-            preference == EnginePreference.singbox
-                ? VpnEngine.singbox
-                : VpnEngine.xray,
-          );
+          .noteActiveEngine(switch (preference) {
+            EnginePreference.singbox => VpnEngine.singbox,
+            EnginePreference.skadi => VpnEngine.skadi,
+            EnginePreference.xray || EnginePreference.auto => VpnEngine.xray,
+          });
     }
     await _loadCoreInfo();
   }
@@ -219,6 +219,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ButtonSegment(
                       value: EnginePreference.singbox,
                       label: Text(l10n.engineSingbox),
+                    ),
+                    ButtonSegment(
+                      value: EnginePreference.skadi,
+                      label: Text(l10n.engineSkadi),
                     ),
                   ],
                   selected: {preference},
