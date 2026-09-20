@@ -251,19 +251,20 @@ download_and_extract \
 
 echo "Fetching SkadiCore v${SKADI_VERSION}..."
 # Official releases ship musl Linux + Windows GNU + macOS Darwin archives named skadicore-*.
+# Use double-quoted patterns (same as sing-box) so \\. becomes regex \. for a literal dot.
 download_and_extract \
-  "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-x86_64-unknown-linux-musl\\.tar\\.gz$')" \
+  "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" "^skadicore-${SKADI_VERSION}-x86_64-unknown-linux-musl\\.tar\\.gz\$")" \
   "${DEST}/linux/x64" "skadicore"
 download_and_extract \
-  "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-x86_64-pc-windows-gnu\\.zip$')" \
+  "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" "^skadicore-${SKADI_VERSION}-x86_64-pc-windows-gnu\\.zip\$")" \
   "${DEST}/windows/x64" "skadicore.exe" "true"
 if [[ "${MACOS_ARCH}" == "arm64" ]]; then
   download_and_extract \
-    "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-aarch64-apple-darwin\\.tar\\.gz$')" \
+    "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" "^skadicore-${SKADI_VERSION}-aarch64-apple-darwin\\.tar\\.gz\$")" \
     "${DEST}/macos" "skadicore" "true"
 else
   download_and_extract \
-    "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" '^skadicore-.*-x86_64-apple-darwin\\.tar\\.gz$')" \
+    "$(resolve_asset_url "RioTwWks/SkadiCore" "${SKADI_VERSION}" "^skadicore-${SKADI_VERSION}-x86_64-apple-darwin\\.tar\\.gz\$")" \
     "${DEST}/macos" "skadicore" "true"
 fi
 
