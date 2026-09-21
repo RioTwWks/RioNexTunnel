@@ -497,12 +497,31 @@ class ConfigParser {
         : <String, dynamic>{};
     routing.putIfAbsent('domainStrategy', () => 'AsIs');
     final rules = List<dynamic>.from(routing['rules'] as List? ?? const []);
-    rules.insert(0, {
+    final filtered = <dynamic>[];
+    for (final raw in rules) {
+      if (raw is! Map) {
+        filtered.add(raw);
+        continue;
+      }
+      final rule = Map<String, dynamic>.from(raw);
+      final outbound = rule['outboundTag']?.toString();
+      final catchAllDirect = outbound == 'direct' &&
+          rule['inboundTag'] == null &&
+          (rule['network']?.toString().contains('tcp') == true ||
+              (rule['network'] == null &&
+                  rule['ip'] == null &&
+                  rule['domain'] == null));
+      if (catchAllDirect) {
+        continue;
+      }
+      filtered.add(rule);
+    }
+    filtered.insert(0, {
       'type': 'field',
       'inboundTag': ['secure-socks-in'],
       'outboundTag': proxyTag,
     });
-    routing['rules'] = rules;
+    routing['rules'] = filtered;
     config['routing'] = routing;
   }
 
