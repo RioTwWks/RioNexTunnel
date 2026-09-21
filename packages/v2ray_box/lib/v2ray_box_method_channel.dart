@@ -441,6 +441,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
     String? socksUsername,
     String? socksPassword,
     int? socksPort,
+    bool desktopXrayTunBridge = false,
   }) async {
     final result = await methodChannel.invokeMethod<bool>('start_with_json', {
       'config': configJson,
@@ -448,6 +449,7 @@ class MethodChannelV2rayBox extends V2rayBoxPlatform {
       if (socksUsername != null) 'socksUsername': socksUsername,
       if (socksPassword != null) 'socksPassword': socksPassword,
       if (socksPort != null) 'socksPort': socksPort,
+      if (desktopXrayTunBridge) 'desktopXrayTunBridge': true,
     });
     return result ?? false;
   }
