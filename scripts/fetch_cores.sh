@@ -277,6 +277,8 @@ copy_if_exists "${DEST}/linux/x64/sing-box" "${LINUX_RES}/sing-box"
 copy_if_exists "${DEST}/linux/x64/skadicore" "${LINUX_RES}/skadicore"
 copy_if_exists "${DEST}/windows/x64/xray.exe" "${WINDOWS_RES}/xray.exe"
 copy_if_exists "${DEST}/windows/x64/sing-box.exe" "${WINDOWS_RES}/sing-box.exe"
+# Xray TUN on Windows needs wintun.dll beside xray.exe (often bundled in sing-box zip).
+copy_if_exists "${DEST}/windows/x64/wintun.dll" "${WINDOWS_RES}/wintun.dll"
 copy_if_exists "${DEST}/windows/x64/skadicore.exe" "${WINDOWS_RES}/skadicore.exe"
 copy_if_exists "${DEST}/macos/xray" "${MACOS_RES}/xray"
 copy_if_exists "${DEST}/macos/sing-box" "${MACOS_RES}/sing-box"

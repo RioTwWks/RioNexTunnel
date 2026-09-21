@@ -15,7 +15,7 @@
 | Platform | Privilege |
 |----------|-----------|
 | **Linux** | `CAP_NET_ADMIN` on the `sing-box` or `xray` binary, or run the app as root |
-| **Windows** | Run RioNexTunnel **as Administrator** |
+| **Windows** | Run RioNexTunnel **as Administrator**; place **`wintun.dll`** next to `xray.exe` (run `scripts/fetch_cores.sh` — copied from the sing-box Windows bundle) |
 | **macOS** | Run with **sudo** / administrator (Network Extension packaging is future work) |
 
 ### Linux: set capabilities (recommended)

@@ -323,6 +323,34 @@ bool CopyFileIfMissing(const std::string& src, const std::string& dst) {
   return out.good();
 }
 
+void EnsureWintunDll(const std::string& binary_path) {
+  const auto slash = binary_path.find_last_of("\\/");
+  if (slash == std::string::npos) {
+    return;
+  }
+  const std::string binary_dir = binary_path.substr(0, slash);
+  const std::string dst = JoinPath(binary_dir, "wintun.dll");
+  if (FileExists(dst)) {
+    return;
+  }
+
+  std::vector<std::string> candidates;
+  AppendUnique(&candidates, JoinPath(binary_dir, "wintun.dll"));
+  AppendUnique(&candidates,
+                 JoinPath(binary_dir, std::string("resources\\wintun.dll")));
+
+  const std::string core_dir = GetEnvVar("V2RAY_BOX_CORE_DIR");
+  if (!core_dir.empty()) {
+    AppendUnique(&candidates, JoinPath(core_dir, "wintun.dll"));
+  }
+
+  for (const auto& candidate : candidates) {
+    if (CopyFileIfMissing(candidate, dst)) {
+      return;
+    }
+  }
+}
+
 void EnsureXrayGeoAssets(const std::string& work_dir,
                          const std::string& binary_path) {
   const std::string asset_dir = JoinPath(work_dir, "assets");
@@ -454,6 +482,7 @@ std::string DesktopCore::Start(const std::string& engine,
   const std::string asset_dir = JoinPath(work_dir, "assets");
   EnsureDirectory(asset_dir);
   if (engine != "singbox") {
+    EnsureWintunDll(binary);
     EnsureXrayGeoAssets(work_dir, binary);
   }
   _putenv_s("XRAY_LOCATION_ASSET", asset_dir.c_str());

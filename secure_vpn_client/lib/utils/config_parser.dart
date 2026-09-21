@@ -23,6 +23,14 @@ class ConfigParserException implements Exception {
   String toString() => 'ConfigParserException: $message';
 }
 
+/// How Xray `protocol: tun` inbound is configured before start.
+enum XrayTunRoutingProfile {
+  /// Android/iOS: TUN fd from VpnService / minimal inbound JSON.
+  mobile,
+  /// Desktop: gateway, DNS, and system routing (Windows needs this for Wintun).
+  desktop,
+}
+
 class ConfigParser {
   static const int defaultSocksPort = 1080;
   static const int vulnerablePort = 7890;
@@ -356,6 +364,7 @@ class ConfigParser {
     VpnEngine engine, {
     int socksPort = defaultSocksPort,
     bool proxyOnly = false,
+    XrayTunRoutingProfile xrayTunProfile = XrayTunRoutingProfile.mobile,
     SocksAuthMode authMode = SocksAuthMode.randomPerSession,
     PanelSocksInbound? panelSocks,
     DnsSettings? dnsSettings,
@@ -414,7 +423,7 @@ class ConfigParser {
     }
     if (!proxyOnly && !skipInjection) {
       if (engine == VpnEngine.xray) {
-        _ensureXrayTunInbound(config);
+        _ensureXrayTunInbound(config, profile: xrayTunProfile);
       } else if (engine == VpnEngine.singbox) {
         _ensureSingboxTunInbound(config);
       }
@@ -477,7 +486,10 @@ class ConfigParser {
   }
 
   /// Xray TUN inbound matching libXray / v2ray_box Android expectations.
-  static void _ensureXrayTunInbound(Map<String, dynamic> config) {
+  static void _ensureXrayTunInbound(
+    Map<String, dynamic> config, {
+    XrayTunRoutingProfile profile = XrayTunRoutingProfile.mobile,
+  }) {
     final inbounds = List<dynamic>.from(
       config['inbounds'] as List<dynamic>? ?? const [],
     );
@@ -485,15 +497,50 @@ class ConfigParser {
       (raw) => raw is Map && raw['protocol']?.toString() == 'tun',
     );
     if (!hasTun) {
+      final settings = <String, dynamic>{
+        'name': 'xray0',
+        'MTU': 1500,
+        'userLevel': 8,
+      };
+      if (profile == XrayTunRoutingProfile.desktop) {
+        settings['gateway'] = ['172.19.0.1/30', 'fdfe:dcba:9876::1/126'];
+        settings['dns'] = ['1.1.1.1', '8.8.8.8'];
+        settings['autoSystemRoutingTable'] = ['0.0.0.0/0', '::/0'];
+        settings['autoOutboundsInterface'] = 'auto';
+      }
       inbounds.insert(0, {
         'tag': 'tun-in',
         'protocol': 'tun',
-        'settings': {'name': 'xray0', 'MTU': 1500, 'userLevel': 8},
+        'settings': settings,
         'sniffing': {
           'enabled': true,
           'destOverride': ['http', 'tls'],
         },
       });
+      config['inbounds'] = inbounds;
+    } else if (profile == XrayTunRoutingProfile.desktop) {
+      for (var i = 0; i < inbounds.length; i++) {
+        final raw = inbounds[i];
+        if (raw is! Map || raw['protocol']?.toString() != 'tun') {
+          continue;
+        }
+        final inbound = Map<String, dynamic>.from(raw);
+        final settings = inbound['settings'] is Map
+            ? Map<String, dynamic>.from(inbound['settings'] as Map)
+            : <String, dynamic>{};
+        settings.putIfAbsent('name', () => 'xray0');
+        settings.putIfAbsent('MTU', () => 1500);
+        settings.putIfAbsent('userLevel', () => 8);
+        settings.putIfAbsent('gateway', () => ['172.19.0.1/30', 'fdfe:dcba:9876::1/126']);
+        settings.putIfAbsent('dns', () => ['1.1.1.1', '8.8.8.8']);
+        settings.putIfAbsent(
+          'autoSystemRoutingTable',
+          () => ['0.0.0.0/0', '::/0'],
+        );
+        settings.putIfAbsent('autoOutboundsInterface', () => 'auto');
+        inbound['settings'] = settings;
+        inbounds[i] = inbound;
+      }
       config['inbounds'] = inbounds;
     }
 
