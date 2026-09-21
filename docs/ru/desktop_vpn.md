@@ -15,7 +15,7 @@
 | Платформа | Права |
 |-----------|--------|
 | **Linux** | `CAP_NET_ADMIN` на бинарник `sing-box` или `xray`, либо запуск от root |
-| **Windows** | Запуск **от имени администратора**; **`wintun.dll`** рядом с `xray.exe` (`scripts/fetch_cores.sh` копирует из Windows-архива sing-box) |
+| **Windows** | Запуск **от имени администратора**; **`wintun.dll`** в папке `resources` рядом с `xray.exe` (кладёт `scripts/fetch_cores.sh` из архива **Xray-windows-64.zip**) |
 | **macOS** | **sudo** / администратор (Network Extension — в планах) |
 
 ### Linux: capabilities

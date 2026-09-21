@@ -168,6 +168,15 @@ download_and_extract() {
 
   cp "${found}" "${output_dir}/${binary_name}"
   chmod +x "${output_dir}/${binary_name}" || true
+
+  # Xray Windows zip ships wintun.dll in the same folder (required for TUN bridge).
+  local found_dir
+  found_dir="$(dirname "${found}")"
+  if [[ -f "${found_dir}/wintun.dll" ]]; then
+    cp "${found_dir}/wintun.dll" "${output_dir}/wintun.dll"
+    echo "  also copied wintun.dll"
+  fi
+
   rm -rf "${tmp}"
 }
 
@@ -277,8 +286,11 @@ copy_if_exists "${DEST}/linux/x64/sing-box" "${LINUX_RES}/sing-box"
 copy_if_exists "${DEST}/linux/x64/skadicore" "${LINUX_RES}/skadicore"
 copy_if_exists "${DEST}/windows/x64/xray.exe" "${WINDOWS_RES}/xray.exe"
 copy_if_exists "${DEST}/windows/x64/sing-box.exe" "${WINDOWS_RES}/sing-box.exe"
-# Xray TUN on Windows needs wintun.dll beside xray.exe (often bundled in sing-box zip).
+# Xray TUN on Windows needs wintun.dll beside xray.exe (bundled in Xray-windows-64.zip).
 copy_if_exists "${DEST}/windows/x64/wintun.dll" "${WINDOWS_RES}/wintun.dll"
+if [[ ! -f "${WINDOWS_RES}/wintun.dll" ]]; then
+  echo "Warning: ${WINDOWS_RES}/wintun.dll missing — desktop VPN on Windows will fail until fetch_cores extracts it from the Xray zip." >&2
+fi
 copy_if_exists "${DEST}/windows/x64/skadicore.exe" "${WINDOWS_RES}/skadicore.exe"
 copy_if_exists "${DEST}/macos/xray" "${MACOS_RES}/xray"
 copy_if_exists "${DEST}/macos/sing-box" "${MACOS_RES}/sing-box"
