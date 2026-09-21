@@ -364,6 +364,7 @@ class ConfigParser {
     VpnEngine engine, {
     int socksPort = defaultSocksPort,
     bool proxyOnly = false,
+    bool omitXrayTunInbound = false,
     XrayTunRoutingProfile xrayTunProfile = XrayTunRoutingProfile.mobile,
     SocksAuthMode authMode = SocksAuthMode.randomPerSession,
     PanelSocksInbound? panelSocks,
@@ -422,7 +423,7 @@ class ConfigParser {
       config['inbounds'] = inbounds;
     }
     if (!proxyOnly && !skipInjection) {
-      if (engine == VpnEngine.xray) {
+      if (engine == VpnEngine.xray && !omitXrayTunInbound) {
         _ensureXrayTunInbound(config, profile: xrayTunProfile);
       } else if (engine == VpnEngine.singbox) {
         _ensureSingboxTunInbound(config);

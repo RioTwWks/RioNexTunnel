@@ -828,7 +828,10 @@ class VpnService {
     final effectiveSocksPort = panelSocks?.isValid == true
         ? panelSocks!.port
         : socksPort;
-    final xrayTunProfile = _isDesktopPlatform && !_useProxyMode
+    final desktopVpn = _isDesktopPlatform && !_useProxyMode;
+    final useDesktopXrayTunBridge =
+        desktopVpn && _engine == VpnEngine.xray;
+    final xrayTunProfile = desktopVpn && !useDesktopXrayTunBridge
         ? XrayTunRoutingProfile.desktop
         : XrayTunRoutingProfile.mobile;
     final secureConfig = ConfigParser.injectSecureSocksInbound(
@@ -837,6 +840,7 @@ class VpnService {
       _engine,
       socksPort: effectiveSocksPort,
       proxyOnly: _useProxyMode,
+      omitXrayTunInbound: useDesktopXrayTunBridge,
       xrayTunProfile: xrayTunProfile,
       authMode: authMode,
       panelSocks: panelSocks,
@@ -861,6 +865,7 @@ class VpnService {
       socksUsername: credentials.username,
       socksPassword: credentials.password,
       socksPort: effectiveSocksPort,
+      desktopXrayTunBridge: useDesktopXrayTunBridge,
     );
     if (!started) {
       final detail = await _describeNativeStartFailure();

@@ -34,6 +34,7 @@ std::string g_socks_pass;
 int g_socks_port = 1080;
 std::string g_kill_switch_mode = "off";
 bool g_kill_switch_engaged = false;
+std::string g_last_start_error;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
 
@@ -110,6 +111,17 @@ std::string GetMapString(const flutter::EncodableMap& map,
     return *value;
   }
   return "";
+}
+
+bool GetMapBool(const flutter::EncodableMap& map, const char* key) {
+  const auto it = map.find(flutter::EncodableValue(key));
+  if (it == map.end()) {
+    return false;
+  }
+  if (const auto* value = std::get_if<bool>(&it->second)) {
+    return *value;
+  }
+  return false;
 }
 
 int GetMapInt(const flutter::EncodableMap& map, const char* key) {
@@ -476,9 +488,27 @@ void V2rayBoxPlugin::HandleMethodCall(
       return;
     }
 
+    const bool desktop_xray_tun_bridge =
+        GetMapBool(*args, "desktopXrayTunBridge") && g_core_engine == "xray";
+
+    g_last_start_error.clear();
     const std::string start_error = DesktopCore::Instance().Start(
         g_core_engine, path, GetWorkingDirectory());
     if (start_error.empty()) {
+      if (desktop_xray_tun_bridge) {
+        const std::string bridge_error =
+            DesktopCore::Instance().StartXrayTunBridge(
+                g_socks_port, g_socks_user, g_socks_pass);
+        if (!bridge_error.empty()) {
+          DesktopCore::Instance().Stop();
+          is_running_ = false;
+          WipeSensitiveFiles();
+          EmitStatus("Stopped");
+          g_last_start_error = bridge_error;
+          ErrorResult(std::move(result), "START_ERROR", bridge_error);
+          return;
+        }
+      }
       is_running_ = true;
       if (ShouldUseSystemProxy(g_service_mode, g_config_options) &&
           !g_socks_user.empty()) {
@@ -494,6 +524,7 @@ void V2rayBoxPlugin::HandleMethodCall(
     is_running_ = false;
     WipeSensitiveFiles();
     EmitStatus("Stopped");
+    g_last_start_error = start_error;
     ErrorResult(std::move(result), "START_ERROR", start_error);
     return;
   }
@@ -608,11 +639,12 @@ void V2rayBoxPlugin::HandleMethodCall(
   }
 
   if (method == "get_last_start_error") {
-    SuccessStringResult(std::move(result), "");
+    SuccessStringResult(std::move(result), g_last_start_error);
     return;
   }
 
   if (method == "clear_last_start_error") {
+    g_last_start_error.clear();
     result->Success(flutter::EncodableValue(true));
     return;
   }

@@ -539,7 +539,148 @@ std::string DesktopCore::Start(const std::string& engine,
   return "";
 }
 
+namespace {
+
+std::string JsonEscape(const std::string& value) {
+  std::string out;
+  out.reserve(value.size() + 8);
+  for (const char ch : value) {
+    switch (ch) {
+      case '\\':
+        out += "\\\\";
+        break;
+      case '"':
+        out += "\\\"";
+        break;
+      default:
+        out += ch;
+        break;
+    }
+  }
+  return out;
+}
+
+std::string BuildXrayTunBridgeConfig(int socks_port,
+                                     const std::string& socks_user,
+                                     const std::string& socks_pass) {
+  std::ostringstream json;
+  json << "{\n  \"log\": {\"loglevel\": \"warning\"},\n";
+  json << "  \"inbounds\": [{\"tag\": \"tun-in\", \"protocol\": \"tun\", ";
+  json << "\"settings\": {\"name\": \"xray0\", \"MTU\": 1500, \"userLevel\": 8, ";
+  json << "\"gateway\": [\"172.19.0.1/30\", \"fdfe:dcba:9876::1/126\"], ";
+  json << "\"dns\": [\"1.1.1.1\", \"8.8.8.8\"], ";
+  json << "\"autoSystemRoutingTable\": [\"0.0.0.0/0\", \"::/0\"], ";
+  json << "\"autoOutboundsInterface\": \"auto\"}, ";
+  json << "\"sniffing\": {\"enabled\": true, \"destOverride\": [\"http\", \"tls\"]}}],\n";
+  json << "  \"outbounds\": [{\"tag\": \"proxy\", \"protocol\": \"socks\", ";
+  json << "\"settings\": {\"servers\": [{\"address\": \"127.0.0.1\", \"port\": "
+       << socks_port;
+  if (!socks_user.empty() && !socks_pass.empty()) {
+    json << ", \"users\": [{\"user\": \"" << JsonEscape(socks_user)
+         << "\", \"pass\": \"" << JsonEscape(socks_pass) << "\"}]";
+  }
+  json << "}]}}, {\"tag\": \"direct\", \"protocol\": \"freedom\"}],\n";
+  json << "  \"routing\": {\"domainStrategy\": \"AsIs\", \"rules\": [{\"type\": "
+          "\"field\", \"outboundTag\": \"direct\", \"ip\": [\"127.0.0.0/8\", "
+          "\"10.0.0.0/8\", \"172.16.0.0/12\", \"192.168.0.0/16\"]}]}\n}\n";
+  return json.str();
+}
+
+}  // namespace
+
+std::string DesktopCore::StartXrayTunBridge(int socks_port,
+                                            const std::string& socks_user,
+                                            const std::string& socks_pass) {
+  if (bridge_process_handle_ != nullptr) {
+    TerminateProcess(bridge_process_handle_, 0);
+    WaitForSingleObject(bridge_process_handle_, 5000);
+    CloseHandle(bridge_process_handle_);
+    bridge_process_handle_ = nullptr;
+  }
+
+  const std::string binary = FindBinary("xray");
+  if (binary.empty()) {
+    return "Xray TUN bridge: xray.exe not found";
+  }
+  EnsureWintunDll(binary);
+
+  const std::string work_dir = GetWorkingDirectory();
+  const std::string profiles_dir = JoinPath(work_dir, "profiles");
+  if (!EnsureDirectory(profiles_dir)) {
+    return "Xray TUN bridge: failed to create profiles directory";
+  }
+  const std::string config_path =
+      JoinPath(profiles_dir, "xray_tun_bridge.json");
+  if (!WriteTextFile(
+          config_path,
+          BuildXrayTunBridgeConfig(socks_port, socks_user, socks_pass))) {
+    return "Xray TUN bridge: failed to write config";
+  }
+
+  SECURITY_ATTRIBUTES sa {};
+  sa.nLength = sizeof(sa);
+  sa.bInheritHandle = TRUE;
+  HANDLE read_pipe = nullptr;
+  HANDLE write_pipe = nullptr;
+  if (!CreatePipe(&read_pipe, &write_pipe, &sa, 0)) {
+    return "Xray TUN bridge: failed to create stderr pipe";
+  }
+  SetHandleInformation(read_pipe, HANDLE_FLAG_INHERIT, 0);
+
+  std::wstring command_line = L"\"" + Utf8ToWide(binary) + L"\" run -c \"" +
+                              Utf8ToWide(config_path) + L"\"";
+  STARTUPINFOW si {};
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+  si.hStdError = write_pipe;
+  si.wShowWindow = SW_HIDE;
+
+  PROCESS_INFORMATION pi {};
+  std::vector<wchar_t> mutable_cmd(command_line.begin(), command_line.end());
+  mutable_cmd.push_back(L'\0');
+
+  const std::wstring work_dir_wide = Utf8ToWide(work_dir);
+  if (!CreateProcessW(nullptr, mutable_cmd.data(), nullptr, nullptr, TRUE,
+                      CREATE_NO_WINDOW, nullptr,
+                      work_dir_wide.empty() ? nullptr : work_dir_wide.c_str(),
+                      &si, &pi)) {
+    CloseHandle(write_pipe);
+    CloseHandle(read_pipe);
+    return "Xray TUN bridge: failed to start process";
+  }
+
+  CloseHandle(write_pipe);
+  Sleep(500);
+
+  DWORD exit_code = STILL_ACTIVE;
+  if (GetExitCodeProcess(pi.hProcess, &exit_code) && exit_code != STILL_ACTIVE) {
+    const std::string stderr_output = TrimOutput(ReadPipe(read_pipe));
+    CloseHandle(read_pipe);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    RemoveFileIfExists(config_path);
+    if (!stderr_output.empty()) {
+      return "Xray TUN bridge: " + stderr_output;
+    }
+    return "Xray TUN bridge exited during startup (check wintun.dll and admin)";
+  }
+
+  CloseHandle(read_pipe);
+  bridge_process_handle_ = pi.hProcess;
+  CloseHandle(pi.hThread);
+  return "";
+}
+
 void DesktopCore::Stop() {
+  if (bridge_process_handle_ != nullptr) {
+    TerminateProcess(bridge_process_handle_, 0);
+    WaitForSingleObject(bridge_process_handle_, 5000);
+    CloseHandle(bridge_process_handle_);
+    bridge_process_handle_ = nullptr;
+    RemoveFileIfExists(
+        JoinPath(JoinPath(GetWorkingDirectory(), "profiles"),
+                 "xray_tun_bridge.json"));
+  }
   if (process_handle_ == nullptr) {
     return;
   }

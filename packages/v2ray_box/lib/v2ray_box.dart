@@ -299,6 +299,7 @@ class V2rayBox {
     String? socksUsername,
     String? socksPassword,
     int? socksPort,
+    bool desktopXrayTunBridge = false,
   }) {
     return V2rayBoxPlatform.instance.startWithJson(
       configJson,
@@ -306,6 +307,7 @@ class V2rayBox {
       socksUsername: socksUsername,
       socksPassword: socksPassword,
       socksPort: socksPort,
+      desktopXrayTunBridge: desktopXrayTunBridge,
     );
   }
 

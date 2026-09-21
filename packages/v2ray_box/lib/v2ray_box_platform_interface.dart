@@ -237,6 +237,7 @@ abstract class V2rayBoxPlatform extends PlatformInterface {
     String? socksUsername,
     String? socksPassword,
     int? socksPort,
+    bool desktopXrayTunBridge = false,
   }) {
     throw UnimplementedError('startWithJson() has not been implemented.');
   }
