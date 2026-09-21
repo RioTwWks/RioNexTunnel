@@ -572,8 +572,8 @@ std::string BuildXrayTunBridgeConfig(int socks_port,
                                      const std::string& socks_pass) {
   std::ostringstream json;
   json << "{\n  \"log\": {\"loglevel\": \"warning\"},\n";
-  json << "  \"inbounds\": [{\"tag\": \"tun-in\", \"protocol\": \"tun\", ";
-  json << "\"settings\": {\"name\": \"xray0\", \"MTU\": 1500, \"userLevel\": 8, ";
+  json << "  \"inbounds\": [{\"tag\": \"tun-in\", \"port\": 0, \"protocol\": \"tun\", ";
+  json << "\"settings\": {\"name\": \"xray0\", \"mtu\": 1500, \"userLevel\": 8, ";
   json << "\"gateway\": [\"172.19.0.1/30\", \"fdfe:dcba:9876::1/126\"], ";
   json << "\"dns\": [\"1.1.1.1\", \"8.8.8.8\"], ";
   json << "\"autoSystemRoutingTable\": [\"0.0.0.0/0\", \"::/0\"], ";
@@ -586,10 +586,14 @@ std::string BuildXrayTunBridgeConfig(int socks_port,
     json << ", \"users\": [{\"user\": \"" << JsonEscape(socks_user)
          << "\", \"pass\": \"" << JsonEscape(socks_pass) << "\"}]";
   }
-  json << "}]}}, {\"tag\": \"direct\", \"protocol\": \"freedom\"}],\n";
+  json << "}]}}, {\"tag\": \"direct\", \"protocol\": \"freedom\", ";
+  json << "\"settings\": {\"domainStrategy\": \"UseIP\"}}],\n";
   json << "  \"routing\": {\"domainStrategy\": \"AsIs\", \"rules\": [{\"type\": "
           "\"field\", \"outboundTag\": \"direct\", \"ip\": [\"127.0.0.0/8\", "
-          "\"10.0.0.0/8\", \"172.16.0.0/12\", \"192.168.0.0/16\"]}]}\n}\n";
+          "\"10.0.0.0/8\", \"172.16.0.0/12\", \"192.168.0.0/16\", "
+          "\"fc00::/7\", \"fe80::/10\", \"::1/128\"]}]},\n";
+  json << "  \"policy\": {\"levels\": {\"8\": {\"handshake\": 4, \"connIdle\": 300, "
+          "\"uplinkOnly\": 1, \"downlinkOnly\": 1}}}\n}\n";
   return json.str();
 }
 
@@ -657,24 +661,40 @@ std::string DesktopCore::StartXrayTunBridge(int socks_port,
   }
 
   CloseHandle(write_pipe);
-  Sleep(500);
 
-  DWORD exit_code = STILL_ACTIVE;
-  if (GetExitCodeProcess(pi.hProcess, &exit_code) && exit_code != STILL_ACTIVE) {
-    const std::string stderr_output = TrimOutput(ReadPipe(read_pipe));
-    CloseHandle(read_pipe);
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-    RemoveFileIfExists(config_path);
-    if (!stderr_output.empty()) {
-      return "Xray TUN bridge: " + stderr_output;
+  std::string stderr_output;
+  for (int attempt = 0; attempt < 8; ++attempt) {
+    Sleep(attempt == 0 ? 400 : 350);
+    DWORD exit_code = STILL_ACTIVE;
+    if (GetExitCodeProcess(pi.hProcess, &exit_code) &&
+        exit_code != STILL_ACTIVE) {
+      stderr_output = TrimOutput(ReadPipe(read_pipe));
+      CloseHandle(read_pipe);
+      CloseHandle(pi.hThread);
+      CloseHandle(pi.hProcess);
+      RemoveFileIfExists(config_path);
+      if (!stderr_output.empty()) {
+        return "Xray TUN bridge: " + stderr_output;
+      }
+      return "Xray TUN bridge exited during startup (check wintun.dll and admin)";
     }
-    return "Xray TUN bridge exited during startup (check wintun.dll and admin)";
   }
+  stderr_output = TrimOutput(ReadPipe(read_pipe));
 
   CloseHandle(read_pipe);
   bridge_process_handle_ = pi.hProcess;
   CloseHandle(pi.hThread);
+  if (!stderr_output.empty() &&
+      (stderr_output.find("failed") != std::string::npos ||
+       stderr_output.find("error") != std::string::npos ||
+       stderr_output.find("FATAL") != std::string::npos)) {
+    TerminateProcess(bridge_process_handle_, 0);
+    WaitForSingleObject(bridge_process_handle_, 5000);
+    CloseHandle(bridge_process_handle_);
+    bridge_process_handle_ = nullptr;
+    RemoveFileIfExists(config_path);
+    return "Xray TUN bridge: " + stderr_output;
+  }
   return "";
 }
 

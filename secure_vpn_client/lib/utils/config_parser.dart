@@ -425,6 +425,8 @@ class ConfigParser {
     if (!proxyOnly && !skipInjection) {
       if (engine == VpnEngine.xray && !omitXrayTunInbound) {
         _ensureXrayTunInbound(config, profile: xrayTunProfile);
+      } else if (engine == VpnEngine.xray && omitXrayTunInbound) {
+        _ensureXrayDesktopBridgeRouting(config);
       } else if (engine == VpnEngine.singbox) {
         _ensureSingboxTunInbound(config);
       }
@@ -484,6 +486,24 @@ class ConfigParser {
       }
     }
     return 'proxy';
+  }
+
+  /// When TUN runs in a separate Xray process, all traffic hits [secure-socks-in].
+  /// Force it through the proxy outbound so panel routing cannot send it direct.
+  static void _ensureXrayDesktopBridgeRouting(Map<String, dynamic> config) {
+    final proxyTag = _defaultProxyOutboundTag(config);
+    final routing = config['routing'] is Map
+        ? Map<String, dynamic>.from(config['routing'] as Map)
+        : <String, dynamic>{};
+    routing.putIfAbsent('domainStrategy', () => 'AsIs');
+    final rules = List<dynamic>.from(routing['rules'] as List? ?? const []);
+    rules.insert(0, {
+      'type': 'field',
+      'inboundTag': ['secure-socks-in'],
+      'outboundTag': proxyTag,
+    });
+    routing['rules'] = rules;
+    config['routing'] = routing;
   }
 
   /// Xray TUN inbound matching libXray / v2ray_box Android expectations.
