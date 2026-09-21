@@ -339,6 +339,13 @@ void EnsureWintunDll(const std::string& binary_path) {
   AppendUnique(&candidates,
                  JoinPath(binary_dir, std::string("resources\\wintun.dll")));
 
+  const std::string exe_dir = GetExecutableDirectory();
+  if (!exe_dir.empty()) {
+    AppendUnique(&candidates, JoinPath(exe_dir, "wintun.dll"));
+    AppendUnique(&candidates,
+                 JoinPath(exe_dir, std::string("resources\\wintun.dll")));
+  }
+
   const std::string core_dir = GetEnvVar("V2RAY_BOX_CORE_DIR");
   if (!core_dir.empty()) {
     AppendUnique(&candidates, JoinPath(core_dir, "wintun.dll"));
