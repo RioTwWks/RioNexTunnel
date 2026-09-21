@@ -31,7 +31,7 @@ sudo setcap cap_net_admin+ep /path/to/sing-box
 ## Движки
 
 - **sing-box** — TUN добавляется в Dart.
-- **Xray** — на Windows/Linux: основное ядро без TUN; второй процесс Xray (**TUN bridge**) гонит трафик в локальный SOCKS с паролем (как на Android).
+- **Xray** — на Windows: основное ядро без TUN; **TUN bridge** (сначала sing-box, иначе второй Xray) гонит трафик в локальный SOCKS с паролем. На Linux/macOS TUN в том же процессе Xray.
 - **SkadiCore** — VPN на десктопе не поддерживается.
 
 ## Безопасность

@@ -14,11 +14,14 @@ class DesktopCore {
   std::string Start(const std::string& engine,
                     const std::string& config_path,
                     const std::string& work_dir);
-  /// TUN → local SOCKS (second Xray process for desktop VPN).
+  /// TUN → local SOCKS (second process for desktop VPN).
+  std::string StartSingboxTunBridge(int socks_port, const std::string& socks_user,
+                                  const std::string& socks_pass);
   std::string StartXrayTunBridge(int socks_port, const std::string& socks_user,
                                  const std::string& socks_pass);
   void Stop();
   bool IsRunning() const;
+  bool IsBridgeRunning() const;
   std::string FindBinary(const std::string& engine) const;
   std::string GetVersion(const std::string& engine) const;
 
@@ -27,6 +30,7 @@ class DesktopCore {
   HANDLE process_handle_ = nullptr;
   DWORD process_id_ = 0;
   HANDLE bridge_process_handle_ = nullptr;
+  std::string bridge_config_basename_;
   std::string engine_;
 };
 
