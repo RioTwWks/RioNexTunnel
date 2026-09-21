@@ -70,8 +70,14 @@ void main() {
       final decoded = jsonDecode(result) as Map<String, dynamic>;
       final inbounds = decoded['inbounds'] as List<dynamic>;
 
-      expect(inbounds.length, 1);
-      final inbound = inbounds.first as Map<String, dynamic>;
+      expect(inbounds.length, 2);
+      final tun = inbounds.whereType<Map>().firstWhere(
+        (inbound) => inbound['tag'] == 'tun-in',
+      );
+      expect(tun['type'], 'tun');
+      final inbound = inbounds.whereType<Map>().firstWhere(
+        (inbound) => inbound['tag'] == 'secure-socks-in',
+      );
       expect(inbound['listen'], '127.0.0.1');
       expect(inbound['listen_port'], ConfigParser.defaultSocksPort);
       expect((inbound['users'] as List).isNotEmpty, isTrue);

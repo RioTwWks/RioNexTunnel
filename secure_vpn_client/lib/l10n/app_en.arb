@@ -56,6 +56,7 @@
   "splitTunnelNoAppsSelected": "No apps selected",
   "splitTunnelReconnectAfterChange": "Reconnect VPN after changing split tunnel apps.",
   "splitTunnelDesktopBody": "Desktop uses proxy mode, not a system TUN VPN. Per-app routing is controlled by each application (browser proxy settings, per-app rules, or OS firewall) — not by this app.",
+  "desktopVpnModeHint": "Full tunnel (TUN) routes all traffic through the VPN core. Linux: grant CAP_NET_ADMIN to the core binary (see docs/en/desktop_vpn.md). Windows/macOS: run as Administrator. Local SOCKS on 127.0.0.1 still uses per-session auth.",
   "splitTunnelDesktopSecurity": "Local SOCKS/HTTP proxies always require per-session authentication on 127.0.0.1 only. Split tunneling does not open unauthenticated ports.",
   "killSwitchTitle": "Kill switch",
   "killSwitchSubtitle": "Block internet when VPN or core stops unexpectedly",

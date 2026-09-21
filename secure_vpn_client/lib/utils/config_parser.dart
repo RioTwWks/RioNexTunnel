@@ -412,11 +412,68 @@ class ConfigParser {
       }
       config['inbounds'] = inbounds;
     }
-    if (!proxyOnly && !skipInjection && engine == VpnEngine.xray) {
-      _ensureXrayTunInbound(config);
+    if (!proxyOnly && !skipInjection) {
+      if (engine == VpnEngine.xray) {
+        _ensureXrayTunInbound(config);
+      } else if (engine == VpnEngine.singbox) {
+        _ensureSingboxTunInbound(config);
+      }
     }
     validateSecure(jsonEncode(config), engine: engine);
     return const JsonEncoder.withIndent('  ').convert(config);
+  }
+
+  /// sing-box TUN inbound for mobile and desktop VPN (TUN) mode.
+  static void _ensureSingboxTunInbound(Map<String, dynamic> config) {
+    final inbounds = List<dynamic>.from(
+      config['inbounds'] as List<dynamic>? ?? const [],
+    );
+    final hasTun = inbounds.any(
+      (raw) => raw is Map && raw['type']?.toString() == 'tun',
+    );
+    if (!hasTun) {
+      inbounds.insert(0, {
+        'type': 'tun',
+        'tag': 'tun-in',
+        'interface_name': 'tun0',
+        'mtu': 1500,
+        'address': ['172.19.0.1/30', 'fdfe:dcba:9876::1/126'],
+        'auto_route': true,
+        'strict_route': true,
+        'stack': 'mixed',
+      });
+      config['inbounds'] = inbounds;
+    }
+    final route = config['route'];
+    if (route is! Map<String, dynamic>) {
+      config['route'] = {
+        'rules': [
+          {'action': 'sniff'},
+          {'protocol': 'dns', 'action': 'hijack-dns'},
+          {'ip_is_private': true, 'outbound': 'direct'},
+        ],
+        'final': _defaultProxyOutboundTag(config),
+      };
+    }
+  }
+
+  static String _defaultProxyOutboundTag(Map<String, dynamic> config) {
+    final outbounds = config['outbounds'];
+    if (outbounds is List) {
+      for (final raw in outbounds) {
+        if (raw is Map) {
+          final tag = raw['tag']?.toString();
+          if (tag != null &&
+              tag.isNotEmpty &&
+              tag != 'direct' &&
+              tag != 'block' &&
+              tag != 'dns-out') {
+            return tag;
+          }
+        }
+      }
+    }
+    return 'proxy';
   }
 
   /// Xray TUN inbound matching libXray / v2ray_box Android expectations.

@@ -29,7 +29,8 @@ enum ServiceModePreference {
     }
   }
 
-  bool showsDesktopVpnWarning({required bool isDesktop}) {
+  /// Shown under Work mode when desktop full tunnel is selected.
+  bool showsDesktopVpnPrivilegesHint({required bool isDesktop}) {
     return isDesktop && this == ServiceModePreference.vpn;
   }
 }
