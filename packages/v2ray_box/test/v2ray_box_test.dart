@@ -189,6 +189,7 @@ class MockV2rayBoxPlatform
     String? socksUsername,
     String? socksPassword,
     int? socksPort,
+    bool desktopXrayTunBridge = false,
   }) async =>
       true;
 
