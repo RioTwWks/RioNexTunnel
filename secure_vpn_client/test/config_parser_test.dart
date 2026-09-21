@@ -83,6 +83,34 @@ void main() {
       expect((inbound['users'] as List).isNotEmpty, isTrue);
     });
 
+    test('desktop Xray TUN bridge routes secure-socks-in to proxy outbound', () {
+      const withDirectRouting = '''
+{
+  "outbounds": [
+    {"protocol": "vless", "tag": "proxy"},
+    {"protocol": "freedom", "tag": "direct"}
+  ],
+  "routing": {
+    "rules": [
+      {"type": "field", "outboundTag": "direct", "network": "tcp,udp"}
+    ]
+  }
+}
+''';
+      final result = ConfigParser.injectSecureSocksInbound(
+        withDirectRouting,
+        credentials,
+        VpnEngine.xray,
+        omitXrayTunInbound: true,
+      );
+      final routing =
+          (jsonDecode(result) as Map)['routing'] as Map<String, dynamic>;
+      final rules = routing['rules'] as List<dynamic>;
+      final first = rules.first as Map<String, dynamic>;
+      expect(first['inboundTag'], ['secure-socks-in']);
+      expect(first['outboundTag'], 'proxy');
+    });
+
     test('desktop VPN adds Xray tun gateway and system routes', () {
       final result = ConfigParser.injectSecureSocksInbound(
         sampleXray,

@@ -830,7 +830,7 @@ class VpnService {
         : socksPort;
     final desktopVpn = _isDesktopPlatform && !_useProxyMode;
     final useDesktopXrayTunBridge =
-        desktopVpn && _engine == VpnEngine.xray;
+        desktopVpn && _engine == VpnEngine.xray && Platform.isWindows;
     final xrayTunProfile = desktopVpn && !useDesktopXrayTunBridge
         ? XrayTunRoutingProfile.desktop
         : XrayTunRoutingProfile.mobile;
