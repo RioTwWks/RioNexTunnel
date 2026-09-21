@@ -76,8 +76,8 @@ flutter build linux --debug
 | Linux | Proxy or **VPN (TUN)** | Proxy verified; VPN needs `CAP_NET_ADMIN` on core — see `docs/en/desktop_vpn.md` |
 | Android | VPN | Scaffold + fork patches; needs device test |
 | iOS | VPN | Scaffold + docs; needs device test |
-| Windows | Proxy | **Implemented** — desktop plugin mirrors Linux (cores, credentials, system proxy) |
-| macOS | Proxy | **Implemented** — credentials channel, HTTP system proxy, browser helper native messaging; needs device E2E verify |
+| Windows | Proxy or **VPN (TUN)** | Proxy implemented; VPN needs Administrator |
+| macOS | Proxy or **VPN (TUN)** | Proxy + browser helper; VPN needs elevated privileges (NE future) |
 
 ## Related docs
 
