@@ -8,6 +8,7 @@ import '../models/pinning_config.dart';
 import '../models/profile.dart';
 import '../models/vpn_engine.dart';
 import 'config_parser.dart';
+import 'core_version_gate.dart';
 import 'link_config_builder.dart';
 
 /// Result of resolving which core engine(s) to try for a profile.
@@ -207,6 +208,7 @@ class EngineAutoSelector {
     required V2rayBox box,
     required EnginePreference preference,
     PinningConfig? pinning,
+    bool desktopFullTunnel = false,
   }) async {
     final available = await availableEngines(box);
     if (available.isEmpty) {
@@ -236,10 +238,44 @@ class EngineAutoSelector {
 
     // Auto: availability → format → geo demotion → default order + fallback.
     final order = await _autoOrder(profile, available, box: box, pinning: pinning);
+    if (desktopFullTunnel &&
+        available.contains(VpnEngine.xray) &&
+        await profileUsesXhttpTransport(profile, pinning: pinning)) {
+      return const EngineResolution(
+        attemptOrder: [VpnEngine.xray],
+        reason:
+            'Auto (desktop VPN): XHTTP requires Xray — sing-box fallback skipped',
+      );
+    }
     return EngineResolution(
       attemptOrder: order,
       reason: 'Auto: try ${order.map((e) => e.coreName).join(' → ')}',
     );
+  }
+
+  /// True when the active profile/server uses XHTTP (sing-box often lacks support).
+  static Future<bool> profileUsesXhttpTransport(
+    Profile profile, {
+    PinningConfig? pinning,
+  }) async {
+    if (profile.type == ProfileType.link) {
+      return CoreVersionGate.contentUsesXhttp(profile.configLink);
+    }
+    try {
+      final body = await ConfigParser.fetchSubscriptionBody(
+        profile.configLink,
+        engine: VpnEngine.xray,
+        pinning: pinning,
+      );
+      final servers = ConfigParser.listSubscriptionServers(body);
+      if (servers.isEmpty) {
+        return false;
+      }
+      final index = profile.selectedServerIndex.clamp(0, servers.length - 1);
+      return CoreVersionGate.contentUsesXhttp(servers[index].content);
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<List<VpnEngine>> _autoOrder(

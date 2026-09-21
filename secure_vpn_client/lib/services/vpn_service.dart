@@ -638,6 +638,7 @@ class VpnService {
       box: _v2rayBox,
       preference: _enginePreference,
       pinning: _pinningConfig,
+      desktopFullTunnel: _isDesktopPlatform && !_useProxyMode,
     );
     AppLog.info(resolution.reason);
 
@@ -827,12 +828,16 @@ class VpnService {
     final effectiveSocksPort = panelSocks?.isValid == true
         ? panelSocks!.port
         : socksPort;
+    final xrayTunProfile = _isDesktopPlatform && !_useProxyMode
+        ? XrayTunRoutingProfile.desktop
+        : XrayTunRoutingProfile.mobile;
     final secureConfig = ConfigParser.injectSecureSocksInbound(
       rawConfig,
       credentials,
       _engine,
       socksPort: effectiveSocksPort,
       proxyOnly: _useProxyMode,
+      xrayTunProfile: xrayTunProfile,
       authMode: authMode,
       panelSocks: panelSocks,
     );

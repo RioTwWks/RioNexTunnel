@@ -83,6 +83,24 @@ void main() {
       expect((inbound['users'] as List).isNotEmpty, isTrue);
     });
 
+    test('desktop VPN adds Xray tun gateway and system routes', () {
+      final result = ConfigParser.injectSecureSocksInbound(
+        sampleXray,
+        credentials,
+        VpnEngine.xray,
+        xrayTunProfile: XrayTunRoutingProfile.desktop,
+      );
+      final inbounds =
+          (jsonDecode(result) as Map)['inbounds'] as List<dynamic>;
+      final tun = inbounds.whereType<Map>().firstWhere(
+        (inbound) => inbound['tag'] == 'tun-in',
+      );
+      final settings = tun['settings'] as Map<String, dynamic>;
+      expect(settings['gateway'], isNotNull);
+      expect(settings['autoSystemRoutingTable'], contains('0.0.0.0/0'));
+      expect(settings['autoOutboundsInterface'], 'auto');
+    });
+
     test('VPN mode keeps tun inbound for xray (not proxyOnly)', () {
       const withTun = '''
 {
