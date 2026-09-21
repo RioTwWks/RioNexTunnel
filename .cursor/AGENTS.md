@@ -73,7 +73,7 @@ flutter build linux --debug
 
 | Platform | Mode | Status |
 |----------|------|--------|
-| Linux | Proxy | **Verified** — all 4 connect combinations; GNOME system proxy + HTTP 1081 inbound |
+| Linux | Proxy or **VPN (TUN)** | Proxy verified; VPN needs `CAP_NET_ADMIN` on core — see `docs/en/desktop_vpn.md` |
 | Android | VPN | Scaffold + fork patches; needs device test |
 | iOS | VPN | Scaffold + docs; needs device test |
 | Windows | Proxy | **Implemented** — desktop plugin mirrors Linux (cores, credentials, system proxy) |

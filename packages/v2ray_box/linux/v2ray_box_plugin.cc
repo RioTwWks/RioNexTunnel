@@ -11,6 +11,7 @@
 
 #include "desktop_core.h"
 #include "desktop_ping.h"
+#include "desktop_vpn.h"
 #include "kill_switch.h"
 #include "local_auth_proxy.h"
 #include "native_messaging.h"
@@ -234,7 +235,11 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
     response = make_success_string(g_service_mode);
   } else if (strcmp(method, "check_vpn_permission") == 0 ||
              strcmp(method, "request_vpn_permission") == 0) {
-    response = make_success_bool(true);
+    const std::string binary =
+        v2ray_box::DesktopCore::Instance().FindBinary(g_core_engine);
+    const std::string vpn_error = v2ray_box::ValidateDesktopVpnStart(
+        g_service_mode, g_config_options, g_core_engine, binary);
+    response = make_success_bool(vpn_error.empty());
   } else if (strcmp(method, "set_notification_stop_button_text") == 0 ||
              strcmp(method, "set_notification_title") == 0 ||
              strcmp(method, "set_notification_icon") == 0 ||
@@ -325,6 +330,14 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
             g_socks_port = static_cast<int>(fl_value_get_int(socks_port_val));
           }
           apply_session_credentials();
+          const std::string core_binary =
+              v2ray_box::DesktopCore::Instance().FindBinary(g_core_engine);
+          const std::string vpn_error = v2ray_box::ValidateDesktopVpnStart(
+              g_service_mode, g_config_options, g_core_engine, core_binary);
+          if (!vpn_error.empty()) {
+            emit_status(self, "Stopped");
+            response = make_error("START_ERROR", vpn_error.c_str());
+          } else {
           const std::string start_error = v2ray_box::DesktopCore::Instance().Start(
               g_core_engine, path, v2ray_box::GetWorkingDirectory());
           if (!start_error.empty()) {
@@ -347,7 +360,8 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
               response = make_error("START_ERROR", proxy_error.c_str());
             } else {
               self->is_running = TRUE;
-              if (v2ray_box::ConfigOptionsSetSystemProxy(g_config_options) &&
+              if (v2ray_box::ShouldUseSystemProxy(g_service_mode,
+                                                  g_config_options) &&
                   !g_socks_user.empty()) {
                 v2ray_box::SystemProxy::Enable("127.0.0.1", http_port,
                                                g_socks_user, g_socks_pass);
@@ -359,7 +373,8 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
             }
           } else {
             self->is_running = TRUE;
-            if (v2ray_box::ConfigOptionsSetSystemProxy(g_config_options) &&
+            if (v2ray_box::ShouldUseSystemProxy(g_service_mode,
+                                                g_config_options) &&
                 !g_socks_user.empty()) {
               const int http_port = g_socks_port + 1;
               v2ray_box::SystemProxy::Enable("127.0.0.1", http_port,
@@ -369,6 +384,7 @@ static void v2ray_box_plugin_handle_method_call(V2rayBoxPlugin* self,
             }
             emit_status(self, "Started");
             response = make_success_bool(true);
+          }
           }
         }
       }

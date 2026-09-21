@@ -33,6 +33,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     
     private var statsTimer: Timer?
     private var configOptions: String = "{}"
+    private var serviceMode: String = "proxy"
     private var activeConfigPath: String = ""
     private var activeProfileName: String = ""
     private var killSwitchMode: String = "off"
@@ -141,8 +142,7 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
     }
 
     private func configOptionsSetSystemProxy() -> Bool {
-        configOptions.contains("\"set-system-proxy\":true") ||
-            configOptions.contains("\"set-system-proxy\": true")
+        DesktopVpn.shouldUseSystemProxy(serviceMode: serviceMode, configOptions: configOptions)
     }
 
     private func applySessionCredentials(from args: [String: Any]) {
@@ -230,17 +230,17 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
             let name = args["name"] as? String ?? ""
             restart(link: link, name: name, result: result)
             
-        case "check_vpn_permission":
-            result(true)
-            
-        case "request_vpn_permission":
-            result(true)
+        case "check_vpn_permission", "request_vpn_permission":
+            result(checkVpnPermissionGranted())
             
         case "set_service_mode":
+            if let mode = call.arguments as? String {
+                serviceMode = mode
+            }
             result(true)
             
         case "get_service_mode":
-            result("proxy")
+            result(serviceMode)
             
         case "set_notification_stop_button_text", "set_notification_title", "set_notification_icon",
              "set_quick_connect_button_text", "update_quick_connect", "sync_quick_settings_tile",
@@ -606,6 +606,23 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
         }
     }
     
+    private func resolveCoreBinaryPath() -> String {
+        if coreEngine == "xray" {
+            return XrayProcess.shared.getBinaryPath() ?? ""
+        }
+        return SingboxProcess.shared.getBinaryPath() ?? ""
+    }
+
+    private func checkVpnPermissionGranted() -> Bool {
+        let binary = resolveCoreBinaryPath()
+        return DesktopVpn.validateStart(
+            serviceMode: serviceMode,
+            configOptions: configOptions,
+            engine: coreEngine,
+            binaryPath: binary
+        ) == nil
+    }
+
     private func startCore(configPath: String) -> Bool {
         let workDir = getWorkingDirectory().path
         if coreEngine == "xray" {
@@ -785,6 +802,20 @@ public class V2rayBoxPlugin: NSObject, FlutterPlugin {
                 self.activeConfigPath = configPath.path
                 
                 DispatchQueue.main.async { self.statusEventSink?(["status": "Starting"]) }
+
+                if let vpnError = DesktopVpn.validateStart(
+                    serviceMode: self.serviceMode,
+                    configOptions: self.configOptions,
+                    engine: self.coreEngine,
+                    binaryPath: self.resolveCoreBinaryPath()
+                ) {
+                    self.isRunning = false
+                    DispatchQueue.main.async {
+                        self.statusEventSink?(["status": "Stopped"])
+                        result(FlutterError(code: "START_ERROR", message: vpnError, details: nil))
+                    }
+                    return
+                }
                 
                 let success = self.startCore(configPath: configPath.path)
                 

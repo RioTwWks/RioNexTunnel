@@ -185,6 +185,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'На десктопе используется режим прокси, а не системный TUN VPN. Маршрутизация по приложениям настраивается в каждом приложении — не в этом клиенте.';
 
   @override
+  String get desktopVpnModeHint =>
+      'Полный туннель (TUN) направляет весь трафик через ядро VPN. Linux: выдайте CAP_NET_ADMIN бинарнику ядра (docs/ru/desktop_vpn.md). Windows/macOS: запуск от администратора. Локальный SOCKS на 127.0.0.1 по-прежнему с паролем на сессию.';
+
+  @override
   String get splitTunnelDesktopSecurity =>
       'Локальные SOCKS/HTTP прокси всегда требуют аутентификацию на сессию только на 127.0.0.1.';
 

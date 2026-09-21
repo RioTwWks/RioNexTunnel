@@ -58,9 +58,9 @@ For iOS, use **routing rules inside the core config** (domain/IP lists) — see 
 
 Documented limits: [iOS setup](ios_setup.md#split-tunneling).
 
-## Linux TUN (future — not implemented)
+## Linux TUN (desktop VPN mode)
 
-**Status:** deferred. Desktop Linux today uses **proxy mode only** (`VpnMode.proxy`). There is no TUN interface, no `VpnService`-style tunnel, and no per-app routing at the OS level on Linux desktop.
+**Status:** implemented for **Work mode → VPN** on Linux/Windows/macOS. See [desktop_vpn.md](desktop_vpn.md). Per-app split tunnel on desktop TUN is still **not** implemented.
 
 If a future **Linux TUN mode** workstream is added, per-app split tunneling would require:
 

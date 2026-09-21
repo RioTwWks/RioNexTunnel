@@ -363,8 +363,12 @@ class VpnService {
       isDesktop: _isDesktopPlatform,
     );
     if (_isDesktopPlatform) {
+      final useProxy = mode == VpnMode.proxy;
       await _v2rayBox.setConfigOptions(
-        const ConfigOptions(enableTun: false, setSystemProxy: true),
+        ConfigOptions(
+          enableTun: !useProxy,
+          setSystemProxy: useProxy,
+        ),
       );
     } else if (mode == VpnMode.proxy) {
       await _v2rayBox.setConfigOptions(
@@ -1080,23 +1084,38 @@ class VpnService {
   }
 
   Future<void> _ensureVpnPermission() async {
-    if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) {
+    if (kIsWeb) {
       return;
     }
-    if (await _v2rayBox.checkVpnPermission()) {
+    if (_isDesktopPlatform && _useProxyMode) {
       return;
     }
-    await _v2rayBox.requestVpnPermission();
-    final deadline = DateTime.now().add(const Duration(seconds: 60));
-    while (DateTime.now().isBefore(deadline)) {
+    if (Platform.isAndroid || Platform.isIOS) {
       if (await _v2rayBox.checkVpnPermission()) {
         return;
       }
-      await Future<void>.delayed(const Duration(milliseconds: 400));
+      await _v2rayBox.requestVpnPermission();
+      final deadline = DateTime.now().add(const Duration(seconds: 60));
+      while (DateTime.now().isBefore(deadline)) {
+        if (await _v2rayBox.checkVpnPermission()) {
+          return;
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+      }
+      throw StateError(
+        'VPN permission is required. Allow the VPN connection prompt and try again.',
+      );
     }
-    throw StateError(
-      'VPN permission is required. Allow the VPN connection prompt and try again.',
-    );
+    if (_isDesktopPlatform && !_useProxyMode) {
+      if (await _v2rayBox.checkVpnPermission()) {
+        return;
+      }
+      throw StateError(
+        'Desktop VPN (TUN) needs elevated privileges. On Linux: '
+        'sudo setcap cap_net_admin+ep on the sing-box/xray binary in app resources. '
+        'On Windows/macOS: run the app as Administrator.',
+      );
+    }
   }
 
   Future<void> _waitForStatus(

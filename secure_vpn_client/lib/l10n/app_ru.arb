@@ -56,6 +56,7 @@
   "splitTunnelNoAppsSelected": "Приложения не выбраны",
   "splitTunnelReconnectAfterChange": "Переподключите VPN после изменения списка приложений.",
   "splitTunnelDesktopBody": "На десктопе используется режим прокси, а не системный TUN VPN. Маршрутизация по приложениям настраивается в каждом приложении — не в этом клиенте.",
+  "desktopVpnModeHint": "Полный туннель (TUN) направляет весь трафик через ядро VPN. Linux: выдайте CAP_NET_ADMIN бинарнику ядра (docs/ru/desktop_vpn.md). Windows/macOS: запуск от администратора. Локальный SOCKS на 127.0.0.1 по-прежнему с паролем на сессию.",
   "splitTunnelDesktopSecurity": "Локальные SOCKS/HTTP прокси всегда требуют аутентификацию на сессию только на 127.0.0.1.",
   "killSwitchTitle": "Аварийное отключение",
   "killSwitchSubtitle": "Блокировать интернет при неожиданной остановке VPN или ядра",

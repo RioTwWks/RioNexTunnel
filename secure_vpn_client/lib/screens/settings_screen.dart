@@ -116,8 +116,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final sessionCredentials = ref.watch(sessionCredentialsProvider);
     final serviceMode = ref.watch(serviceModePreferenceProvider);
     final logLevel = ref.watch(appLogLevelProvider);
-    final showsVpnWarning =
-        serviceMode.showsDesktopVpnWarning(isDesktop: desktopProxy);
+    final showsVpnPrivilegesHint =
+        serviceMode.showsDesktopVpnPrivilegesHint(isDesktop: desktopProxy);
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
     final engineSubtitle = preference.isAuto
@@ -385,10 +385,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           .read(serviceModePreferenceProvider.notifier)
                           .setPreference(selection.first),
                 ),
-                if (showsVpnWarning) ...[
+                if (showsVpnPrivilegesHint) ...[
                   const SizedBox(height: 10),
                   Text(
-                    l10n.splitTunnelDesktopBody,
+                    l10n.desktopVpnModeHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),

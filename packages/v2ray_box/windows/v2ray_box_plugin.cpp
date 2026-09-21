@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "desktop_core.h"
+#include "desktop_vpn.h"
 #include "native_messaging.h"
 #include "system_proxy.h"
 
@@ -357,7 +358,11 @@ void V2rayBoxPlugin::HandleMethodCall(
   }
 
   if (method == "check_vpn_permission" || method == "request_vpn_permission") {
-    SuccessBoolResult(std::move(result), true);
+    const std::string binary =
+        DesktopCore::Instance().FindBinary(g_core_engine);
+    const std::string vpn_error = ValidateDesktopVpnStart(
+        g_service_mode, g_config_options, g_core_engine, binary);
+    SuccessBoolResult(std::move(result), vpn_error.empty());
     return;
   }
 
@@ -461,11 +466,22 @@ void V2rayBoxPlugin::HandleMethodCall(
     }
     ApplySessionCredentials();
 
+    const std::string core_binary =
+        DesktopCore::Instance().FindBinary(g_core_engine);
+    const std::string vpn_error = ValidateDesktopVpnStart(
+        g_service_mode, g_config_options, g_core_engine, core_binary);
+    if (!vpn_error.empty()) {
+      EmitStatus("Stopped");
+      ErrorResult(std::move(result), "START_ERROR", vpn_error);
+      return;
+    }
+
     const std::string start_error = DesktopCore::Instance().Start(
         g_core_engine, path, GetWorkingDirectory());
     if (start_error.empty()) {
       is_running_ = true;
-      if (ConfigOptionsSetSystemProxy(g_config_options) && !g_socks_user.empty()) {
+      if (ShouldUseSystemProxy(g_service_mode, g_config_options) &&
+          !g_socks_user.empty()) {
         const int http_port = g_socks_port + 1;
         SystemProxy::Enable("127.0.0.1", http_port, g_socks_user, g_socks_pass);
         NativeMessaging::PublishCredentials("127.0.0.1", http_port, g_socks_user, g_socks_pass);

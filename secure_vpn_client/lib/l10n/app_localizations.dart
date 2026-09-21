@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'Desktop uses proxy mode, not a system TUN VPN. Per-app routing is controlled by each application (browser proxy settings, per-app rules, or OS firewall) — not by this app.'**
   String get splitTunnelDesktopBody;
 
+  /// No description provided for @desktopVpnModeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Full tunnel (TUN) routes all traffic through the VPN core. Linux: grant CAP_NET_ADMIN to the core binary (see docs/en/desktop_vpn.md). Windows/macOS: run as Administrator. Local SOCKS on 127.0.0.1 still uses per-session auth.'**
+  String get desktopVpnModeHint;
+
   /// No description provided for @splitTunnelDesktopSecurity.
   ///
   /// In en, this message translates to:

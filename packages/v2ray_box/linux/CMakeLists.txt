@@ -15,6 +15,7 @@ set(PLUGIN_NAME "v2ray_box_plugin")
 list(APPEND PLUGIN_SOURCES
   "desktop_core.cc"
   "desktop_ping.cc"
+  "desktop_vpn.cc"
   "kill_switch.cc"
   "local_auth_proxy.cc"
   "native_messaging.cc"
