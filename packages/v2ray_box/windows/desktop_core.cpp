@@ -576,8 +576,9 @@ std::string JsonEscape(const std::string& value) {
 std::string BuildXrayTunBridgeConfig(int socks_port,
                                      const std::string& socks_user,
                                      const std::string& socks_pass) {
-  const unsigned long tick = GetTickCount64();
-  const std::string tun_name = "rio" + std::to_string(tick % 100000);
+  const ULONGLONG tick = GetTickCount64();
+  const std::string tun_name =
+      "rio" + std::to_string(tick % 100000ULL);
   std::ostringstream json;
   json << "{\n  \"log\": {\"loglevel\": \"warning\"},\n";
   json << "  \"inbounds\": [{\"tag\": \"tun-in\", \"port\": 0, \"protocol\": \"tun\", ";
