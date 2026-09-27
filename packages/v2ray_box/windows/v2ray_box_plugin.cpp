@@ -15,6 +15,7 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -40,6 +41,16 @@ std::string g_last_start_error;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
 std::mutex g_core_start_mutex;
+
+constexpr UINT kFinishStartWithJsonMessage = WM_APP + 4500;
+
+HWND g_flutter_host_hwnd = nullptr;
+
+struct FinishStartWork {
+  V2rayBoxPlugin* plugin;
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
+  std::string start_error;
+};
 
 std::string ActiveConfigPath() {
   return JoinPath(GetWorkingDirectory(), "profiles\\active_config.json");
@@ -195,8 +206,27 @@ MakeNoopStreamHandler() {
 // static
 void V2rayBoxPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows* registrar) {
-  auto plugin = std::make_unique<V2rayBoxPlugin>(registrar);
+  auto plugin = std::make_unique<V2rayBoxPlugin>();
   g_plugin_instance = plugin.get();
+
+  if (registrar->GetView() != nullptr) {
+    g_flutter_host_hwnd = registrar->GetView()->GetNativeWindow();
+  }
+  registrar->RegisterTopLevelWindowProcDelegate(
+      [](HWND hwnd, UINT message, WPARAM wparam,
+         LPARAM /*lparam*/) -> std::optional<LRESULT> {
+        (void)hwnd;
+        if (message != kFinishStartWithJsonMessage) {
+          return std::nullopt;
+        }
+        auto* work = reinterpret_cast<FinishStartWork*>(wparam);
+        if (work != nullptr && work->plugin != nullptr) {
+          work->plugin->CompleteStartWithJson(std::move(work->result),
+                                              work->start_error);
+          delete work;
+        }
+        return static_cast<LRESULT>(0);
+      });
 
   auto method_channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -267,8 +297,31 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
-V2rayBoxPlugin::V2rayBoxPlugin(flutter::PluginRegistrarWindows* registrar)
-    : task_runner_(registrar != nullptr ? registrar->task_runner() : nullptr) {}
+V2rayBoxPlugin::V2rayBoxPlugin() = default;
+
+void V2rayBoxPlugin::CompleteStartWithJson(
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result,
+    const std::string& start_error) {
+  if (start_error.empty()) {
+    is_running_ = true;
+    if (ShouldUseSystemProxy(g_service_mode, g_config_options) &&
+        !g_socks_user.empty()) {
+      const int http_port = g_socks_port + 1;
+      SystemProxy::Enable("127.0.0.1", http_port, g_socks_user, g_socks_pass);
+      NativeMessaging::PublishCredentials("127.0.0.1", http_port, g_socks_user,
+                                        g_socks_pass);
+    }
+    EmitStatus("Started");
+    SuccessBoolResult(std::move(result), true);
+    return;
+  }
+
+  is_running_ = false;
+  WipeSensitiveFiles();
+  EmitStatus("Stopped");
+  g_last_start_error = start_error;
+  ErrorResult(std::move(result), "START_ERROR", start_error);
+}
 
 V2rayBoxPlugin::~V2rayBoxPlugin() {
   NativeMessaging::ClearCredentials();
@@ -503,33 +556,6 @@ void V2rayBoxPlugin::HandleMethodCall(
     const std::string engine = g_core_engine;
     const std::string work_dir = GetWorkingDirectory();
 
-    auto finish_start =
-        [this](
-            std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
-                result,
-            const std::string& start_error) {
-          if (start_error.empty()) {
-            is_running_ = true;
-            if (ShouldUseSystemProxy(g_service_mode, g_config_options) &&
-                !g_socks_user.empty()) {
-              const int http_port = g_socks_port + 1;
-              SystemProxy::Enable("127.0.0.1", http_port, g_socks_user,
-                                  g_socks_pass);
-              NativeMessaging::PublishCredentials("127.0.0.1", http_port,
-                                                  g_socks_user, g_socks_pass);
-            }
-            EmitStatus("Started");
-            SuccessBoolResult(std::move(result), true);
-            return;
-          }
-
-          is_running_ = false;
-          WipeSensitiveFiles();
-          EmitStatus("Stopped");
-          g_last_start_error = start_error;
-          ErrorResult(std::move(result), "START_ERROR", start_error);
-        };
-
     auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge]() {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
       std::string start_error =
@@ -546,20 +572,21 @@ void V2rayBoxPlugin::HandleMethodCall(
       return start_error;
     };
 
-    if (!task_runner_) {
-      finish_start(std::move(result), run_start());
+    if (g_flutter_host_hwnd == nullptr) {
+      CompleteStartWithJson(std::move(result), run_start());
       return;
     }
 
     std::thread([this, run_start = std::move(run_start),
-                 finish_start = std::move(finish_start),
                  result = std::move(result)]() mutable {
       const std::string start_error = run_start();
-      task_runner_->PostTask([this, finish_start = std::move(finish_start),
-                              result = std::move(result),
-                              start_error]() mutable {
-        finish_start(std::move(result), start_error);
-      });
+      auto* work =
+          new FinishStartWork{this, std::move(result), start_error};
+      if (!PostMessage(g_flutter_host_hwnd, kFinishStartWithJsonMessage,
+                       reinterpret_cast<WPARAM>(work), 0)) {
+        CompleteStartWithJson(std::move(work->result), work->start_error);
+        delete work;
+      }
     }).detach();
     return;
   }
