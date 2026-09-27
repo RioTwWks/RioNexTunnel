@@ -871,6 +871,7 @@ class VpnService {
       socksPort: effectiveSocksPort,
       desktopXrayTunBridge: useDesktopXrayTunBridge,
     );
+    AppLog.info('Native core start returned started=$started');
     if (!started) {
       final detail = await _describeNativeStartFailure();
       AppLog.error('connectWithJson returned false${detail.isEmpty ? '' : ': $detail'}');

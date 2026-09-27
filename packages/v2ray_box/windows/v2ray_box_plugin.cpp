@@ -15,10 +15,8 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
-#include <optional>
 #include <sstream>
 #include <string>
-#include <thread>
 #include <utility>
 
 #include "desktop_core.h"
@@ -41,16 +39,6 @@ std::string g_last_start_error;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
 std::mutex g_core_start_mutex;
-
-constexpr UINT kFinishStartWithJsonMessage = WM_APP + 4500;
-
-HWND g_flutter_host_hwnd = nullptr;
-
-struct FinishStartWork {
-  V2rayBoxPlugin* plugin;
-  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
-  std::string start_error;
-};
 
 std::string ActiveConfigPath() {
   return JoinPath(GetWorkingDirectory(), "profiles\\active_config.json");
@@ -208,25 +196,6 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows* registrar) {
   auto plugin = std::make_unique<V2rayBoxPlugin>();
   g_plugin_instance = plugin.get();
-
-  if (registrar->GetView() != nullptr) {
-    g_flutter_host_hwnd = registrar->GetView()->GetNativeWindow();
-  }
-  registrar->RegisterTopLevelWindowProcDelegate(
-      [](HWND hwnd, UINT message, WPARAM wparam,
-         LPARAM /*lparam*/) -> std::optional<LRESULT> {
-        (void)hwnd;
-        if (message != kFinishStartWithJsonMessage) {
-          return std::nullopt;
-        }
-        auto* work = reinterpret_cast<FinishStartWork*>(wparam);
-        if (work != nullptr && work->plugin != nullptr) {
-          work->plugin->CompleteStartWithJson(std::move(work->result),
-                                              work->start_error);
-          delete work;
-        }
-        return static_cast<LRESULT>(0);
-      });
 
   auto method_channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -556,10 +525,10 @@ void V2rayBoxPlugin::HandleMethodCall(
     const std::string engine = g_core_engine;
     const std::string work_dir = GetWorkingDirectory();
 
-    auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge]() {
+    std::string start_error;
+    {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
-      std::string start_error =
-          DesktopCore::Instance().Start(engine, path, work_dir);
+      start_error = DesktopCore::Instance().Start(engine, path, work_dir);
       if (start_error.empty() && desktop_xray_tun_bridge) {
         const std::string bridge_error =
             DesktopCore::Instance().StartXrayTunBridge(
@@ -569,25 +538,8 @@ void V2rayBoxPlugin::HandleMethodCall(
           start_error = bridge_error;
         }
       }
-      return start_error;
-    };
-
-    if (g_flutter_host_hwnd == nullptr) {
-      CompleteStartWithJson(std::move(result), run_start());
-      return;
     }
-
-    std::thread([this, run_start = std::move(run_start),
-                 result = std::move(result)]() mutable {
-      const std::string start_error = run_start();
-      auto* work =
-          new FinishStartWork{this, std::move(result), start_error};
-      if (!PostMessage(g_flutter_host_hwnd, kFinishStartWithJsonMessage,
-                       reinterpret_cast<WPARAM>(work), 0)) {
-        CompleteStartWithJson(std::move(work->result), work->start_error);
-        delete work;
-      }
-    }).detach();
+    CompleteStartWithJson(std::move(result), start_error);
     return;
   }
 
