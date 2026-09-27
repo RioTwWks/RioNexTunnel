@@ -6,6 +6,7 @@
 #include <flutter/event_stream_handler_functions.h>
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
+#include <flutter/task_runner.h>
 
 #include <memory>
 
@@ -15,7 +16,8 @@ class V2rayBoxPlugin : public flutter::Plugin {
  public:
   static void RegisterWithRegistrar(flutter::PluginRegistrarWindows* registrar);
 
-  V2rayBoxPlugin();
+  explicit V2rayBoxPlugin(
+      flutter::PluginRegistrarWindows* registrar = nullptr);
 
   virtual ~V2rayBoxPlugin();
 
@@ -36,6 +38,7 @@ class V2rayBoxPlugin : public flutter::Plugin {
   bool is_running_ = false;
   bool emit_status_events_ = false;
   std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> status_sink_;
+  std::shared_ptr<flutter::TaskRunner> task_runner_;
 };
 
 }  // namespace v2ray_box
