@@ -771,6 +771,7 @@ class VpnService {
       );
     }
 
+    AppLog.info('Resolving profile config...');
     if (!kIsWeb && Platform.isIOS && _engine == VpnEngine.xray) {
       throw StateError(
         'Xray is not supported on iOS. Open Settings → Engine and choose Auto or sing-box.',
@@ -859,6 +860,9 @@ class VpnService {
 
     await _setSessionCredentials(credentials, port: effectiveSocksPort);
     await _v2rayBox.clearLastStartError();
+    AppLog.info(
+      'Starting native core (desktopXrayTunBridge=$useDesktopXrayTunBridge)...',
+    );
     final started = await _v2rayBox.connectWithJson(
       secureConfig,
       name: effectiveProfile.name,

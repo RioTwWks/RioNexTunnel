@@ -8,6 +8,7 @@
 #include <flutter/plugin_registrar_windows.h>
 
 #include <memory>
+#include <string>
 
 namespace v2ray_box {
 
@@ -31,6 +32,10 @@ class V2rayBoxPlugin : public flutter::Plugin {
   void OnStatusListen(
       std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> events);
   void OnStatusCancel();
+
+  void CompleteStartWithJson(
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result,
+      const std::string& start_error);
 
  private:
   bool is_running_ = false;

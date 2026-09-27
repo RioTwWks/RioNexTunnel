@@ -105,18 +105,15 @@ void RunShellCommand(const std::string& command) {
 }
 
 void KillOrphanCoreProcesses(const std::string& config_path) {
-  const std::string pattern = config_path;
-  const std::string cmd =
-      "wmic process where \"CommandLine like '%" + pattern +
-      "%'\" call terminate >nul 2>&1";
-  RunShellCommand(cmd);
-  Sleep(200);
+  // Do not use WMIC here: on Windows 10/11 it can block for a long time and
+  // freezes the Flutter UI when start/stop runs on the platform thread.
+  // Orphan xray/sing-box processes are terminated via DesktopCore::Stop().
+  (void)config_path;
 }
 
 void KillOrphanTunBridgeProcesses() {
   KillOrphanCoreProcesses("xray_tun_bridge.json");
   KillOrphanCoreProcesses("singbox_tun_bridge.json");
-  Sleep(300);
 }
 
 void KillProcessOnPort(int port) {
@@ -527,9 +524,14 @@ std::string DesktopCore::Start(const std::string& engine,
   }
 
   CloseHandle(write_pipe);
-  Sleep(500);
 
   DWORD exit_code = STILL_ACTIVE;
+  for (int wait_ms = 0; wait_ms < 3000; wait_ms += 100) {
+    if (GetExitCodeProcess(pi.hProcess, &exit_code) && exit_code != STILL_ACTIVE) {
+      break;
+    }
+    Sleep(100);
+  }
   if (GetExitCodeProcess(pi.hProcess, &exit_code) && exit_code != STILL_ACTIVE) {
     const std::string stderr_output = TrimOutput(ReadPipe(read_pipe));
     CloseHandle(read_pipe);
@@ -772,9 +774,8 @@ std::string DesktopCore::StartXrayTunBridge(int socks_port,
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     bridge_config_basename_.clear();
-    Sleep(400);
+    Sleep(100);
   }
-  KillOrphanTunBridgeProcesses();
 
   const std::string config_json =
       BuildXrayTunBridgeConfig(socks_port, socks_user, socks_pass);
@@ -809,8 +810,7 @@ void DesktopCore::Stop() {
                    bridge_config_basename_));
       bridge_config_basename_.clear();
     }
-    Sleep(300);
-    KillOrphanTunBridgeProcesses();
+    Sleep(100);
   }
   if (process_handle_ == nullptr) {
     return;

@@ -14,8 +14,11 @@
 
 #include <fstream>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "desktop_core.h"
@@ -37,6 +40,17 @@ bool g_kill_switch_engaged = false;
 std::string g_last_start_error;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
+std::mutex g_core_start_mutex;
+
+constexpr UINT kFinishStartWithJsonMessage = WM_APP + 4500;
+
+HWND g_flutter_host_hwnd = nullptr;
+
+struct FinishStartWork {
+  V2rayBoxPlugin* plugin;
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
+  std::string start_error;
+};
 
 std::string ActiveConfigPath() {
   return JoinPath(GetWorkingDirectory(), "profiles\\active_config.json");
@@ -195,6 +209,25 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
   auto plugin = std::make_unique<V2rayBoxPlugin>();
   g_plugin_instance = plugin.get();
 
+  if (registrar->GetView() != nullptr) {
+    g_flutter_host_hwnd = registrar->GetView()->GetNativeWindow();
+  }
+  registrar->RegisterTopLevelWindowProcDelegate(
+      [](HWND hwnd, UINT message, WPARAM wparam,
+         LPARAM /*lparam*/) -> std::optional<LRESULT> {
+        (void)hwnd;
+        if (message != kFinishStartWithJsonMessage) {
+          return std::nullopt;
+        }
+        auto* work = reinterpret_cast<FinishStartWork*>(wparam);
+        if (work != nullptr && work->plugin != nullptr) {
+          work->plugin->CompleteStartWithJson(std::move(work->result),
+                                              work->start_error);
+          delete work;
+        }
+        return static_cast<LRESULT>(0);
+      });
+
   auto method_channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           registrar->messenger(), "v2ray_box",
@@ -266,10 +299,37 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
 
 V2rayBoxPlugin::V2rayBoxPlugin() = default;
 
+void V2rayBoxPlugin::CompleteStartWithJson(
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result,
+    const std::string& start_error) {
+  if (start_error.empty()) {
+    is_running_ = true;
+    if (ShouldUseSystemProxy(g_service_mode, g_config_options) &&
+        !g_socks_user.empty()) {
+      const int http_port = g_socks_port + 1;
+      SystemProxy::Enable("127.0.0.1", http_port, g_socks_user, g_socks_pass);
+      NativeMessaging::PublishCredentials("127.0.0.1", http_port, g_socks_user,
+                                        g_socks_pass);
+    }
+    EmitStatus("Started");
+    SuccessBoolResult(std::move(result), true);
+    return;
+  }
+
+  is_running_ = false;
+  WipeSensitiveFiles();
+  EmitStatus("Stopped");
+  g_last_start_error = start_error;
+  ErrorResult(std::move(result), "START_ERROR", start_error);
+}
+
 V2rayBoxPlugin::~V2rayBoxPlugin() {
   NativeMessaging::ClearCredentials();
   SystemProxy::Disable();
-  DesktopCore::Instance().Stop();
+  {
+    std::lock_guard<std::mutex> lock(g_core_start_mutex);
+    DesktopCore::Instance().Stop();
+  }
   ClearSessionCredentials();
   WipeSensitiveFiles();
   if (g_plugin_instance == this) {
@@ -492,40 +552,42 @@ void V2rayBoxPlugin::HandleMethodCall(
         GetMapBool(*args, "desktopXrayTunBridge") && g_core_engine == "xray";
 
     g_last_start_error.clear();
-    const std::string start_error = DesktopCore::Instance().Start(
-        g_core_engine, path, GetWorkingDirectory());
-    if (start_error.empty()) {
-      if (desktop_xray_tun_bridge) {
+
+    const std::string engine = g_core_engine;
+    const std::string work_dir = GetWorkingDirectory();
+
+    auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge]() {
+      std::lock_guard<std::mutex> lock(g_core_start_mutex);
+      std::string start_error =
+          DesktopCore::Instance().Start(engine, path, work_dir);
+      if (start_error.empty() && desktop_xray_tun_bridge) {
         const std::string bridge_error =
             DesktopCore::Instance().StartXrayTunBridge(
                 g_socks_port, g_socks_user, g_socks_pass);
         if (!bridge_error.empty()) {
           DesktopCore::Instance().Stop();
-          is_running_ = false;
-          WipeSensitiveFiles();
-          EmitStatus("Stopped");
-          g_last_start_error = bridge_error;
-          ErrorResult(std::move(result), "START_ERROR", bridge_error);
-          return;
+          start_error = bridge_error;
         }
       }
-      is_running_ = true;
-      if (ShouldUseSystemProxy(g_service_mode, g_config_options) &&
-          !g_socks_user.empty()) {
-        const int http_port = g_socks_port + 1;
-        SystemProxy::Enable("127.0.0.1", http_port, g_socks_user, g_socks_pass);
-        NativeMessaging::PublishCredentials("127.0.0.1", http_port, g_socks_user, g_socks_pass);
-      }
-      EmitStatus("Started");
-      SuccessBoolResult(std::move(result), true);
+      return start_error;
+    };
+
+    if (g_flutter_host_hwnd == nullptr) {
+      CompleteStartWithJson(std::move(result), run_start());
       return;
     }
 
-    is_running_ = false;
-    WipeSensitiveFiles();
-    EmitStatus("Stopped");
-    g_last_start_error = start_error;
-    ErrorResult(std::move(result), "START_ERROR", start_error);
+    std::thread([this, run_start = std::move(run_start),
+                 result = std::move(result)]() mutable {
+      const std::string start_error = run_start();
+      auto* work =
+          new FinishStartWork{this, std::move(result), start_error};
+      if (!PostMessage(g_flutter_host_hwnd, kFinishStartWithJsonMessage,
+                       reinterpret_cast<WPARAM>(work), 0)) {
+        CompleteStartWithJson(std::move(work->result), work->start_error);
+        delete work;
+      }
+    }).detach();
     return;
   }
 
@@ -559,7 +621,10 @@ void V2rayBoxPlugin::HandleMethodCall(
   if (method == "engage_kill_switch") {
     NativeMessaging::ClearCredentials();
     SystemProxy::Disable();
-    DesktopCore::Instance().Stop();
+    {
+      std::lock_guard<std::mutex> lock(g_core_start_mutex);
+      DesktopCore::Instance().Stop();
+    }
     is_running_ = false;
     g_kill_switch_engaged = true;
     EmitStatus("Stopped");
@@ -606,7 +671,10 @@ void V2rayBoxPlugin::HandleMethodCall(
     EmitStatus("Stopping");
     NativeMessaging::ClearCredentials();
     SystemProxy::Disable();
-    DesktopCore::Instance().Stop();
+    {
+      std::lock_guard<std::mutex> lock(g_core_start_mutex);
+      DesktopCore::Instance().Stop();
+    }
     is_running_ = false;
     ClearSessionCredentials();
     WipeSensitiveFiles();
