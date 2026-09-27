@@ -33,11 +33,11 @@ class V2rayBoxPlugin : public flutter::Plugin {
       std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> events);
   void OnStatusCancel();
 
+ private:
   void CompleteStartWithJson(
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result,
       const std::string& start_error);
 
- private:
   bool is_running_ = false;
   bool emit_status_events_ = false;
   std::unique_ptr<flutter::EventSink<flutter::EncodableValue>> status_sink_;
