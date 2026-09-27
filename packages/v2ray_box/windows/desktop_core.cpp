@@ -113,6 +113,12 @@ void KillOrphanCoreProcesses(const std::string& config_path) {
   Sleep(200);
 }
 
+void KillOrphanTunBridgeProcesses() {
+  KillOrphanCoreProcesses("xray_tun_bridge.json");
+  KillOrphanCoreProcesses("singbox_tun_bridge.json");
+  Sleep(300);
+}
+
 void KillProcessOnPort(int port) {
   if (port <= 0) {
     return;
@@ -570,10 +576,12 @@ std::string JsonEscape(const std::string& value) {
 std::string BuildXrayTunBridgeConfig(int socks_port,
                                      const std::string& socks_user,
                                      const std::string& socks_pass) {
+  const unsigned long tick = GetTickCount64();
+  const std::string tun_name = "rio" + std::to_string(tick % 100000);
   std::ostringstream json;
   json << "{\n  \"log\": {\"loglevel\": \"warning\"},\n";
   json << "  \"inbounds\": [{\"tag\": \"tun-in\", \"port\": 0, \"protocol\": \"tun\", ";
-  json << "\"settings\": {\"name\": \"xray0\", \"mtu\": 1500, \"userLevel\": 8, ";
+  json << "\"settings\": {\"name\": \"" << tun_name << "\", \"mtu\": 1500, \"userLevel\": 8, ";
   json << "\"gateway\": [\"172.19.0.1/30\", \"fdfe:dcba:9876::1/126\"], ";
   json << "\"dns\": [\"1.1.1.1\", \"8.8.8.8\"], ";
   json << "\"autoSystemRoutingTable\": [\"0.0.0.0/0\", \"::/0\"]}, ";
@@ -697,8 +705,8 @@ std::string StartTunBridgeProcess(const std::string& engine,
   CloseHandle(write_pipe);
 
   std::string stderr_output;
-  for (int attempt = 0; attempt < 10; ++attempt) {
-    Sleep(attempt == 0 ? 400 : 400);
+  for (int attempt = 0; attempt < 5; ++attempt) {
+    Sleep(attempt == 0 ? 250 : 200);
     DWORD exit_code = STILL_ACTIVE;
     if (GetExitCodeProcess(pi.hProcess, &exit_code) &&
         exit_code != STILL_ACTIVE) {
@@ -763,7 +771,9 @@ std::string DesktopCore::StartXrayTunBridge(int socks_port,
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     bridge_config_basename_.clear();
+    Sleep(400);
   }
+  KillOrphanTunBridgeProcesses();
 
   const std::string config_json =
       BuildXrayTunBridgeConfig(socks_port, socks_user, socks_pass);
@@ -798,6 +808,8 @@ void DesktopCore::Stop() {
                    bridge_config_basename_));
       bridge_config_basename_.clear();
     }
+    Sleep(300);
+    KillOrphanTunBridgeProcesses();
   }
   if (process_handle_ == nullptr) {
     return;
