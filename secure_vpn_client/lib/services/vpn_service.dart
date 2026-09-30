@@ -23,6 +23,7 @@ import '../models/vpn_engine.dart';
 import '../utils/config_enhancer.dart';
 import '../utils/amnezia_wg_config.dart';
 import '../utils/config_parser.dart';
+import '../utils/profile_config_isolate.dart';
 import '../utils/core_version_gate.dart';
 import '../utils/engine_auto_selector.dart';
 import '../utils/link_config_builder.dart';
@@ -530,8 +531,22 @@ class VpnService {
   }
 
   Future<String> _rawContentToJsonConfig(Profile profile, String raw) async {
-    final config = await _contentToJsonMap(profile, raw);
     final customRules = (await _routingRulesService.load()).enabledRules;
+    final canOffload = !kIsWeb &&
+        _isDesktopPlatform &&
+        (raw.startsWith('{') ||
+            raw.startsWith('[') ||
+            LinkConfigBuilder.isConfigLink(raw));
+    if (canOffload) {
+      return buildProfileConfigOffUiThread(
+        raw: raw,
+        profile: profile,
+        engine: _engine,
+        customRules: customRules,
+      );
+    }
+
+    final config = await _contentToJsonMap(profile, raw);
     return ConfigEnhancer.applyProfileSettings(
       jsonEncode(config),
       profile,
@@ -772,6 +787,7 @@ class VpnService {
     }
 
     AppLog.info('Resolving profile config...');
+    await AppLog.flush();
     if (!kIsWeb && Platform.isIOS && _engine == VpnEngine.xray) {
       throw StateError(
         'Xray is not supported on iOS. Open Settings → Engine and choose Auto or sing-box.',
@@ -788,9 +804,12 @@ class VpnService {
       contentOverride: stack?.content,
     );
     AppLog.info('Resolved profile config (${rawConfig.length} bytes)');
+    await AppLog.flush();
 
-    if (_engine == VpnEngine.xray) {
+    if (_engine == VpnEngine.xray && !_isDesktopPlatform) {
       await _warnIfXrayTooOldForXhttp(rawConfig);
+    } else if (_engine == VpnEngine.xray) {
+      unawaited(_warnIfXrayTooOldForXhttp(rawConfig));
     }
 
     _assertOfficialCoreSupportsAwg(rawConfig);

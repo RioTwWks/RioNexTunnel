@@ -56,6 +56,9 @@ class AppLog {
     }
   }
 
+  /// Waits until queued log lines are flushed to disk.
+  static Future<void> flush() => _chain;
+
   static Future<List<AppLogEntry>> readRecentLines({
     int maxLines = 500,
     bool includeDebug = false,
