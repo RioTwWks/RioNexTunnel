@@ -12,11 +12,14 @@
 
 #include <VersionHelpers.h>
 
+#include <atomic>
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "desktop_core.h"
@@ -39,6 +42,29 @@ std::string g_last_start_error;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
 std::mutex g_core_start_mutex;
+
+constexpr UINT kFinishStartWithJsonMessage = WM_APP + 4500;
+
+HWND g_flutter_view_hwnd = nullptr;
+std::atomic<HWND> g_top_level_hwnd{nullptr};
+
+struct FinishStartWork {
+  V2rayBoxPlugin* plugin;
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
+  std::string start_error;
+};
+
+HWND PlatformMessageHwnd() {
+  const HWND cached = g_top_level_hwnd.load();
+  if (cached != nullptr && IsWindow(cached)) {
+    return cached;
+  }
+  if (g_flutter_view_hwnd == nullptr) {
+    return nullptr;
+  }
+  const HWND root = GetAncestor(g_flutter_view_hwnd, GA_ROOT);
+  return root != nullptr ? root : g_flutter_view_hwnd;
+}
 
 std::string ActiveConfigPath() {
   return JoinPath(GetWorkingDirectory(), "profiles\\active_config.json");
@@ -196,6 +222,25 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows* registrar) {
   auto plugin = std::make_unique<V2rayBoxPlugin>();
   g_plugin_instance = plugin.get();
+
+  if (registrar->GetView() != nullptr) {
+    g_flutter_view_hwnd = registrar->GetView()->GetNativeWindow();
+  }
+  registrar->RegisterTopLevelWindowProcDelegate(
+      [](HWND hwnd, UINT message, WPARAM wparam,
+         LPARAM /*lparam*/) -> std::optional<LRESULT> {
+        g_top_level_hwnd.store(hwnd);
+        if (message != kFinishStartWithJsonMessage) {
+          return std::nullopt;
+        }
+        auto* work = reinterpret_cast<FinishStartWork*>(wparam);
+        if (work != nullptr && work->plugin != nullptr) {
+          work->plugin->CompleteStartWithJson(std::move(work->result),
+                                              work->start_error);
+          delete work;
+        }
+        return static_cast<LRESULT>(0);
+      });
 
   auto method_channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -525,10 +570,10 @@ void V2rayBoxPlugin::HandleMethodCall(
     const std::string engine = g_core_engine;
     const std::string work_dir = GetWorkingDirectory();
 
-    std::string start_error;
-    {
+    auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge]() {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
-      start_error = DesktopCore::Instance().Start(engine, path, work_dir);
+      std::string start_error =
+          DesktopCore::Instance().Start(engine, path, work_dir);
       if (start_error.empty() && desktop_xray_tun_bridge) {
         const std::string bridge_error =
             DesktopCore::Instance().StartXrayTunBridge(
@@ -538,8 +583,27 @@ void V2rayBoxPlugin::HandleMethodCall(
           start_error = bridge_error;
         }
       }
+      return start_error;
+    };
+
+    const HWND message_hwnd = PlatformMessageHwnd();
+    if (message_hwnd == nullptr) {
+      CompleteStartWithJson(std::move(result), run_start());
+      return;
     }
-    CompleteStartWithJson(std::move(result), start_error);
+
+    std::thread([message_hwnd, run_start = std::move(run_start),
+                 result = std::move(result), plugin = this]() mutable {
+      const std::string start_error = run_start();
+      auto* work =
+          new FinishStartWork{plugin, std::move(result), start_error};
+      if (!PostMessage(message_hwnd, kFinishStartWithJsonMessage,
+                       reinterpret_cast<WPARAM>(work), 0)) {
+        plugin->CompleteStartWithJson(std::move(work->result),
+                                        work->start_error);
+        delete work;
+      }
+    }).detach();
     return;
   }
 

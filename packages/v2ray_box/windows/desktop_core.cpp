@@ -1,3 +1,6 @@
+#include <winsock2.h>
+#include <iphlpapi.h>
+
 #include "desktop_core.h"
 
 #include <direct.h>
@@ -13,6 +16,8 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+
+#pragma comment(lib, "iphlpapi.lib")
 
 namespace v2ray_box {
 namespace {
@@ -116,16 +121,49 @@ void KillOrphanTunBridgeProcesses() {
   KillOrphanCoreProcesses("singbox_tun_bridge.json");
 }
 
+int TcpTableLocalPort(DWORD raw_port) {
+  return static_cast<int>((raw_port >> 8) & 0xFF) |
+         static_cast<int>((raw_port & 0xFF) << 8);
+}
+
 void KillProcessOnPort(int port) {
   if (port <= 0) {
     return;
   }
-  const std::string cmd =
-      "for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :" +
-      std::to_string(port) +
-      " ^| findstr LISTENING') do taskkill /F /PID %a >nul 2>&1";
-  RunShellCommand(cmd);
-  Sleep(100);
+
+  DWORD size = 0;
+  if (GetExtendedTcpTable(nullptr, &size, FALSE, AF_INET,
+                          TCP_TABLE_OWNER_PID_ALL, 0) !=
+      ERROR_INSUFFICIENT_BUFFER) {
+    return;
+  }
+
+  std::vector<BYTE> buffer(size);
+  auto* table = reinterpret_cast<PMIB_TCPTABLE_OWNER_PID>(buffer.data());
+  if (GetExtendedTcpTable(table, &size, FALSE, AF_INET, TCP_TABLE_OWNER_PID_ALL,
+                          0) != NO_ERROR) {
+    return;
+  }
+
+  const DWORD self_pid = GetCurrentProcessId();
+  for (DWORD i = 0; i < table->dwNumEntries; ++i) {
+    const MIB_TCPROW_OWNER_PID& row = table->table[i];
+    if (row.dwState != MIB_TCP_STATE_LISTEN) {
+      continue;
+    }
+    if (TcpTableLocalPort(row.dwLocalPort) != port) {
+      continue;
+    }
+    if (row.dwOwningPid == 0 || row.dwOwningPid == self_pid) {
+      continue;
+    }
+    HANDLE process =
+        OpenProcess(PROCESS_TERMINATE, FALSE, row.dwOwningPid);
+    if (process != nullptr) {
+      TerminateProcess(process, 0);
+      CloseHandle(process);
+    }
+  }
 }
 
 std::string ReadPipe(HANDLE pipe) {
