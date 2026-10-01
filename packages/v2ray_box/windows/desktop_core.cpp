@@ -109,6 +109,14 @@ void RunShellCommand(const std::string& command) {
   std::system(command.c_str());
 }
 
+HANDLE OpenInheritedNulHandle() {
+  SECURITY_ATTRIBUTES sa {};
+  sa.nLength = sizeof(sa);
+  sa.bInheritHandle = TRUE;
+  return CreateFileW(L"NUL", GENERIC_WRITE, FILE_SHARE_WRITE, &sa, OPEN_EXISTING,
+                     0, nullptr);
+}
+
 void KillOrphanCoreProcesses(const std::string& config_path) {
   // Do not use WMIC here: on Windows 10/11 it can block for a long time and
   // freezes the Flutter UI when start/stop runs on the platform thread.
@@ -222,7 +230,7 @@ std::string RunForOutput(const std::string& binary,
   }
 
   CloseHandle(write_pipe);
-  WaitForSingleObject(pi.hProcess, INFINITE);
+  WaitForSingleObject(pi.hProcess, 8000);
   const std::string output = TrimOutput(ReadPipe(read_pipe));
   CloseHandle(read_pipe);
   CloseHandle(pi.hThread);
@@ -511,12 +519,10 @@ std::string DesktopCore::Start(const std::string& engine,
   sa.nLength = sizeof(sa);
   sa.bInheritHandle = TRUE;
 
-  HANDLE read_pipe = nullptr;
-  HANDLE write_pipe = nullptr;
-  if (!CreatePipe(&read_pipe, &write_pipe, &sa, 0)) {
-    return "Failed to create stderr pipe";
+  HANDLE stderr_nul = OpenInheritedNulHandle();
+  if (stderr_nul == INVALID_HANDLE_VALUE || stderr_nul == nullptr) {
+    return "Failed to open NUL device for core stderr";
   }
-  SetHandleInformation(read_pipe, HANDLE_FLAG_INHERIT, 0);
 
   const std::string user = GetEnvVar("SECURE_VPN_SOCKS_USER");
   if (!user.empty()) {
@@ -531,7 +537,6 @@ std::string DesktopCore::Start(const std::string& engine,
   EnsureDirectory(asset_dir);
   if (engine != "singbox") {
     EnsureWintunDll(binary);
-    EnsureXrayGeoAssets(work_dir, binary);
   }
   _putenv_s("XRAY_LOCATION_ASSET", asset_dir.c_str());
 
@@ -544,7 +549,7 @@ std::string DesktopCore::Start(const std::string& engine,
   STARTUPINFOW si {};
   si.cb = sizeof(si);
   si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-  si.hStdError = write_pipe;
+  si.hStdError = stderr_nul;
   si.wShowWindow = SW_HIDE;
 
   PROCESS_INFORMATION pi {};
@@ -556,12 +561,11 @@ std::string DesktopCore::Start(const std::string& engine,
                       CREATE_NO_WINDOW, nullptr,
                       work_dir_wide.empty() ? nullptr : work_dir_wide.c_str(),
                       &si, &pi)) {
-    CloseHandle(write_pipe);
-    CloseHandle(read_pipe);
+    CloseHandle(stderr_nul);
     return "Failed to start core process";
   }
 
-  CloseHandle(write_pipe);
+  CloseHandle(stderr_nul);
 
   DWORD exit_code = STILL_ACTIVE;
   for (int wait_ms = 0; wait_ms < 2000; wait_ms += 100) {
@@ -571,20 +575,15 @@ std::string DesktopCore::Start(const std::string& engine,
     Sleep(100);
   }
   if (GetExitCodeProcess(pi.hProcess, &exit_code) && exit_code != STILL_ACTIVE) {
-    const std::string stderr_output = TrimOutput(ReadPipe(read_pipe));
-    CloseHandle(read_pipe);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     process_handle_ = nullptr;
     process_id_ = 0;
     engine_.clear();
-    if (!stderr_output.empty()) {
-      return stderr_output;
-    }
-    return "Core process exited during startup";
+    return "Core process exited during startup (code=" +
+           std::to_string(exit_code) + ")";
   }
 
-  CloseHandle(read_pipe);
   process_handle_ = pi.hProcess;
   process_id_ = pi.dwProcessId;
   engine_ = engine;
@@ -710,12 +709,10 @@ std::string StartTunBridgeProcess(const std::string& engine,
   SECURITY_ATTRIBUTES sa {};
   sa.nLength = sizeof(sa);
   sa.bInheritHandle = TRUE;
-  HANDLE read_pipe = nullptr;
-  HANDLE write_pipe = nullptr;
-  if (!CreatePipe(&read_pipe, &write_pipe, &sa, 0)) {
-    return "TUN bridge: failed to create stderr pipe";
+  HANDLE stderr_nul = OpenInheritedNulHandle();
+  if (stderr_nul == INVALID_HANDLE_VALUE || stderr_nul == nullptr) {
+    return "TUN bridge: failed to open NUL device for stderr";
   }
-  SetHandleInformation(read_pipe, HANDLE_FLAG_INHERIT, 0);
 
   std::wstring command_line = L"\"" + Utf8ToWide(binary) + L"\" run -c \"" +
                               Utf8ToWide(config_path) + L"\"";
@@ -726,7 +723,7 @@ std::string StartTunBridgeProcess(const std::string& engine,
   STARTUPINFOW si {};
   si.cb = sizeof(si);
   si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-  si.hStdError = write_pipe;
+  si.hStdError = stderr_nul;
   si.wShowWindow = SW_HIDE;
 
   PROCESS_INFORMATION pi {};
@@ -738,45 +735,27 @@ std::string StartTunBridgeProcess(const std::string& engine,
                       CREATE_NO_WINDOW, nullptr,
                       work_dir_wide.empty() ? nullptr : work_dir_wide.c_str(),
                       &si, &pi)) {
-    CloseHandle(write_pipe);
-    CloseHandle(read_pipe);
+    CloseHandle(stderr_nul);
     return "TUN bridge: failed to start process";
   }
 
-  CloseHandle(write_pipe);
+  CloseHandle(stderr_nul);
 
-  std::string stderr_output;
-  for (int attempt = 0; attempt < 5; ++attempt) {
-    Sleep(attempt == 0 ? 250 : 200);
+  for (int attempt = 0; attempt < 3; ++attempt) {
+    Sleep(attempt == 0 ? 150 : 100);
     DWORD exit_code = STILL_ACTIVE;
     if (GetExitCodeProcess(pi.hProcess, &exit_code) &&
         exit_code != STILL_ACTIVE) {
-      stderr_output = TrimOutput(ReadPipe(read_pipe));
-      CloseHandle(read_pipe);
       CloseHandle(pi.hThread);
       CloseHandle(pi.hProcess);
       RemoveFileIfExists(config_path);
-      if (!stderr_output.empty()) {
-        return "TUN bridge: " + stderr_output;
-      }
-      return "TUN bridge exited during startup (check admin / wintun)";
+      return "TUN bridge exited during startup (code=" +
+             std::to_string(exit_code) + ", check admin / wintun)";
     }
   }
-  stderr_output = TrimOutput(ReadPipe(read_pipe));
-  CloseHandle(read_pipe);
 
   *bridge_handle_out = pi.hProcess;
   CloseHandle(pi.hThread);
-  if (!stderr_output.empty() &&
-      (stderr_output.find("failed") != std::string::npos ||
-       stderr_output.find("error") != std::string::npos ||
-       stderr_output.find("FATAL") != std::string::npos)) {
-    TerminateProcess(pi.hProcess, 0);
-    WaitForSingleObject(pi.hProcess, 5000);
-    CloseHandle(pi.hProcess);
-    RemoveFileIfExists(config_path);
-    return "TUN bridge: " + stderr_output;
-  }
   return "";
 }
 
@@ -787,7 +766,7 @@ std::string DesktopCore::StartSingboxTunBridge(int socks_port,
                                                const std::string& socks_pass) {
   if (bridge_process_handle_ != nullptr) {
     TerminateProcess(bridge_process_handle_, 0);
-    WaitForSingleObject(bridge_process_handle_, 5000);
+    WaitForSingleObject(bridge_process_handle_, 2000);
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     bridge_config_basename_.clear();
@@ -808,7 +787,7 @@ std::string DesktopCore::StartXrayTunBridge(int socks_port,
                                             const std::string& socks_pass) {
   if (bridge_process_handle_ != nullptr) {
     TerminateProcess(bridge_process_handle_, 0);
-    WaitForSingleObject(bridge_process_handle_, 5000);
+    WaitForSingleObject(bridge_process_handle_, 2000);
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     bridge_config_basename_.clear();
@@ -839,7 +818,7 @@ bool DesktopCore::IsBridgeRunning() const {
 void DesktopCore::Stop() {
   if (bridge_process_handle_ != nullptr) {
     TerminateProcess(bridge_process_handle_, 0);
-    WaitForSingleObject(bridge_process_handle_, 5000);
+    WaitForSingleObject(bridge_process_handle_, 2000);
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     if (!bridge_config_basename_.empty()) {
@@ -855,7 +834,7 @@ void DesktopCore::Stop() {
   }
 
   TerminateProcess(process_handle_, 0);
-  WaitForSingleObject(process_handle_, 5000);
+  WaitForSingleObject(process_handle_, 2000);
   CloseHandle(process_handle_);
   process_handle_ = nullptr;
   process_id_ = 0;
