@@ -882,7 +882,8 @@ class VpnService {
     AppLog.info(
       'Starting native core (desktopXrayTunBridge=$useDesktopXrayTunBridge)...',
     );
-    final started = await _v2rayBox.connectWithJson(
+    await AppLog.flush();
+    final started = await _invokeNativeConnectWithJson(
       secureConfig,
       name: effectiveProfile.name,
       socksUsername: credentials.username,
@@ -891,6 +892,7 @@ class VpnService {
       desktopXrayTunBridge: useDesktopXrayTunBridge,
     );
     AppLog.info('Native core start returned started=$started');
+    await AppLog.flush();
     if (!started) {
       final detail = await _describeNativeStartFailure();
       AppLog.error('connectWithJson returned false${detail.isEmpty ? '' : ': $detail'}');
@@ -1148,6 +1150,38 @@ class VpnService {
         'Desktop VPN (TUN) needs elevated privileges. On Linux: '
         'sudo setcap cap_net_admin+ep on the sing-box/xray binary in app resources. '
         'On Windows/macOS: run the app as Administrator.',
+      );
+    }
+  }
+
+  static const _nativeStartTimeout = Duration(seconds: 45);
+
+  Future<bool> _invokeNativeConnectWithJson(
+    String secureConfig, {
+    required String name,
+    required String socksUsername,
+    required String socksPassword,
+    required int socksPort,
+    required bool desktopXrayTunBridge,
+  }) async {
+    final future = _v2rayBox.connectWithJson(
+      secureConfig,
+      name: name,
+      socksUsername: socksUsername,
+      socksPassword: socksPassword,
+      socksPort: socksPort,
+      desktopXrayTunBridge: desktopXrayTunBridge,
+    );
+    if (!_isDesktopPlatform) {
+      return future;
+    }
+    try {
+      return await future.timeout(_nativeStartTimeout);
+    } on TimeoutException {
+      throw StateError(
+        'Native VPN start timed out after ${_nativeStartTimeout.inSeconds}s. '
+        'If xray.exe is running but the app stays on Connecting, restart the app '
+        'and try again (run as Administrator for VPN mode).',
       );
     }
   }

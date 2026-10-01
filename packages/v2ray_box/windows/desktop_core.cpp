@@ -564,7 +564,7 @@ std::string DesktopCore::Start(const std::string& engine,
   CloseHandle(write_pipe);
 
   DWORD exit_code = STILL_ACTIVE;
-  for (int wait_ms = 0; wait_ms < 3000; wait_ms += 100) {
+  for (int wait_ms = 0; wait_ms < 2000; wait_ms += 100) {
     if (GetExitCodeProcess(pi.hProcess, &exit_code) && exit_code != STILL_ACTIVE) {
       break;
     }
