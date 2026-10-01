@@ -17,6 +17,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 
 #include "desktop_core.h"
@@ -39,6 +40,53 @@ std::string g_last_start_error;
 
 V2rayBoxPlugin* g_plugin_instance = nullptr;
 std::mutex g_core_start_mutex;
+
+constexpr UINT kCompleteStartMessage = WM_APP + 0x5817;
+constexpr char kMessageWindowClass[] = "RioNexTunnelV2rayBoxMsg";
+
+HWND g_message_window = nullptr;
+
+struct FinishStartWork {
+  V2rayBoxPlugin* plugin;
+  std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result;
+  std::string start_error;
+};
+
+LRESULT CALLBACK MessageWindowProc(HWND hwnd,
+                                   UINT message,
+                                   WPARAM wparam,
+                                   LPARAM lparam) {
+  if (message == kCompleteStartMessage) {
+    auto* work = reinterpret_cast<FinishStartWork*>(wparam);
+    if (work != nullptr && work->plugin != nullptr) {
+      work->plugin->CompleteStartWithJson(std::move(work->result),
+                                          work->start_error);
+      delete work;
+    }
+    return 0;
+  }
+  return DefWindowProc(hwnd, message, wparam, lparam);
+}
+
+bool EnsureMessageWindow() {
+  if (g_message_window != nullptr && IsWindow(g_message_window)) {
+    return true;
+  }
+
+  WNDCLASS window_class {};
+  window_class.lpfnWndProc = MessageWindowProc;
+  window_class.lpszClassName = kMessageWindowClass;
+  window_class.hInstance = GetModuleHandle(nullptr);
+  if (RegisterClassA(&window_class) == 0 &&
+      GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+    return false;
+  }
+
+  g_message_window =
+      CreateWindowExA(0, kMessageWindowClass, "RioNexTunnelMsg", 0, 0, 0, 0, 0,
+                      HWND_MESSAGE, nullptr, GetModuleHandle(nullptr), nullptr);
+  return g_message_window != nullptr;
+}
 
 std::string ActiveConfigPath() {
   return JoinPath(GetWorkingDirectory(), "profiles\\active_config.json");
@@ -196,6 +244,7 @@ void V2rayBoxPlugin::RegisterWithRegistrar(
     flutter::PluginRegistrarWindows* registrar) {
   auto plugin = std::make_unique<V2rayBoxPlugin>();
   g_plugin_instance = plugin.get();
+  EnsureMessageWindow();
 
   auto method_channel =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
@@ -301,6 +350,10 @@ V2rayBoxPlugin::~V2rayBoxPlugin() {
   }
   ClearSessionCredentials();
   WipeSensitiveFiles();
+  if (g_message_window != nullptr && IsWindow(g_message_window)) {
+    DestroyWindow(g_message_window);
+    g_message_window = nullptr;
+  }
   if (g_plugin_instance == this) {
     g_plugin_instance = nullptr;
   }
@@ -525,10 +578,10 @@ void V2rayBoxPlugin::HandleMethodCall(
     const std::string engine = g_core_engine;
     const std::string work_dir = GetWorkingDirectory();
 
-    std::string start_error;
-    {
+    auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge]() {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
-      start_error = DesktopCore::Instance().Start(engine, path, work_dir);
+      std::string start_error =
+          DesktopCore::Instance().Start(engine, path, work_dir);
       if (start_error.empty() && desktop_xray_tun_bridge) {
         const std::string bridge_error =
             DesktopCore::Instance().StartXrayTunBridge(
@@ -538,8 +591,24 @@ void V2rayBoxPlugin::HandleMethodCall(
           start_error = bridge_error;
         }
       }
+      return start_error;
+    };
+
+    if (!EnsureMessageWindow()) {
+      CompleteStartWithJson(std::move(result), run_start());
+      return;
     }
-    CompleteStartWithJson(std::move(result), start_error);
+
+    auto* work = new FinishStartWork{this, std::move(result), ""};
+    std::thread([work, run_start = std::move(run_start)]() mutable {
+      work->start_error = run_start();
+      if (!PostMessage(g_message_window, kCompleteStartMessage,
+                       reinterpret_cast<WPARAM>(work), 0)) {
+        work->plugin->CompleteStartWithJson(std::move(work->result),
+                                            work->start_error);
+        delete work;
+      }
+    }).detach();
     return;
   }
 

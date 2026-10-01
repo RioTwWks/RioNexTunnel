@@ -808,8 +808,6 @@ class VpnService {
 
     if (_engine == VpnEngine.xray && !_isDesktopPlatform) {
       await _warnIfXrayTooOldForXhttp(rawConfig);
-    } else if (_engine == VpnEngine.xray) {
-      unawaited(_warnIfXrayTooOldForXhttp(rawConfig));
     }
 
     _assertOfficialCoreSupportsAwg(rawConfig);
