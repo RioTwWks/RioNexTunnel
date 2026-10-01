@@ -42,7 +42,7 @@ V2rayBoxPlugin* g_plugin_instance = nullptr;
 std::mutex g_core_start_mutex;
 
 constexpr UINT kCompleteStartMessage = WM_APP + 0x5817;
-constexpr char kMessageWindowClass[] = "RioNexTunnelV2rayBoxMsg";
+constexpr wchar_t kMessageWindowClass[] = L"RioNexTunnelV2rayBoxMsg";
 
 HWND g_message_window = nullptr;
 
@@ -73,18 +73,18 @@ bool EnsureMessageWindow() {
     return true;
   }
 
-  WNDCLASS window_class {};
+  WNDCLASSW window_class {};
   window_class.lpfnWndProc = MessageWindowProc;
   window_class.lpszClassName = kMessageWindowClass;
   window_class.hInstance = GetModuleHandle(nullptr);
-  if (RegisterClassA(&window_class) == 0 &&
+  if (RegisterClassW(&window_class) == 0 &&
       GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
     return false;
   }
 
-  g_message_window =
-      CreateWindowExA(0, kMessageWindowClass, "RioNexTunnelMsg", 0, 0, 0, 0, 0,
-                      HWND_MESSAGE, nullptr, GetModuleHandle(nullptr), nullptr);
+  g_message_window = CreateWindowExW(
+      0, kMessageWindowClass, L"RioNexTunnelMsg", 0, 0, 0, 0, 0, HWND_MESSAGE,
+      nullptr, GetModuleHandle(nullptr), nullptr);
   return g_message_window != nullptr;
 }
 
