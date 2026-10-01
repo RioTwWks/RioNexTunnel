@@ -621,10 +621,11 @@ std::string BuildXrayTunBridgeConfig(int socks_port,
   std::ostringstream json;
   json << "{\n  \"log\": {\"loglevel\": \"warning\"},\n";
   json << "  \"inbounds\": [{\"tag\": \"tun-in\", \"port\": 0, \"protocol\": \"tun\", ";
-  json << "\"settings\": {\"name\": \"" << tun_name << "\", \"mtu\": 1500, \"userLevel\": 8, ";
+  json << "\"settings\": {\"name\": \"" << tun_name << "\", \"MTU\": 1500, \"userLevel\": 8, ";
   json << "\"gateway\": [\"172.19.0.1/30\", \"fdfe:dcba:9876::1/126\"], ";
   json << "\"dns\": [\"1.1.1.1\", \"8.8.8.8\"], ";
-  json << "\"autoSystemRoutingTable\": [\"0.0.0.0/0\", \"::/0\"]}, ";
+  json << "\"autoSystemRoutingTable\": [\"0.0.0.0/0\", \"::/0\"], ";
+  json << "\"autoOutboundsInterface\": \"auto\"}, ";
   json << "\"sniffing\": {\"enabled\": true, \"destOverride\": [\"http\", \"tls\"]}}],\n";
   json << "  \"outbounds\": [{\"tag\": \"proxy\", \"protocol\": \"socks\", ";
   json << "\"settings\": {\"servers\": [{\"address\": \"127.0.0.1\", \"port\": "
@@ -638,7 +639,8 @@ std::string BuildXrayTunBridgeConfig(int socks_port,
   json << "  \"routing\": {\"domainStrategy\": \"AsIs\", \"rules\": [{\"type\": "
           "\"field\", \"outboundTag\": \"direct\", \"ip\": [\"127.0.0.0/8\", "
           "\"10.0.0.0/8\", \"172.16.0.0/12\", \"192.168.0.0/16\", "
-          "\"fc00::/7\", \"fe80::/10\", \"::1/128\"]}]},\n";
+          "\"fc00::/7\", \"fe80::/10\", \"::1/128\"]}, {\"type\": \"field\", "
+          "\"network\": \"tcp,udp\", \"outboundTag\": \"proxy\"}]},\n";
   json << "  \"policy\": {\"levels\": {\"8\": {\"handshake\": 4, \"connIdle\": 300, "
           "\"uplinkOnly\": 1, \"downlinkOnly\": 1}}}\n}\n";
   return json.str();
@@ -647,12 +649,15 @@ std::string BuildXrayTunBridgeConfig(int socks_port,
 std::string BuildSingboxTunBridgeConfig(int socks_port,
                                         const std::string& socks_user,
                                         const std::string& socks_pass) {
+  const ULONGLONG tick = GetTickCount64();
+  const std::string tun_name =
+      "rio" + std::to_string(tick % 100000ULL);
   std::ostringstream json;
   json << "{\n  \"log\": {\"level\": \"warn\", \"timestamp\": true},\n";
   json << "  \"inbounds\": [{\n";
   json << "    \"type\": \"tun\",\n";
   json << "    \"tag\": \"tun-in\",\n";
-  json << "    \"interface_name\": \"tun0\",\n";
+  json << "    \"interface_name\": \"" << tun_name << "\",\n";
   json << "    \"inet4_address\": \"172.19.0.1/30\",\n";
   json << "    \"inet6_address\": \"fdfe:dcba:9876::1/126\",\n";
   json << "    \"mtu\": 1500,\n";

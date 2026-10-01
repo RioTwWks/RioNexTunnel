@@ -583,9 +583,14 @@ void V2rayBoxPlugin::HandleMethodCall(
       std::string start_error =
           DesktopCore::Instance().Start(engine, path, work_dir);
       if (start_error.empty() && desktop_xray_tun_bridge) {
-        const std::string bridge_error =
-            DesktopCore::Instance().StartXrayTunBridge(
-                g_socks_port, g_socks_user, g_socks_pass);
+        std::string bridge_error;
+        if (!DesktopCore::Instance().FindBinary("singbox").empty()) {
+          bridge_error = DesktopCore::Instance().StartSingboxTunBridge(
+              g_socks_port, g_socks_user, g_socks_pass);
+        } else {
+          bridge_error = DesktopCore::Instance().StartXrayTunBridge(
+              g_socks_port, g_socks_user, g_socks_pass);
+        }
         if (!bridge_error.empty()) {
           DesktopCore::Instance().Stop();
           start_error = bridge_error;
