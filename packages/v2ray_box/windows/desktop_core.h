@@ -22,6 +22,8 @@ class DesktopCore {
   void Stop();
   bool IsRunning() const;
   bool IsBridgeRunning() const;
+  /// Last successful Windows TUN bridge engine (empty if none).
+  std::string BridgeEngine() const { return bridge_engine_; }
   std::string FindBinary(const std::string& engine) const;
   std::string GetVersion(const std::string& engine) const;
 
@@ -31,6 +33,8 @@ class DesktopCore {
   DWORD process_id_ = 0;
   HANDLE bridge_process_handle_ = nullptr;
   std::string bridge_config_basename_;
+  std::string bridge_engine_;
+  bool bridge_required_ = false;
   std::string engine_;
 };
 

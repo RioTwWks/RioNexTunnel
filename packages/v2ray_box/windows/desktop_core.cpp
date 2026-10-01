@@ -18,6 +18,7 @@
 #include <vector>
 
 #pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
 
 namespace v2ray_box {
 namespace {
@@ -663,6 +664,8 @@ std::string BuildSingboxTunBridgeConfig(int socks_port,
   json << "    \"mtu\": 1500,\n";
   json << "    \"auto_route\": true,\n";
   json << "    \"strict_route\": true,\n";
+  json << "    \"inet4_route_address\": [\"0.0.0.0/1\", \"128.0.0.0/1\"],\n";
+  json << "    \"inet6_route_address\": [\"::/1\", \"8000::/1\"],\n";
   json << "    \"stack\": \"mixed\"\n";
   json << "  }],\n";
   json << "  \"outbounds\": [\n";
@@ -687,6 +690,38 @@ std::string BuildSingboxTunBridgeConfig(int socks_port,
   return json.str();
 }
 
+bool WaitForLocalTcpPort(int port, int timeout_ms) {
+  if (port <= 0 || port > 65535) {
+    return false;
+  }
+  WSADATA wsa {};
+  if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+    return false;
+  }
+  const ULONGLONG deadline = GetTickCount64() + static_cast<ULONGLONG>(timeout_ms);
+  bool ready = false;
+  while (GetTickCount64() < deadline) {
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (sock == INVALID_SOCKET) {
+      break;
+    }
+    sockaddr_in addr {};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(static_cast<u_short>(port));
+    InetPtonA(AF_INET, "127.0.0.1", &addr.sin_addr);
+    const int connected =
+        connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+    closesocket(sock);
+    if (connected == 0) {
+      ready = true;
+      break;
+    }
+    Sleep(75);
+  }
+  WSACleanup();
+  return ready;
+}
+
 std::string StartTunBridgeProcess(const std::string& engine,
                                   const std::string& config_basename,
                                   const std::string& config_json,
@@ -697,9 +732,7 @@ std::string StartTunBridgeProcess(const std::string& engine,
                ? "TUN bridge: sing-box.exe not found"
                : "Xray TUN bridge: xray.exe not found";
   }
-  if (engine == "xray") {
-    EnsureWintunDll(binary);
-  }
+  EnsureWintunDll(binary);
 
   const std::string work_dir = GetWorkingDirectory();
   const std::string profiles_dir = JoinPath(work_dir, "profiles");
@@ -746,8 +779,8 @@ std::string StartTunBridgeProcess(const std::string& engine,
 
   CloseHandle(stderr_nul);
 
-  for (int attempt = 0; attempt < 3; ++attempt) {
-    Sleep(attempt == 0 ? 150 : 100);
+  for (int attempt = 0; attempt < 8; ++attempt) {
+    Sleep(attempt == 0 ? 200 : 125);
     DWORD exit_code = STILL_ACTIVE;
     if (GetExitCodeProcess(pi.hProcess, &exit_code) &&
         exit_code != STILL_ACTIVE) {
@@ -775,6 +808,13 @@ std::string DesktopCore::StartSingboxTunBridge(int socks_port,
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     bridge_config_basename_.clear();
+    bridge_engine_.clear();
+    bridge_required_ = false;
+  }
+
+  if (!WaitForLocalTcpPort(socks_port, 8000)) {
+    return "TUN bridge: local SOCKS is not listening on 127.0.0.1:" +
+           std::to_string(socks_port);
   }
 
   const std::string config_json =
@@ -783,6 +823,8 @@ std::string DesktopCore::StartSingboxTunBridge(int socks_port,
       "singbox", "singbox_tun_bridge.json", config_json, &bridge_process_handle_);
   if (error.empty()) {
     bridge_config_basename_ = "singbox_tun_bridge.json";
+    bridge_engine_ = "singbox";
+    bridge_required_ = true;
   }
   return error;
 }
@@ -796,7 +838,14 @@ std::string DesktopCore::StartXrayTunBridge(int socks_port,
     CloseHandle(bridge_process_handle_);
     bridge_process_handle_ = nullptr;
     bridge_config_basename_.clear();
+    bridge_engine_.clear();
+    bridge_required_ = false;
     Sleep(100);
+  }
+
+  if (!WaitForLocalTcpPort(socks_port, 8000)) {
+    return "TUN bridge: local SOCKS is not listening on 127.0.0.1:" +
+           std::to_string(socks_port);
   }
 
   const std::string config_json =
@@ -805,13 +854,18 @@ std::string DesktopCore::StartXrayTunBridge(int socks_port,
       "xray", "xray_tun_bridge.json", config_json, &bridge_process_handle_);
   if (error.empty()) {
     bridge_config_basename_ = "xray_tun_bridge.json";
+    bridge_engine_ = "xray";
+    bridge_required_ = true;
   }
   return error;
 }
 
 bool DesktopCore::IsBridgeRunning() const {
-  if (bridge_process_handle_ == nullptr) {
+  if (!bridge_required_) {
     return true;
+  }
+  if (bridge_process_handle_ == nullptr) {
+    return false;
   }
   DWORD exit_code = STILL_ACTIVE;
   if (!GetExitCodeProcess(bridge_process_handle_, &exit_code)) {
@@ -821,6 +875,8 @@ bool DesktopCore::IsBridgeRunning() const {
 }
 
 void DesktopCore::Stop() {
+  bridge_required_ = false;
+  bridge_engine_.clear();
   if (bridge_process_handle_ != nullptr) {
     TerminateProcess(bridge_process_handle_, 0);
     WaitForSingleObject(bridge_process_handle_, 2000);

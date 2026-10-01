@@ -903,6 +903,13 @@ class VpnService {
 
     try {
       await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
+      if (useDesktopXrayTunBridge && !await _v2rayBox.isCoreRunning()) {
+        throw StateError(
+          'Windows TUN bridge stopped right after connect. '
+          'Run as Administrator and ensure wintun.dll is next to xray.exe '
+          '(scripts/fetch_cores.sh).',
+        );
+      }
     } catch (error) {
       final detail = await _describeNativeStartFailure();
       AppLog.error('Did not reach Connected: $error${detail.isEmpty ? '' : ' — $detail'}');
@@ -925,7 +932,8 @@ class VpnService {
     _publishStatus(VpnStatus.started);
     AppLog.info(
       'VPN connected with ${_engine.coreName}'
-      '${stack != null ? ' stack=${stack.tag}' : ''}',
+      '${stack != null ? ' stack=${stack.tag}' : ''}'
+      '${useDesktopXrayTunBridge ? ' (Windows TUN bridge → local SOCKS)' : ''}',
     );
     return effectiveProfile;
   }
