@@ -708,7 +708,7 @@ bool WaitForLocalTcpPort(int port, int timeout_ms) {
     sockaddr_in addr {};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(static_cast<u_short>(port));
-    InetPtonA(AF_INET, "127.0.0.1", &addr.sin_addr);
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     const int connected =
         connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
     closesocket(sock);
