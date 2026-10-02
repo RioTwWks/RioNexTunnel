@@ -90,8 +90,8 @@ bool HasActiveWintunAdapter() {
     if (adapter->OperStatus != IfOperStatusUp) {
       continue;
     }
-    if (DescriptionMentionsWintun(adapter->Description)) {
-      return true;
+    if (!DescriptionMentionsWintun(adapter->Description)) {
+      continue;
     }
     if (AdapterNameLooksLikeTunnel(adapter->FriendlyName)) {
       return true;
@@ -117,10 +117,14 @@ bool ConfigOptionsEnableTun(const std::string& json) {
 
 bool ShouldUseSystemProxy(const std::string& service_mode,
                           const std::string& config_options_json) {
+  // Windows desktop VPN may set set-system-proxy while TUN is active (Hiddify-style).
+  if (ConfigOptionsSetSystemProxy(config_options_json)) {
+    return true;
+  }
   if (DesktopVpnActive(service_mode, config_options_json)) {
     return false;
   }
-  return ConfigOptionsSetSystemProxy(config_options_json);
+  return false;
 }
 
 std::string ValidateDesktopVpnStart(const std::string& service_mode,

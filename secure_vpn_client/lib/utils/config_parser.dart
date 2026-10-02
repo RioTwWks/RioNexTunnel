@@ -364,6 +364,7 @@ class ConfigParser {
     VpnEngine engine, {
     int socksPort = defaultSocksPort,
     bool proxyOnly = false,
+    bool includeLocalHttpInbound = false,
     bool omitXrayTunInbound = false,
     XrayTunRoutingProfile xrayTunProfile = XrayTunRoutingProfile.mobile,
     SocksAuthMode authMode = SocksAuthMode.randomPerSession,
@@ -412,7 +413,7 @@ class ConfigParser {
         ...(config['inbounds'] as List<dynamic>? ?? const []),
         inbound,
       ];
-      if (proxyOnly) {
+      if (proxyOnly || includeLocalHttpInbound) {
         final httpPort = effectivePort + 1;
         inbounds.add(
           engine == VpnEngine.singbox

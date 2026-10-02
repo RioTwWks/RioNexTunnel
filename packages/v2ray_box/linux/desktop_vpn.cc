@@ -56,10 +56,13 @@ bool ConfigOptionsEnableTun(const std::string& json) {
 
 bool ShouldUseSystemProxy(const std::string& service_mode,
                           const std::string& config_options_json) {
+  if (ConfigOptionsSetSystemProxy(config_options_json)) {
+    return true;
+  }
   if (DesktopVpnActive(service_mode, config_options_json)) {
     return false;
   }
-  return ConfigOptionsSetSystemProxy(config_options_json);
+  return false;
 }
 
 std::string ValidateDesktopVpnStart(const std::string& service_mode,

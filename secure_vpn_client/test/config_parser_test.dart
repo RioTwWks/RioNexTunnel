@@ -174,6 +174,20 @@ void main() {
       );
     });
 
+    test('includeLocalHttpInbound adds HTTP without proxyOnly', () {
+      final result = ConfigParser.injectSecureSocksInbound(
+        sampleXray,
+        credentials,
+        VpnEngine.xray,
+        includeLocalHttpInbound: true,
+      );
+      final tags = (jsonDecode(result) as Map)['inbounds'] as List;
+      expect(
+        tags.whereType<Map>().map((inbound) => inbound['tag']).toList(),
+        contains('secure-http-in'),
+      );
+    });
+
     test('proxyOnly strips all existing inbounds from subscription JSON', () {
       const subscriptionLike = '''
 {
