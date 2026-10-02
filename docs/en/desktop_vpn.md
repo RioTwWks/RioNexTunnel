@@ -10,7 +10,7 @@
 
 **Work mode → Proxy** (default on desktop for **Auto**) keeps the previous behavior: authenticated local SOCKS/HTTP and optional system proxy.
 
-On **Windows**, **VPN** mode follows a [Hiddify](https://github.com/hiddify/hiddify-app)-style hybrid: **TUN in the core** plus **system HTTP proxy** to `127.0.0.1` (authenticated) so browsers and WinINET apps tunnel even when OS routing alone is unreliable. Linux/macOS VPN stays TUN-only (no system proxy).
+On **Windows**, **VPN** mode follows a [Hiddify](https://github.com/hiddify/hiddify-app)-style hybrid: **system HTTP proxy** to authenticated `127.0.0.1` (always) plus **TUN in the core** when `wintun.dll` and admin rights allow it. Connect is **not blocked** if TUN fails to appear — browsers still use the system proxy. Linux/macOS VPN stays TUN-only (no system proxy).
 
 ## Requirements
 
