@@ -22,7 +22,26 @@ Several popular VPN clients exposed an **unauthenticated local SOCKS5 proxy** (o
 | Mandatory authentication | SOCKS/HTTP inbounds use `auth: password` with per-session credentials |
 | No credential persistence | `CredentialService` generates CSPRNG values; wiped on disconnect |
 | No credential logging | Credentials passed via platform channel / env vars, not logs or disk |
-| Desktop proxy mode | Linux/Windows/macOS use `VpnMode.proxy`, not open TUN without isolation |
+| No LAN exposure | Never listen on `0.0.0.0` (the March 2026 incident class) |
+
+## VPN mode vs Proxy mode on desktop
+
+These solve different problems. **Do not mix them** (for example system HTTP proxy plus “VPN connected” without a working TUN).
+
+| | **VPN (TUN)** | **Proxy** |
+|---|---------------|-----------|
+| How apps reach the tunnel | OS routes IP packets into the virtual adapter (Wintun on Windows) | Apps that honor system proxy or SOCKS/HTTP settings |
+| System HTTP proxy | **Off** — avoids WinINET apps breaking on proxy auth | Optional (`127.0.0.1:1081`) |
+| Local SOCKS `1080` | Still **password-protected** for extensions and manual clients; normal apps do **not** need it | Same; primary path for `curl --socks5` with credentials |
+| Split / bypass | Routing rules in core config (and Android per-app UI) | Per-app: do not set proxy; use direct rules in subscription |
+
+### Why keep local proxy auth at all?
+
+The March 2026 issue was **unauthenticated** SOCKS on a port any process could use (often `0.0.0.0:7890`). RioNexTunnel binds to **`127.0.0.1` only** and requires a **per-session password** so another local app cannot silently steal your tunnel or read routing config through the proxy.
+
+That auth is **not** a substitute for VPN on Windows: most games, messengers, and WinINET apps cannot use an authenticated system proxy. **VPN mode must use TUN** (admin + `wintun.dll` for Xray on Windows). If you only need a browser, use **Proxy mode** and the [browser extension](browser_extension.md) or copy SOCKS credentials from the UI.
+
+Removing local auth would not make TUN “more secure”; it would only make it easier for malware on the same machine to use your open localhost proxy. Excluding apps from the tunnel is done with **routing / split tunneling**, not by dropping localhost auth.
 
 ## Per-session credentials
 
