@@ -185,6 +185,9 @@ int GetMapInt(const flutter::EncodableMap& map, const char* key) {
   if (const auto* value = std::get_if<int64_t>(&it->second)) {
     return static_cast<int>(*value);
   }
+  if (const auto* value = std::get_if<double>(&it->second)) {
+    return static_cast<int>(*value);
+  }
   return 0;
 }
 
@@ -583,9 +586,19 @@ void V2rayBoxPlugin::HandleMethodCall(
       std::string start_error =
           DesktopCore::Instance().Start(engine, path, work_dir);
       if (start_error.empty() && desktop_xray_tun_bridge) {
-        const std::string bridge_error =
-            DesktopCore::Instance().StartXrayTunBridge(
+        std::string bridge_error;
+        if (!DesktopCore::Instance().FindBinary("singbox").empty()) {
+          bridge_error = DesktopCore::Instance().StartSingboxTunBridge(
+              g_socks_port, g_socks_user, g_socks_pass);
+          if (!bridge_error.empty() &&
+              !DesktopCore::Instance().FindBinary("xray").empty()) {
+            bridge_error = DesktopCore::Instance().StartXrayTunBridge(
                 g_socks_port, g_socks_user, g_socks_pass);
+          }
+        } else {
+          bridge_error = DesktopCore::Instance().StartXrayTunBridge(
+              g_socks_port, g_socks_user, g_socks_pass);
+        }
         if (!bridge_error.empty()) {
           DesktopCore::Instance().Stop();
           start_error = bridge_error;
@@ -716,6 +729,10 @@ void V2rayBoxPlugin::HandleMethodCall(
         flutter::EncodableValue(xray_ok);
     map[flutter::EncodableValue("singbox_available")] =
         flutter::EncodableValue(singbox_ok);
+    map[flutter::EncodableValue("tun_bridge_engine")] =
+        flutter::EncodableValue(DesktopCore::Instance().BridgeEngine());
+    map[flutter::EncodableValue("tun_bridge_running")] =
+        flutter::EncodableValue(DesktopCore::Instance().IsBridgeRunning());
     // SkadiCore LocalAuthProxy front is Linux-first; hide until Windows port.
     map[flutter::EncodableValue("skadi_available")] =
         flutter::EncodableValue(false);
