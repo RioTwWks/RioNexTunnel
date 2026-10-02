@@ -578,6 +578,9 @@ void V2rayBoxPlugin::HandleMethodCall(
     const bool desktop_vpn_active =
         IsVpnServiceMode(g_service_mode) &&
         ConfigOptionsEnableTun(g_config_options);
+    const bool windows_vpn_hybrid =
+        desktop_vpn_active &&
+        ConfigOptionsSetSystemProxy(g_config_options);
 
     g_last_start_error.clear();
 
@@ -585,7 +588,7 @@ void V2rayBoxPlugin::HandleMethodCall(
     const std::string work_dir = GetWorkingDirectory();
 
     auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge,
-                      desktop_vpn_active]() {
+                      desktop_vpn_active, windows_vpn_hybrid]() {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
       std::string start_error =
           DesktopCore::Instance().Start(engine, path, work_dir);
@@ -605,7 +608,7 @@ void V2rayBoxPlugin::HandleMethodCall(
           start_error = bridge_error;
         }
       }
-      if (start_error.empty() && desktop_vpn_active) {
+      if (start_error.empty() && desktop_vpn_active && !windows_vpn_hybrid) {
         if (!WaitForWindowsTunReady(20000)) {
           DesktopCore::Instance().Stop();
           start_error =

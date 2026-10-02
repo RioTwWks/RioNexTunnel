@@ -90,8 +90,8 @@ bool HasActiveWintunAdapter() {
     if (adapter->OperStatus != IfOperStatusUp) {
       continue;
     }
-    if (!DescriptionMentionsWintun(adapter->Description)) {
-      continue;
+    if (DescriptionMentionsWintun(adapter->Description)) {
+      return true;
     }
     if (AdapterNameLooksLikeTunnel(adapter->FriendlyName)) {
       return true;

@@ -943,10 +943,16 @@ class VpnService {
     }
     await _killSwitchService?.onTunnelRestored();
     _publishStatus(VpnStatus.started);
+    if (windowsVpnHybrid) {
+      AppLog.info(
+        'Windows VPN active: system HTTP proxy enabled; '
+        'install wintun.dll beside xray.exe for full TUN routing',
+      );
+    }
     AppLog.info(
       'VPN connected with ${_engine.coreName}'
       '${stack != null ? ' stack=${stack.tag}' : ''}'
-      '${windowsVpnHybrid ? ' (Windows TUN + system proxy)' : desktopVpn && Platform.isWindows ? ' (Windows TUN in main Xray)' : ''}',
+      '${windowsVpnHybrid ? ' (Windows VPN: proxy + optional TUN)' : desktopVpn && Platform.isWindows ? ' (Windows TUN in main Xray)' : ''}',
     );
     return effectiveProfile;
   }
