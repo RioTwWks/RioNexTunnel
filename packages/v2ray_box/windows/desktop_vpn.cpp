@@ -1,8 +1,5 @@
 #include "desktop_vpn.h"
 
-#include "desktop_core.h"
-#include "system_proxy.h"
-
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -10,16 +7,19 @@
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0600
 #endif
+// winsock2.h must precede any other header that pulls in <windows.h> (e.g.
+// desktop_core.h) or MSVC treats warnings as errors (winsock redefinition).
 #include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iphlpapi.h>
 #include <windows.h>
+#include <iphlpapi.h>
 #include <sddl.h>
 
 #include <vector>
 #pragma comment(lib, "iphlpapi.lib")
-#pragma comment(lib, "ws2_32.lib")
 #endif
+
+#include "desktop_core.h"
+#include "system_proxy.h"
 
 namespace v2ray_box {
 namespace {
