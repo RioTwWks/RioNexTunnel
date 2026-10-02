@@ -4,11 +4,21 @@
 #include "system_proxy.h"
 
 #ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <iphlpapi.h>
-#include <vector>
 #include <windows.h>
 #include <sddl.h>
+
+#include <vector>
 #pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
 #endif
 
 namespace v2ray_box {
@@ -33,12 +43,6 @@ bool IsProcessElevated() {
   CloseHandle(token);
   return ok && elevation.TokenIsElevated;
 }
-#endif
-
-}  // namespace
-
-#ifdef _WIN32
-namespace {
 
 bool AdapterNameLooksLikeTunnel(const wchar_t* friendly_name) {
   if (friendly_name == nullptr || friendly_name[0] == L'\0') {
@@ -56,30 +60,37 @@ bool AdapterNameLooksLikeTunnel(const wchar_t* friendly_name) {
   return false;
 }
 
+bool DescriptionMentionsWintun(const wchar_t* description) {
+  if (description == nullptr) {
+    return false;
+  }
+  return wcsstr(description, L"Wintun") != nullptr ||
+         wcsstr(description, L"wintun") != nullptr;
+}
+
 bool HasActiveWintunAdapter() {
   ULONG buffer_size = 15000;
   std::vector<BYTE> buffer(buffer_size);
   ULONG result = GetAdaptersAddresses(
-      AF_UNSPEC, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, nullptr,
-      reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &buffer_size);
+      AF_UNSPEC, 0, nullptr,
+      reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &buffer_size);
   if (result == ERROR_BUFFER_OVERFLOW) {
     buffer.resize(buffer_size);
     result = GetAdaptersAddresses(
-        AF_UNSPEC, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, nullptr,
-        reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &buffer_size);
+        AF_UNSPEC, 0, nullptr,
+        reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &buffer_size);
   }
   if (result != NO_ERROR) {
     return false;
   }
 
   for (auto* adapter =
-           reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
+           reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data());
        adapter != nullptr; adapter = adapter->Next) {
     if (adapter->OperStatus != IfOperStatusUp) {
       continue;
     }
-    if (adapter->Description != nullptr &&
-        StrStrIW(adapter->Description, L"Wintun") != nullptr) {
+    if (DescriptionMentionsWintun(adapter->Description)) {
       return true;
     }
     if (AdapterNameLooksLikeTunnel(adapter->FriendlyName)) {
@@ -88,9 +99,9 @@ bool HasActiveWintunAdapter() {
   }
   return false;
 }
+#endif
 
 }  // namespace
-#endif
 
 bool IsVpnServiceMode(const std::string& service_mode) {
   return service_mode == "vpn";
