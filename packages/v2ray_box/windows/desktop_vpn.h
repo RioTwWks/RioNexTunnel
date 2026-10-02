@@ -17,6 +17,9 @@ std::string ValidateDesktopVpnStart(const std::string& service_mode,
                                     const std::string& engine,
                                     const std::string& core_binary_path);
 
+/// Poll until a Wintun-style adapter is up or [timeout_ms] elapses.
+bool WaitForWindowsTunReady(int timeout_ms);
+
 }  // namespace v2ray_box
 
 #endif  // V2RAY_BOX_DESKTOP_VPN_H_

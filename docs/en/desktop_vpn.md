@@ -37,7 +37,7 @@ getcap /path/to/sing-box
 ## Engines
 
 - **sing-box** — TUN inbound injected in Dart (`tun-in`, `auto_route`, `strict_route`).
-- **Xray** — on Windows: main core runs **without** TUN; a second process (**TUN bridge**, prefer **sing-box** with `auto_route` + split default routes when `sing-box.exe` is present, otherwise Xray TUN) forwards system traffic to authenticated local SOCKS. If sing-box TUN fails (missing **wintun.dll**, no admin), the app falls back to the Xray TUN bridge. On Linux/macOS, TUN stays in the main Xray process.
+- **Xray** — TUN inbound in the **main** Xray process on Linux, Windows, and macOS (`tun-in`, system routes via **wintun** on Windows). Native start waits until a Wintun adapter is up; otherwise connect fails with a clear error (admin + **wintun.dll** required). Optional split **TUN bridge** code remains in the plugin for experiments but is not used by default.
 - **SkadiCore** — desktop VPN not supported; use sing-box or Xray.
 
 ## Security

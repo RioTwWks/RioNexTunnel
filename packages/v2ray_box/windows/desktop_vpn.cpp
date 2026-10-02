@@ -1,11 +1,25 @@
 #include "desktop_vpn.h"
 
-#include "system_proxy.h"
-
 #ifdef _WIN32
-#include <windows.h>
-#include <sddl.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
+// winsock2.h must precede any other header that pulls in <windows.h> (e.g.
+// desktop_core.h) or MSVC treats warnings as errors (winsock redefinition).
+#include <winsock2.h>
+#include <windows.h>
+#include <iphlpapi.h>
+#include <sddl.h>
+
+#include <vector>
+#pragma comment(lib, "iphlpapi.lib")
+#endif
+
+#include "desktop_core.h"
+#include "system_proxy.h"
 
 namespace v2ray_box {
 namespace {
@@ -28,6 +42,62 @@ bool IsProcessElevated() {
                                       sizeof(elevation), &size);
   CloseHandle(token);
   return ok && elevation.TokenIsElevated;
+}
+
+bool AdapterNameLooksLikeTunnel(const wchar_t* friendly_name) {
+  if (friendly_name == nullptr || friendly_name[0] == L'\0') {
+    return false;
+  }
+  if (_wcsnicmp(friendly_name, L"xray", 4) == 0) {
+    return true;
+  }
+  if (_wcsnicmp(friendly_name, L"rio", 3) == 0) {
+    return true;
+  }
+  if (_wcsnicmp(friendly_name, L"tun", 3) == 0) {
+    return true;
+  }
+  return false;
+}
+
+bool DescriptionMentionsWintun(const wchar_t* description) {
+  if (description == nullptr) {
+    return false;
+  }
+  return wcsstr(description, L"Wintun") != nullptr ||
+         wcsstr(description, L"wintun") != nullptr;
+}
+
+bool HasActiveWintunAdapter() {
+  ULONG buffer_size = 15000;
+  std::vector<BYTE> buffer(buffer_size);
+  ULONG result = GetAdaptersAddresses(
+      AF_UNSPEC, 0, nullptr,
+      reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &buffer_size);
+  if (result == ERROR_BUFFER_OVERFLOW) {
+    buffer.resize(buffer_size);
+    result = GetAdaptersAddresses(
+        AF_UNSPEC, 0, nullptr,
+        reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data()), &buffer_size);
+  }
+  if (result != NO_ERROR) {
+    return false;
+  }
+
+  for (auto* adapter =
+           reinterpret_cast<IP_ADAPTER_ADDRESSES*>(buffer.data());
+       adapter != nullptr; adapter = adapter->Next) {
+    if (adapter->OperStatus != IfOperStatusUp) {
+      continue;
+    }
+    if (DescriptionMentionsWintun(adapter->Description)) {
+      return true;
+    }
+    if (AdapterNameLooksLikeTunnel(adapter->FriendlyName)) {
+      return true;
+    }
+  }
+  return false;
 }
 #endif
 
@@ -74,5 +144,28 @@ std::string ValidateDesktopVpnStart(const std::string& service_mode,
 #endif
   return "";
 }
+
+#ifdef _WIN32
+bool WaitForWindowsTunReady(int timeout_ms) {
+  if (timeout_ms <= 0) {
+    return HasActiveWintunAdapter();
+  }
+  const ULONGLONG deadline =
+      GetTickCount64() + static_cast<ULONGLONG>(timeout_ms);
+  while (GetTickCount64() < deadline) {
+    if (!DesktopCore::Instance().IsRunning()) {
+      return false;
+    }
+    if (!DesktopCore::Instance().IsBridgeRunning()) {
+      return false;
+    }
+    if (HasActiveWintunAdapter()) {
+      return true;
+    }
+    Sleep(200);
+  }
+  return HasActiveWintunAdapter();
+}
+#endif
 
 }  // namespace v2ray_box

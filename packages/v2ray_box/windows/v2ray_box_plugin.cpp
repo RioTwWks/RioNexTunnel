@@ -575,33 +575,43 @@ void V2rayBoxPlugin::HandleMethodCall(
 
     const bool desktop_xray_tun_bridge =
         GetMapBool(*args, "desktopXrayTunBridge") && g_core_engine == "xray";
+    const bool desktop_vpn_active =
+        IsVpnServiceMode(g_service_mode) &&
+        ConfigOptionsEnableTun(g_config_options);
 
     g_last_start_error.clear();
 
     const std::string engine = g_core_engine;
     const std::string work_dir = GetWorkingDirectory();
 
-    auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge]() {
+    auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge,
+                      desktop_vpn_active]() {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
       std::string start_error =
           DesktopCore::Instance().Start(engine, path, work_dir);
       if (start_error.empty() && desktop_xray_tun_bridge) {
         std::string bridge_error;
-        if (!DesktopCore::Instance().FindBinary("singbox").empty()) {
-          bridge_error = DesktopCore::Instance().StartSingboxTunBridge(
-              g_socks_port, g_socks_user, g_socks_pass);
-          if (!bridge_error.empty() &&
-              !DesktopCore::Instance().FindBinary("xray").empty()) {
-            bridge_error = DesktopCore::Instance().StartXrayTunBridge(
-                g_socks_port, g_socks_user, g_socks_pass);
-          }
-        } else {
+        if (!DesktopCore::Instance().FindBinary("xray").empty()) {
           bridge_error = DesktopCore::Instance().StartXrayTunBridge(
               g_socks_port, g_socks_user, g_socks_pass);
+        } else if (!DesktopCore::Instance().FindBinary("singbox").empty()) {
+          bridge_error = DesktopCore::Instance().StartSingboxTunBridge(
+              g_socks_port, g_socks_user, g_socks_pass);
+        } else {
+          bridge_error = "TUN bridge: xray.exe and sing-box.exe not found";
         }
         if (!bridge_error.empty()) {
           DesktopCore::Instance().Stop();
           start_error = bridge_error;
+        }
+      }
+      if (start_error.empty() && desktop_vpn_active) {
+        if (!WaitForWindowsTunReady(20000)) {
+          DesktopCore::Instance().Stop();
+          start_error =
+              "Windows TUN interface did not come up. Run as Administrator "
+              "and ensure wintun.dll is beside xray.exe in resources "
+              "(scripts/fetch_cores.sh).";
         }
       }
       return start_error;
