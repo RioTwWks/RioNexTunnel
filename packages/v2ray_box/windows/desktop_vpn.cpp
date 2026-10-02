@@ -1,10 +1,14 @@
 #include "desktop_vpn.h"
 
+#include "desktop_core.h"
 #include "system_proxy.h"
 
 #ifdef _WIN32
+#include <iphlpapi.h>
+#include <vector>
 #include <windows.h>
 #include <sddl.h>
+#pragma comment(lib, "iphlpapi.lib")
 #endif
 
 namespace v2ray_box {
@@ -32,6 +36,61 @@ bool IsProcessElevated() {
 #endif
 
 }  // namespace
+
+#ifdef _WIN32
+namespace {
+
+bool AdapterNameLooksLikeTunnel(const wchar_t* friendly_name) {
+  if (friendly_name == nullptr || friendly_name[0] == L'\0') {
+    return false;
+  }
+  if (_wcsnicmp(friendly_name, L"xray", 4) == 0) {
+    return true;
+  }
+  if (_wcsnicmp(friendly_name, L"rio", 3) == 0) {
+    return true;
+  }
+  if (_wcsnicmp(friendly_name, L"tun", 3) == 0) {
+    return true;
+  }
+  return false;
+}
+
+bool HasActiveWintunAdapter() {
+  ULONG buffer_size = 15000;
+  std::vector<BYTE> buffer(buffer_size);
+  ULONG result = GetAdaptersAddresses(
+      AF_UNSPEC, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, nullptr,
+      reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &buffer_size);
+  if (result == ERROR_BUFFER_OVERFLOW) {
+    buffer.resize(buffer_size);
+    result = GetAdaptersAddresses(
+        AF_UNSPEC, GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST, nullptr,
+        reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &buffer_size);
+  }
+  if (result != NO_ERROR) {
+    return false;
+  }
+
+  for (auto* adapter =
+           reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
+       adapter != nullptr; adapter = adapter->Next) {
+    if (adapter->OperStatus != IfOperStatusUp) {
+      continue;
+    }
+    if (adapter->Description != nullptr &&
+        StrStrIW(adapter->Description, L"Wintun") != nullptr) {
+      return true;
+    }
+    if (AdapterNameLooksLikeTunnel(adapter->FriendlyName)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+#endif
 
 bool IsVpnServiceMode(const std::string& service_mode) {
   return service_mode == "vpn";
@@ -74,5 +133,28 @@ std::string ValidateDesktopVpnStart(const std::string& service_mode,
 #endif
   return "";
 }
+
+#ifdef _WIN32
+bool WaitForWindowsTunReady(int timeout_ms) {
+  if (timeout_ms <= 0) {
+    return HasActiveWintunAdapter();
+  }
+  const ULONGLONG deadline =
+      GetTickCount64() + static_cast<ULONGLONG>(timeout_ms);
+  while (GetTickCount64() < deadline) {
+    if (!DesktopCore::Instance().IsRunning()) {
+      return false;
+    }
+    if (!DesktopCore::Instance().IsBridgeRunning()) {
+      return false;
+    }
+    if (HasActiveWintunAdapter()) {
+      return true;
+    }
+    Sleep(200);
+  }
+  return HasActiveWintunAdapter();
+}
+#endif
 
 }  // namespace v2ray_box

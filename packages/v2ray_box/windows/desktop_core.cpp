@@ -659,8 +659,7 @@ std::string BuildSingboxTunBridgeConfig(int socks_port,
   json << "    \"type\": \"tun\",\n";
   json << "    \"tag\": \"tun-in\",\n";
   json << "    \"interface_name\": \"" << tun_name << "\",\n";
-  json << "    \"inet4_address\": \"172.19.0.1/30\",\n";
-  json << "    \"inet6_address\": \"fdfe:dcba:9876::1/126\",\n";
+  json << "    \"address\": [\"172.19.0.1/30\", \"fdfe:dcba:9876::1/126\"],\n";
   json << "    \"mtu\": 1500,\n";
   json << "    \"auto_route\": true,\n";
   json << "    \"strict_route\": true,\n";

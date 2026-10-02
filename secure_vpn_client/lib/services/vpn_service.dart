@@ -847,9 +847,10 @@ class VpnService {
         ? panelSocks!.port
         : socksPort;
     final desktopVpn = _isDesktopPlatform && !_useProxyMode;
-    final useDesktopXrayTunBridge =
-        desktopVpn && _engine == VpnEngine.xray && Platform.isWindows;
-    final xrayTunProfile = desktopVpn && !useDesktopXrayTunBridge
+    // Windows uses TUN inside the main Xray process (same as Linux). The split
+    // SOCKS+bridge process often stayed "connected" without system routes.
+    const useDesktopXrayTunBridge = false;
+    final xrayTunProfile = desktopVpn
         ? XrayTunRoutingProfile.desktop
         : XrayTunRoutingProfile.mobile;
     final secureConfig = ConfigParser.injectSecureSocksInbound(
@@ -903,9 +904,11 @@ class VpnService {
 
     try {
       await _waitForStatus(VpnStatus.started, timeout: _connectReadyTimeout);
-      if (useDesktopXrayTunBridge && !await _v2rayBox.isCoreRunning()) {
+      if (desktopVpn &&
+          Platform.isWindows &&
+          !await _v2rayBox.isCoreRunning()) {
         throw StateError(
-          'Windows TUN bridge stopped right after connect. '
+          'Windows VPN core stopped right after connect. '
           'Run as Administrator and ensure wintun.dll is next to xray.exe '
           '(scripts/fetch_cores.sh).',
         );
@@ -933,7 +936,7 @@ class VpnService {
     AppLog.info(
       'VPN connected with ${_engine.coreName}'
       '${stack != null ? ' stack=${stack.tag}' : ''}'
-      '${useDesktopXrayTunBridge ? ' (Windows TUN bridge → local SOCKS)' : ''}',
+      '${desktopVpn && Platform.isWindows ? ' (Windows TUN in main Xray)' : ''}',
     );
     return effectiveProfile;
   }
