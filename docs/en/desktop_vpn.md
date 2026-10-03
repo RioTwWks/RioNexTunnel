@@ -8,9 +8,7 @@
 
 **Work mode → VPN** on Linux, Windows, or macOS starts the core with a **TUN inbound** (same idea as Android/iOS full tunnel). The app does **not** enable the system HTTP proxy in this mode — browsers and other apps use normal routing through the tunnel.
 
-**Work mode → Proxy** (default on desktop for **Auto**) keeps the previous behavior: authenticated local SOCKS/HTTP and optional system proxy.
-
-On **Windows**, **VPN** mode follows a [Hiddify](https://github.com/hiddify/hiddify-app)-style hybrid: **system HTTP proxy** to authenticated `127.0.0.1` (always) plus **TUN in the core** when `wintun.dll` and admin rights allow it. Connect is **not blocked** if TUN fails to appear — browsers still use the system proxy. Linux/macOS VPN stays TUN-only (no system proxy).
+**Work mode → Proxy** (default on desktop for **Auto**) keeps the previous behavior: authenticated local SOCKS/HTTP and optional system proxy. See [security.md](security.md#vpn-mode-vs-proxy-mode-on-desktop) for why local proxy auth exists and how it differs from TUN.
 
 ## Requirements
 

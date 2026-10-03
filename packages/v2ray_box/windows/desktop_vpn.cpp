@@ -117,7 +117,6 @@ bool ConfigOptionsEnableTun(const std::string& json) {
 
 bool ShouldUseSystemProxy(const std::string& service_mode,
                           const std::string& config_options_json) {
-  // Windows desktop VPN may set set-system-proxy while TUN is active (Hiddify-style).
   if (ConfigOptionsSetSystemProxy(config_options_json)) {
     return true;
   }
@@ -145,9 +144,43 @@ std::string ValidateDesktopVpnStart(const std::string& service_mode,
     return "Desktop VPN (TUN) on Windows requires running RioNexTunnel as "
            "Administrator.";
   }
+  if (engine == "xray" && !WintunDllAvailable()) {
+    return "wintun.dll not found beside xray.exe or in app resources. Run "
+           "scripts/fetch_cores.sh from the repo root, rebuild the app, or use "
+           "Work mode → Proxy for browser-only tunneling.";
+  }
 #endif
   return "";
 }
+
+#ifdef _WIN32
+bool WintunDllAvailable() {
+  const std::string xray = DesktopCore::Instance().FindBinary("xray");
+  if (!xray.empty()) {
+    const auto slash = xray.find_last_of("\\/");
+    if (slash != std::string::npos) {
+      const std::string wintun =
+          JoinPath(xray.substr(0, slash), "wintun.dll");
+      if (GetFileAttributesA(wintun.c_str()) != INVALID_FILE_ATTRIBUTES) {
+        return true;
+      }
+    }
+  }
+  const std::string exe_dir = GetExecutableDirectory();
+  if (!exe_dir.empty()) {
+    if (GetFileAttributesA(
+            JoinPath(exe_dir, "resources\\wintun.dll").c_str()) !=
+        INVALID_FILE_ATTRIBUTES) {
+      return true;
+    }
+    if (GetFileAttributesA(JoinPath(exe_dir, "wintun.dll").c_str()) !=
+        INVALID_FILE_ATTRIBUTES) {
+      return true;
+    }
+  }
+  return false;
+}
+#endif
 
 #ifdef _WIN32
 bool WaitForWindowsTunReady(int timeout_ms) {

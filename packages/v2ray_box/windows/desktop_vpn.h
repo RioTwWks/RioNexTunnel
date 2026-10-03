@@ -20,6 +20,9 @@ std::string ValidateDesktopVpnStart(const std::string& service_mode,
 /// Poll until a Wintun-style adapter is up or [timeout_ms] elapses.
 bool WaitForWindowsTunReady(int timeout_ms);
 
+/// True when wintun.dll is beside xray.exe or under the app resources folder.
+bool WintunDllAvailable();
+
 }  // namespace v2ray_box
 
 #endif  // V2RAY_BOX_DESKTOP_VPN_H_

@@ -578,17 +578,13 @@ void V2rayBoxPlugin::HandleMethodCall(
     const bool desktop_vpn_active =
         IsVpnServiceMode(g_service_mode) &&
         ConfigOptionsEnableTun(g_config_options);
-    const bool windows_vpn_hybrid =
-        desktop_vpn_active &&
-        ConfigOptionsSetSystemProxy(g_config_options);
-
     g_last_start_error.clear();
 
     const std::string engine = g_core_engine;
     const std::string work_dir = GetWorkingDirectory();
 
     auto run_start = [engine, path, work_dir, desktop_xray_tun_bridge,
-                      desktop_vpn_active, windows_vpn_hybrid]() {
+                      desktop_vpn_active]() {
       std::lock_guard<std::mutex> lock(g_core_start_mutex);
       std::string start_error =
           DesktopCore::Instance().Start(engine, path, work_dir);
@@ -608,7 +604,7 @@ void V2rayBoxPlugin::HandleMethodCall(
           start_error = bridge_error;
         }
       }
-      if (start_error.empty() && desktop_vpn_active && !windows_vpn_hybrid) {
+      if (start_error.empty() && desktop_vpn_active) {
         if (!WaitForWindowsTunReady(20000)) {
           DesktopCore::Instance().Stop();
           start_error =
@@ -742,6 +738,8 @@ void V2rayBoxPlugin::HandleMethodCall(
         flutter::EncodableValue(xray_ok);
     map[flutter::EncodableValue("singbox_available")] =
         flutter::EncodableValue(singbox_ok);
+    map[flutter::EncodableValue("wintun_available")] =
+        flutter::EncodableValue(WintunDllAvailable());
     map[flutter::EncodableValue("tun_bridge_engine")] =
         flutter::EncodableValue(DesktopCore::Instance().BridgeEngine());
     map[flutter::EncodableValue("tun_bridge_running")] =

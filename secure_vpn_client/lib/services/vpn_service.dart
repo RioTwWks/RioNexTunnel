@@ -365,13 +365,10 @@ class VpnService {
     );
     if (_isDesktopPlatform) {
       final useProxy = mode == VpnMode.proxy;
-      // Hiddify-style: on Windows, VPN mode still drives system proxy so browsers
-      // and WinINET apps use the tunnel while TUN routes are brought up.
-      final windowsVpnHybrid = !useProxy && Platform.isWindows;
       await _v2rayBox.setConfigOptions(
         ConfigOptions(
           enableTun: !useProxy,
-          setSystemProxy: useProxy || windowsVpnHybrid,
+          setSystemProxy: useProxy,
         ),
       );
     } else if (mode == VpnMode.proxy) {
@@ -850,7 +847,6 @@ class VpnService {
         ? panelSocks!.port
         : socksPort;
     final desktopVpn = _isDesktopPlatform && !_useProxyMode;
-    final windowsVpnHybrid = desktopVpn && Platform.isWindows;
     // Windows uses TUN inside the main Xray process (same as Linux). The split
     // SOCKS+bridge process often stayed "connected" without system routes.
     const useDesktopXrayTunBridge = false;
@@ -863,7 +859,7 @@ class VpnService {
       _engine,
       socksPort: effectiveSocksPort,
       proxyOnly: _useProxyMode,
-      includeLocalHttpInbound: _useProxyMode || windowsVpnHybrid,
+      includeLocalHttpInbound: _useProxyMode,
       omitXrayTunInbound: useDesktopXrayTunBridge,
       xrayTunProfile: xrayTunProfile,
       authMode: authMode,
@@ -883,11 +879,6 @@ class VpnService {
 
     await _setSessionCredentials(credentials, port: effectiveSocksPort);
     await _v2rayBox.clearLastStartError();
-    if (windowsVpnHybrid) {
-      AppLog.info(
-        'Windows VPN: TUN + system HTTP proxy (127.0.0.1:${effectiveSocksPort + 1})',
-      );
-    }
     AppLog.info(
       'Starting native core (desktopXrayTunBridge=$useDesktopXrayTunBridge)...',
     );
@@ -943,16 +934,10 @@ class VpnService {
     }
     await _killSwitchService?.onTunnelRestored();
     _publishStatus(VpnStatus.started);
-    if (windowsVpnHybrid) {
-      AppLog.info(
-        'Windows VPN active: system HTTP proxy enabled; '
-        'install wintun.dll beside xray.exe for full TUN routing',
-      );
-    }
     AppLog.info(
       'VPN connected with ${_engine.coreName}'
       '${stack != null ? ' stack=${stack.tag}' : ''}'
-      '${windowsVpnHybrid ? ' (Windows VPN: proxy + optional TUN)' : desktopVpn && Platform.isWindows ? ' (Windows TUN in main Xray)' : ''}',
+      '${desktopVpn && Platform.isWindows ? ' (Windows TUN in main Xray)' : ''}',
     );
     return effectiveProfile;
   }
